@@ -16,4 +16,8 @@
     <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.10" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LeZi9916\AquaTools\AquaTools.csproj" />
+  </ItemGroup>
+
 </Project>
