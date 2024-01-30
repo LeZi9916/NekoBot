@@ -5,8 +5,6 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Exceptions;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace TelegramBot
@@ -65,7 +63,7 @@ namespace TelegramBot
                 }
                 catch(Exception e)
                 {
-                    Debug(DebugType.Error, $"Failure to receive message : {e.Message}");
+                    Debug(DebugType.Error, $"Failure to receive message : \n{e.Message}\n{e.StackTrace}");
                 }
             });
         }
@@ -75,7 +73,8 @@ namespace TelegramBot
             stopwatch.Start();
             try
             {
-                CheckUser(update);
+                FindUser(update);
+                FindGroup(update);
 
                 switch (update.Type)
                 {
@@ -116,19 +115,19 @@ namespace TelegramBot
             }
             catch (Exception e)
             {
-                Debug(DebugType.Error, $"Failure to handle message : {e.Message}");
+                Debug(DebugType.Error, $"Failure to handle message : \n{e.Message}\n{e.StackTrace}");
                 return;
             }            
             stopwatch.Stop();
             Config.TotalHandleCount++;
             Config.TimeSpentList.Add((int)stopwatch.ElapsedMilliseconds);
         }
-        static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+        static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception e, CancellationToken cancellationToken)
         {
-            Debug(DebugType.Error, $"From internal exception : {exception.Message}");
+            Debug(DebugType.Error, $"From internal exception : \n{e.Message}\n{e.StackTrace}");
             return Task.CompletedTask;
         }
-        static async void CheckUser(Update update)
+        static async void FindUser(Update update)
         {
             await Task.Run(() => 
             {
@@ -166,6 +165,41 @@ namespace TelegramBot
                     $"isBot: {user.IsBot}\n" +
                     $"Username: {user.Username}\n" +
                     $"isPremium: {user.IsPremium}\n");
+                }
+            });
+        }
+        static async void FindGroup(Update update)
+        {
+            await Task.Run(() => 
+            {
+                try
+                {
+                    var chat = update.Message?.Chat ?? update.EditedMessage?.Chat;
+
+                    if (chat is null)
+                        return;
+                    else if (chat.Type is not (ChatType.Group or ChatType.Supergroup))
+                        return;
+
+                    var groupId = chat.Id;
+
+                    if (Config.GroupIdList.Contains(groupId))
+                        return;
+
+                    var group = new Group()
+                    {
+                        GroupId = groupId
+                    };
+                    Config.GroupList.Add(group);
+                    Config.GroupIdList.Add(groupId);
+                    Config.SaveData();
+                    Debug(DebugType.Info, $"Find New Group:\n" +
+                        $"Name: {chat.FirstName} {chat.LastName}\n" +
+                        $"Id: {groupId}\n");
+                }
+                catch(Exception e)
+                {
+                    Debug(DebugType.Error, $"Find a new group,but cannon add to list: \n{e.Message}\n{e.StackTrace}");
                 }
             });
         }

@@ -1,20 +1,14 @@
 ﻿using AquaTools;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Numerics;
 using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.Unicode;
 using System.Threading;
 using System.Threading.Tasks;
+using Telegram.Bot.Types.Enums;
 
 namespace TelegramBot
 {
@@ -27,6 +21,12 @@ namespace TelegramBot
         Admin,
         Root
     }
+    enum ActionType
+    {
+        Modify,
+        Reply,
+        Delete
+    }
     class TUser
     {
         public long Id { get; set; }
@@ -38,7 +38,7 @@ namespace TelegramBot
             get => FirstName + " " + LastName;
         }
         public Permission Level { get; set; } = Permission.Common;
-        public string MaiUserId { get; set; } = null;
+        public int? MaiUserId { get; set; } = null;
 
         public bool CheckPermission(Permission targetLevel) => Level >= targetLevel ? true : false;
         public void SetPermission(Permission targetLevel)
@@ -46,6 +46,25 @@ namespace TelegramBot
             Level = targetLevel;
             Config.SaveData();
         }
+    }
+    class Group
+    {
+        public long GroupId { get; set; }
+        public Setting Setting { get; set; } = new();
+        public List<Filter> Rule { get; set; } = new();
+    }
+    class Filter
+    {
+        public required TUser Target { get; set; }
+        public required ActionType ActionType { get; set; }
+        public required MessageType MessageType { get; set; }
+        public string MatchString { get; set; }
+        public string ActionString { get; set; }
+    }
+    class Setting
+    {
+        public bool ForceCheckReference = false;
+        public bool Listen = true;
     }
     internal static class Config
     {
@@ -62,6 +81,9 @@ namespace TelegramBot
         public static long TotalHandleCount = 0;
         public static List<long> TimeSpentList = new();
 
+        public static List<long> GroupIdList = new();
+        public static List<Group> GroupList = new();
+
         static Mutex mutex = new();
 
         public static List<long> UserIdList = new() { 1136680302 };
@@ -77,7 +99,8 @@ namespace TelegramBot
         };
 
         public static List<KeyChip> keyChips = new() 
-        {new KeyChip()
+        {
+            new KeyChip()
             {
                 PlaceId = 2120,
                 PlaceName = "SUPER101潮漫北流店",
@@ -106,7 +129,17 @@ namespace TelegramBot
                 TotalHandleCount = Load<long>(Path.Combine(DatabasePath, "TotalHandleCount.data"));
             if (File.Exists(Path.Combine(DatabasePath, "TimeSpentList.data")))
                 TimeSpentList = Load<List<long>>(Path.Combine(DatabasePath, "TimeSpentList.data"));
+            if (File.Exists(Path.Combine(DatabasePath, "GroupList.data")))
+                GroupList = Load<List<Group>>(Path.Combine(DatabasePath, "GroupList.data"));
+            if (File.Exists(Path.Combine(DatabasePath, "GroupIdList.data")))
+                GroupIdList = Load<List<long>>(Path.Combine(DatabasePath, "GroupIdList.data"));
             AutoSave();
+        }
+        public static Group SearchGroup(long groupId)
+        {
+            var result = GroupList.Where(u => u.GroupId == groupId).ToArray();
+
+            return result.Length == 0 ? null : result[0];
         }
         public static TUser SearchUser(long userId)
         {
@@ -141,6 +174,8 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "UserIdList.data"), UserIdList);
             Save(Path.Combine(DatabasePath, "TotalHandleCount.data"), TotalHandleCount);
             Save(Path.Combine(DatabasePath, "TimeSpentList.data"), TimeSpentList);
+            Save(Path.Combine(DatabasePath, "GroupList.data"), GroupList);
+            Save(Path.Combine(DatabasePath, "GroupIdList.data"), GroupIdList);
         }
         public static void WriteLog(string s)
         {

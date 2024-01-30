@@ -134,7 +134,7 @@ namespace TelegramBot
                     $"Name: {target.Name}\n" +
                     $"Id: {target.Id}\n" +
                     $"Permission: {target.Level}\n" +
-                    $"MaiUserId: {(isGroup ? target.MaiUserId is null ? "未绑定" : "喵" : target.MaiUserId ?? "未绑定")}", update);
+                    $"MaiUserId: {(isGroup ? target.MaiUserId is null ? "未绑定" : "喵" : target.MaiUserId is null ? "未绑定" : target.MaiUserId)}", update);
         }
         static void SetUserPermission(Command command, Update update, TUser querier,int diff)
         {

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -75,8 +77,11 @@ namespace TelegramBot
             var chat = message.Chat;
             var userId = message.From.Id;
             var user = Config.SearchUser(userId);
+            Group group = null;
+            var isGroup = chat.Type is not (ChatType.Group or ChatType.Supergroup);
 
-            //Config.Save();
+
+            
             if (string.IsNullOrEmpty(param[0]))
                 return;
             if (param[0].Substring(0, 1) != "/")
@@ -86,7 +91,9 @@ namespace TelegramBot
             }
             if (user is null)
                 return;
-            
+            if (isGroup)
+                group = Config.SearchGroup(chat.Id);
+
             if (!user.CheckPermission(Permission.Common))
             {
                 if(chat.Type is ChatType.Private)
@@ -97,7 +104,12 @@ namespace TelegramBot
                 return;
             }
 
-            var prefix = param[0].Split("@")[0].Replace("/","");
+            var _param = param[0].Split("@");
+            var prefix = _param[0].Replace("/","");
+            if (group is not null && group.Setting.ForceCheckReference)
+                if (!(_param.Length == 2 && _param[1] == BotUsername))
+                    return;
+
             Command command = new();
 
             command.Prefix = Command.GetCommandType(prefix);
@@ -169,6 +181,50 @@ namespace TelegramBot
                     break;
             }
         }
+        static void FilterGroupMessage(string content, Update update, TUser querier)
+        {
+            var chat = update.Message?.Chat ?? update.EditedMessage?.Chat;
+            if (chat is null)
+                return;
+            else if (chat.Type is not (ChatType.Group or ChatType.Supergroup))
+                return;
+
+            var group = Config.SearchGroup(chat.Id);
+            if (group.Rule.Count == 0)
+                return;
+
+            var ruleList = group.Rule;
+            var commonRuleList = ruleList.Where(x => x.Target is null);
+            var specificRuleList = ruleList.Where(x => x.Target.Id == querier.Id);
+            var activeRuleList = new List<Filter>();
+            activeRuleList.AddRange(specificRuleList);
+            activeRuleList.AddRange(commonRuleList);
+            Action<Filter> FilterHandler = rule =>
+            {
+                switch (rule.ActionType)
+                {
+                    case ActionType.Modify:
+                        break;
+                    case ActionType.Delete:
+                        DeleteMessage(update);
+                        break;
+                }
+                if (rule.ActionString is not null)
+                    SendMessage(rule.ActionString, update);
+            };
+
+            foreach (var rule in activeRuleList)
+            {
+                if(update.Message.Type  == rule.MessageType)
+                {
+                    if(update.Message.Text is null)
+                        FilterHandler(rule);
+                    else if(rule.MatchString is not null && update.Message.Text.Contains(rule.MatchString))
+                        FilterHandler(rule);
+                }
+            }
+            
+        }
         static async Task<Message> SendMessage(string text,Update update,bool isReply = true, ParseMode? parseMode = null)
         {
             try
@@ -181,7 +237,7 @@ namespace TelegramBot
             }
             catch(Exception e)
             {
-                Debug(DebugType.Error, $"Failure to send message : {e.Message}");
+                Debug(DebugType.Error, $"Failure to send message : \n{e.Message}\n{e.StackTrace}");
                 return null;
             }
         }
@@ -197,7 +253,7 @@ namespace TelegramBot
             catch (Exception e)
             {
                 SendMessage("请为Bot授予删除消息权限喵", update,false);
-                Debug(DebugType.Error, e.Message);
+                Debug(DebugType.Error, $"Cannot delete message : \n{e.Message}\n{e.StackTrace}");
             }
         }
         static async Task<bool> DownloadFile(string dPath,string fileId)
@@ -212,7 +268,7 @@ namespace TelegramBot
             }
             catch(Exception e)
             {
-                Debug(DebugType.Error, $"Failure to download file : {e.Message}");
+                Debug(DebugType.Error, $"Failure to download file : \n{e.Message}\n{e.StackTrace}");
                 return false;                
             }
         }
@@ -227,7 +283,7 @@ namespace TelegramBot
             }
             catch(Exception e)
             {
-                Debug(DebugType.Error, $"Failure to edit message : {e.Message}");
+                Debug(DebugType.Error, $"Failure to edit message : \n{e.Message}\n{e.StackTrace}");
                 return null;
             }
         }
