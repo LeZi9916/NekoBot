@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -20,7 +19,10 @@ namespace TelegramBot
             if (!querier.CheckPermission(Permission.Advanced))
                 return ;
             if (command.Content.Length == 0)
+            {
+                GetHelpInfo(command, update, querier);
                 return;
+            }
 
             var suffix = command.Content[0];
             command.Content = command.Content.Skip(1).ToArray();
@@ -31,7 +33,9 @@ namespace TelegramBot
             }
             switch (suffix)
             {
-                case "2userId":
+                case "status":
+                    GetMaiServerStatus(command, update, querier);
+                    break;
                 case "region":
                     GetMaiUserRegion(command, update, querier);
                     break;
@@ -60,7 +64,8 @@ namespace TelegramBot
                 "用户信息:\n" +
                 $"名称: {response.userName}\n" +
                 $"Rating: {response.playerRating}\n" +
-                $"最后游玩日期: {response.lastPlayDate}", update);
+                $"最后游玩日期: {response.lastPlayDate}\n" +
+                $"对端响应: {response.StatusCode}", update);
         }
         static void GetMaiUserRegion(Command command, Update update, TUser querier)
         {
@@ -74,7 +79,8 @@ namespace TelegramBot
 
             if (response.StatusCode is not HttpStatusCode.OK)
             {
-                SendMessage("获取出勤地区数据失败QAQ", update);
+                SendMessage("获取出勤地区数据失败QAQ\n" +
+                           $"对端响应: {response.StatusCode}", update);
                 return;
             }
             if(response.userRegionList.Length == 0)
@@ -192,10 +198,49 @@ namespace TelegramBot
             var result = Aqua.PostAsync<UserLogoutRequest,UserLogoutResponse>(request).Result;
 
             if(result is not null)
-                SendMessage("已发信，请检查是否生效~", update);
+                SendMessage("已发信，请检查是否生效~\n" +
+                           $"对端响应: {result.Object.StatusCode}", update);
             else
-                SendMessage("发信失败QAQ", update);
+                SendMessage("发信失败QAQ\n" +
+                           $"对端响应: {result.Object.StatusCode}", update);
 
+        }
+
+        static void GetMaiServerStatus(Command command, Update update, TUser querier)
+        {
+            string text = "maimai服务器状态:\n" +
+                          "```csharp" +
+                         StringHandle(
+                          "\nTcping延迟:" +
+                         $"\n- Title服务器  : {MaiMonitor.TitleServerDelay}ms\n" +
+                         $"  -  5min  : {MaiMonitor.Get5minAvgPing(MaiMonitor.ServerType.Title)}ms\n" +
+                         $"  - 10min  : {MaiMonitor.Get10minAvgPing(MaiMonitor.ServerType.Title)}ms\n" +
+                         $"  - 15min  : {MaiMonitor.Get15minAvgPing(MaiMonitor.ServerType.Title)}ms" +
+                         $"\n- OAuth服务器  : {MaiMonitor.OAuthServerDelay}ms\n" +
+                         $"  -  5min  : {MaiMonitor.Get5minAvgPing(MaiMonitor.ServerType.OAuth)}ms\n" +
+                         $"  - 10min  : {MaiMonitor.Get10minAvgPing(MaiMonitor.ServerType.OAuth)}ms\n" +
+                         $"  - 15min  : {MaiMonitor.Get15minAvgPing(MaiMonitor.ServerType.OAuth)}ms" +
+                         $"\n- DXNet服务器  : {MaiMonitor.NetServerDelay}ms\n" +
+                         $"  -  5min  : {MaiMonitor.Get5minAvgPing(MaiMonitor.ServerType.Net)}ms\n" +
+                         $"  - 10min  : {MaiMonitor.Get10minAvgPing(MaiMonitor.ServerType.Net)}ms\n" +
+                         $"  - 15min  : {MaiMonitor.Get15minAvgPing(MaiMonitor.ServerType.Net)}ms" +
+                         $"\n- Main 服务器  : {MaiMonitor.MainServerDelay}ms\n" +
+                         $"  -  5min  : {MaiMonitor.Get5minAvgPing(MaiMonitor.ServerType.Main)}ms\n" +
+                         $"  - 10min  : {MaiMonitor.Get10minAvgPing(MaiMonitor.ServerType.Main)}ms\n" +
+                         $"  - 15min  : {MaiMonitor.Get15minAvgPing(MaiMonitor.ServerType.Main)}ms" +
+                         $"\n\n" +
+                          "响应状态:\n" +
+                         $"- 发送包数累计 : {MaiMonitor.TotalRequestCount}\n" +
+                         $"- 响应超时累计 : {MaiMonitor.TimeoutRequestCount}\n" +
+                         $"- 非压缩包累计 : {MaiMonitor.CompressSkipRequestCount}\n" +
+                         $"- 响应包跳过率 : {MaiMonitor.CompressSkipRate * 100}%\n\n" +
+                         $"土豆性:\n" +
+                         $"-       土豆？: {(MaiMonitor.ServiceAvailability ? MaiMonitor.CompressSkipRate > 0.18 ? "差不多熟了" : "否" : "是")}\n" +
+                         $"- 平均土豆间隔 : {(MaiMonitor.FaultInterval == -1 ?"不可用" : $"{MaiMonitor.FaultInterval}s")}\n" +
+                         $"\n") +
+                          "```";
+
+            SendMessage(text, update,true,ParseMode.MarkdownV2);
         }
         static string GetRegionName(int regionId)
         {

@@ -34,6 +34,8 @@ namespace TelegramBot
             Promote,
             Demote,
             Mai,
+            Logs,
+            Config,
             Unknow
         }
         struct Command
@@ -65,6 +67,10 @@ namespace TelegramBot
                         return CommandType.Demote;
                     case "mai":
                         return CommandType.Mai;
+                    case "config":
+                        return CommandType.Config;
+                    case "logs":
+                        return CommandType.Logs;
                     default:
                         return CommandType.Unknow;
                 }
@@ -78,7 +84,7 @@ namespace TelegramBot
             var userId = message.From.Id;
             var user = Config.SearchUser(userId);
             Group group = null;
-            var isGroup = chat.Type is not (ChatType.Group or ChatType.Supergroup);
+            var isGroup = chat.Type is (ChatType.Group or ChatType.Supergroup);
 
 
             
@@ -94,21 +100,21 @@ namespace TelegramBot
             if (isGroup)
                 group = Config.SearchGroup(chat.Id);
 
-            if (!user.CheckPermission(Permission.Common))
-            {
-                if(chat.Type is ChatType.Private)
-                    SendMessage("很抱歉，您不能使用该Bot哦~", update);
-                else
-                    SendMessage("很抱歉，您不能使用该Bot哦~", update);
-                Debug(DebugType.Info,"Banned user access,rejected");
-                return;
-            }
-
             var _param = param[0].Split("@");
             var prefix = _param[0].Replace("/","");
             if (group is not null && group.Setting.ForceCheckReference)
                 if (!(_param.Length == 2 && _param[1] == BotUsername))
                     return;
+
+            if (!user.CheckPermission(Permission.Common))
+            {
+                if (chat.Type is ChatType.Private)
+                    SendMessage("很抱歉，您不能使用该Bot哦~", update);
+                else
+                    SendMessage("很抱歉，您不能使用该Bot哦~", update);
+                Debug(DebugType.Info, "Banned user access,rejected");
+                return;
+            }
 
             Command command = new();
 
@@ -134,9 +140,6 @@ namespace TelegramBot
                 case CommandType.Ban:
                     BanUser(command, update, querier);
                     break;
-                case CommandType.Bind:
-                    BindUser(command, update, querier);
-                    break;
                 case CommandType.Status:
                     GetSystemInfo(command, update);
                     break;
@@ -149,38 +152,21 @@ namespace TelegramBot
                 case CommandType.Demote:
                     SetUserPermission(command, update, querier, -1);
                     break;
+                case CommandType.Config:
+                    BotConfig(command, update, querier);
+                    break;
                 case CommandType.Help:
-                    var helpStr = "```bash\n" + StringHandle(
-                        "\n相关命令：\n" +
-                        "\n/add             <TGUserId>    允许指定用户访问bot" +
-                        "\n/ban             <TGUserId>    禁止指定用户访问bot" +
-                        "\n/info            <TGUserId>    获取指定用户信息" +
-                        "\n/promote         <TGUserId>    提升指定用户权限" +
-                        "\n/demote          <TGUserId>    降低指定用户权限" +
-                        "\n/status                        显示bot服务器状态" +
-                        "\n/logs                          获取本次运行日志" +
-                        "\n/help                          显示帮助信息\n");
-
-                    if (isPrivate)
-                    {
-                        helpStr +=
-                            "\n科技相关命令：\n" +
-                            "\n/mai bind      [QRCode|Image]  使用二维码进行绑定" +
-                            "\n/mai 2userId                   解析带有\"SGWCMAID\"前缀的神秘代码" +
-                            "\n/mai info                      获取账号信息" +
-                            "\n/mai logout                    登出" +
-                            "\n```";
-                    }
-                    else
-                        helpStr += "\n```";
-
-                    SendMessage(helpStr, update,true,ParseMode.MarkdownV2);
+                    GetHelpInfo(command, update, querier);
+                    break;
+                case CommandType.Logs:
+                    GetBotLog(command, update, querier);
                     break;
                 case CommandType.Mai:
                     MaiCommandHandle(command, update, querier);
                     break;
             }
         }
+        
         static void FilterGroupMessage(string content, Update update, TUser querier)
         {
             var chat = update.Message?.Chat ?? update.EditedMessage?.Chat;
@@ -254,6 +240,24 @@ namespace TelegramBot
             {
                 SendMessage("请为Bot授予删除消息权限喵", update,false);
                 Debug(DebugType.Error, $"Cannot delete message : \n{e.Message}\n{e.StackTrace}");
+            }
+        }
+        static async Task<bool> UploadFile(string filePath,long chatId)
+        {
+            try
+            {
+                var stream = System.IO.File.Open(filePath,FileMode.Open,FileAccess.Read,FileShare.ReadWrite);
+                var filename = new FileInfo(filePath).Name;
+                await botClient.SendDocumentAsync(
+                        chatId: chatId,
+                        document: InputFile.FromStream(stream: stream, fileName: filename));
+                stream.Close();
+                return true;
+            }
+            catch(Exception e)
+            {
+                Debug(DebugType.Error, $"Failure to upload file : \n{e.Message}\n{e.StackTrace}");
+                return false;
             }
         }
         static async Task<bool> DownloadFile(string dPath,string fileId)

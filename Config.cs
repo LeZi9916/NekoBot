@@ -63,17 +63,17 @@ namespace TelegramBot
     }
     class Setting
     {
-        public bool ForceCheckReference = false;
-        public bool Listen = true;
+        public bool ForceCheckReference { get; set; } = false;
+        public bool Listen { get; set; } = true;
     }
     internal static class Config
     {
         static DateTime Up = DateTime.Now;
         static string AppPath = Environment.CurrentDirectory;
         static string LogsPath = Path.Combine(AppPath, "logs");
-        static string DatabasePath = Path.Combine(AppPath, "Database");
+        internal static string DatabasePath = Path.Combine(AppPath, "Database");
         public static string TempPath = Path.Combine(AppPath, "Temp");
-        static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
+        internal static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
 
         public static bool EnableAutoSave = true;
         public static int AutoSaveInterval = 300000;
@@ -192,17 +192,19 @@ namespace TelegramBot
             if (!Directory.Exists(TempPath))
                 Directory.CreateDirectory(TempPath);
         }
-        public static void Save<T>(string path,T target)
+        public static void Save<T>(string path,T target,bool debugMessage = true)
         {
             try
             {
                 var fileStream = File.Open(path, FileMode.Create);
                 fileStream.Write(Encoding.UTF8.GetBytes(ToJsonString(target)));
                 fileStream.Close();
-                Program.Debug(DebugType.Info, $"Saved File {path}");
+                if (debugMessage)
+                    Program.Debug(DebugType.Info, $"Saved File {path}");
             }
             catch(Exception e)
             {
+                
                 Program.Debug(DebugType.Error, $"Saving File \"{path}\" Failure:\n{e.Message}");
             }
         }

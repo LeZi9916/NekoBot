@@ -27,7 +27,7 @@ namespace TelegramBot
             var count = CPULoadHistory.Count;
             var _5minLoads = CPULoadHistory.Skip(Math.Max(0,count - 300)).Sum();
             var _10minLoads = CPULoadHistory.Skip(Math.Max(0,count - 600)).Sum();
-            var _15minLoads = CPULoadHistory.Sum();
+            var _15minLoads = CPULoadHistory.Skip(Math.Max(0, count - 900)).Sum();
 
             _5CPULoad = (int)((_5minLoads / 300) * 100);
             _10CPULoad = (int)((_10minLoads / 600) * 100);

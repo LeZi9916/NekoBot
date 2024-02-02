@@ -18,7 +18,7 @@ namespace TelegramBot
             {
                 if (replyMessage is null)
                 {
-                    SendMessage("请指明需要修改的用户喵", update);
+                    GetHelpInfo(command,update,querier);
                     return;
                 }
                 target = Config.SearchUser(replyMessage.From.Id);
@@ -66,7 +66,7 @@ namespace TelegramBot
             {
                 if (replyMessage is null)
                 {
-                    SendMessage("请指明需要修改的用户喵", update);
+                    GetHelpInfo(command, update, querier);
                     return;
                 }
                 target = Config.SearchUser(replyMessage.From.Id);
@@ -107,14 +107,14 @@ namespace TelegramBot
         }
         static void GetUserInfo(Command command, Update update,TUser querier)
         {
-            var isGroup = update.Message.Chat.Type is ChatType.Group;
+            var isGroup = update.Message.Chat.Type is (ChatType.Group or ChatType.Supergroup);
             var id = (update.Message.ReplyToMessage is not null ? (update.Message.ReplyToMessage.From ?? update.Message.From) : update.Message.From).Id;
 
             if (command.Content.Length > 0)
             {
                 if (!long.TryParse(command.Content[0], out id))
                 {
-                    SendMessage("userId错误，请仔细检查喵~", update);
+                    GetHelpInfo(command, update, querier);
                     return;
                 }
             }
@@ -248,6 +248,130 @@ namespace TelegramBot
                 $"-5分钟平均CPU占用率: {Monitor._5CPULoad}%\n" +
                 $"-10分钟平均CPU占用率: {Monitor._10CPULoad}%\n" +
                 $"-15分钟平均CPU占用率: {Monitor._15CPULoad}%\n"),update,true,ParseMode.MarkdownV2);
+        }
+        static async void GetBotLog(Command command, Update update, TUser querier)
+        {
+            var message = update.Message;
+            var chat = update.Message.Chat;
+            var isPrivate = chat.Type is ChatType.Private;
+            if(!isPrivate)
+            {
+                SendMessage("喵呜呜", update, true);
+                return;
+            }
+            if(!querier.CheckPermission(Permission.Root))
+            {
+                SendMessage("喵?", update, true);
+                return;
+            }
+
+            await UploadFile(Config.LogFile,chat.Id);
+        }
+        static void BotConfig(Command command, Update update, TUser querier)
+        {
+            if(update.Message.Chat.Type is not (ChatType.Group or ChatType.Supergroup))
+            {
+                SendMessage("此功能只能在Group里面使用喵x",update);
+                return;
+            }
+            if(!querier.CheckPermission(Permission.Admin))
+            {
+                SendMessage($"很抱歉，您不能修改bot的设置喵", update);
+                return;
+            }
+            if(command.Content.Length < 2)
+            {
+                GetHelpInfo(command, update, querier);
+                return;
+            }
+
+            var group = Config.SearchGroup(update.Message.Chat.Id);
+            string prefix = command.Content[0].ToLower();
+            bool boolValue;
+            switch(prefix)
+            {
+                case "forcecheckreference":
+                    if (bool.TryParse(command.Content[1], out boolValue))
+                    {
+                        group.Setting.ForceCheckReference = boolValue;
+                        SendMessage($"已将ForceCheckReference属性修改为*{boolValue}*",update,true,ParseMode.MarkdownV2);
+                        Config.SaveData();
+                    }
+                    else
+                        GetHelpInfo(command, update, querier);
+                    break;
+            }
+        }
+        static void GetHelpInfo(Command command, Update update, TUser querier)
+        {
+            var isPrivate = update.Message.Chat.Type is ChatType.Private;
+            string helpStr = "```bash\n";
+            switch (command.Prefix)
+            {
+                case CommandType.Add:
+                    helpStr += StringHandle(
+                        "/add 命令的用法:\n" +
+                        "\n/add                           允许reply对象访问bot" +
+                        "\n/add             <TGUserId>    允许指定用户访问bot");
+                    break;
+                case CommandType.Ban:
+                    helpStr += StringHandle(
+                        "/ban 命令的用法:\n" +
+                        "\n/ban                           封禁reply对象" +
+                        "\n/ban             <TGUserId>    封禁指定用户");
+                    break;
+                case CommandType.Status:
+                    return;
+                case CommandType.Info:
+                    helpStr += StringHandle(
+                        "/info 命令的用法:\n" +
+                        "\n/info                          获取reply对象的用户信息" +
+                        "\n/info            <TGUserId>    获取指定用户的用户信息");
+                    break;
+                case CommandType.Promote:
+                    helpStr += StringHandle(
+                        "/promote 命令的用法:\n" +
+                        "\n/promote                       提升reply对象的权限等级" +
+                        "\n/promote         <TGUserId>    提升指定用户的权限等级");
+                    break;
+                case CommandType.Demote:
+                    helpStr += StringHandle(
+                        "/demote 命令的用法:\n" +
+                        "\n/demote                        降低reply对象的权限等级" +
+                        "\n/demote          <TGUserId>    降低指定用户的权限等级");
+                    break;
+                case CommandType.Help:
+                    helpStr += StringHandle(
+                        "\n相关命令：\n" +
+                        "\n/add             <TGUserId>    允许指定用户访问bot" +
+                        "\n/ban             <TGUserId>    禁止指定用户访问bot" +
+                        "\n/info            <TGUserId>    获取指定用户信息" +
+                        "\n/promote         <TGUserId>    提升指定用户权限" +
+                        "\n/demote          <TGUserId>    降低指定用户权限" +
+                        "\n/status                        显示bot服务器状态" +
+                        "\n/logs                          获取本次运行日志" +
+                        "\n/help                          显示帮助信息\n");
+
+                    if (isPrivate && querier.CheckPermission(Permission.Advanced))
+                    {
+                        helpStr +=
+                            "\n/mai bind      [QRCode|Image]  使用二维码进行绑定" +
+                            "\n/mai 2userId                   解析带有\"SGWCMAID\"前缀的神秘代码" +
+                            "\n/mai info                      获取账号信息" +
+                            "\n/mai logout                    登出";
+                    }
+                    break;
+                case CommandType.Mai:
+                    helpStr += StringHandle(
+                            "/mai 命令的用法：\n" +
+                            "\n/mai bind      [QRCode|Image]  使用二维码进行绑定" +
+                            "\n/mai 2userId                   解析带有\"SGWCMAID\"前缀的神秘代码" +
+                            "\n/mai info                      获取账号信息" +
+                            "\n/mai logout                    登出");
+                    break;
+            }
+            helpStr += "\n```";
+            SendMessage(helpStr, update, true, ParseMode.MarkdownV2);
         }
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
         

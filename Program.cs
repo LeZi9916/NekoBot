@@ -22,14 +22,13 @@ namespace TelegramBot
         static string Token = "6872337338:AAEylSFo-QmT0B49_q_oF3Cy6ah6PbxkCxI";
         static string BotUsername = "ZzyFuckComputerbot";
         static DateTime startTime;
-        static Stopwatch stopwatch = new Stopwatch();
         static void Main(string[] args)
         {
             Monitor.Init();
             Config.Init();
+            MaiMonitor.Init();
             startTime = DateTime.Now;
             botClient = new TelegramBotClient(Token);
-
             botClient.StartReceiving(
                 updateHandler: UpdateHandleAsync,
                 pollingErrorHandler: HandlePollingErrorAsync,
@@ -42,12 +41,15 @@ namespace TelegramBot
             while(true)
                 Console.ReadKey();
         }
-        static async Task MessageHandleAsync(ITelegramBotClient botClient, Update update)
+        static async void MessageHandleAsync(ITelegramBotClient botClient, Update update)
         {
             await Task.Run(() =>
             {
+                Stopwatch stopwatch = new();
+                stopwatch.Reset();
+                stopwatch.Start();
                 try
-                {
+                {                    
                     var message = update.Message;
                     var chat = message.From;
                     var userId = message.From.Id;
@@ -65,12 +67,14 @@ namespace TelegramBot
                 {
                     Debug(DebugType.Error, $"Failure to receive message : \n{e.Message}\n{e.StackTrace}");
                 }
+                stopwatch.Stop();
+                Config.TotalHandleCount++;
+                Config.TimeSpentList.Add((int)stopwatch.ElapsedMilliseconds);
             });
         }
         static async Task UpdateHandleAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            stopwatch.Reset();
-            stopwatch.Start();
+            
             try
             {
                 FindUser(update);
@@ -79,7 +83,7 @@ namespace TelegramBot
                 switch (update.Type)
                 {
                     case UpdateType.Message:
-                        await MessageHandleAsync(botClient, update);
+                        MessageHandleAsync(botClient, update);
                         break;
                     case UpdateType.InlineQuery:
                         break;
@@ -118,9 +122,8 @@ namespace TelegramBot
                 Debug(DebugType.Error, $"Failure to handle message : \n{e.Message}\n{e.StackTrace}");
                 return;
             }            
-            stopwatch.Stop();
-            Config.TotalHandleCount++;
-            Config.TimeSpentList.Add((int)stopwatch.ElapsedMilliseconds);
+            
+            await Task.Delay(0);
         }
         static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception e, CancellationToken cancellationToken)
         {
