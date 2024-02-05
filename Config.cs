@@ -6,9 +6,12 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot.Types.Enums;
+using static TelegramBot.MaiScanner;
+using static TelegramBot.MaiDatabase;
 
 namespace TelegramBot
 {
@@ -39,8 +42,33 @@ namespace TelegramBot
         }
         public Permission Level { get; set; } = Permission.Common;
         public int? MaiUserId { get; set; } = null;
+        public bool isBanned => Level <= Permission.Ban; 
+        public bool isUnknow => Level == Permission.Unknow; 
+        [JsonIgnore]
+        public MaiAccount Account { get; set; }
+        public async Task<bool> GetMaiAccountInfo()
+        {
+            return await Task.Run(() =>
+            {
+                if (MaiUserId is null)
+                    return false;
 
-        public bool CheckPermission(Permission targetLevel) => Level >= targetLevel ? true : false;
+                var userid = (int)MaiUserId;
+                var result = MaiAccountList.Where(x => x.userId == userid);
+
+                if (result.Count() == 0)
+                    return false;
+
+                Account = result.ToArray()[0];
+                return true;
+            });
+        }
+        public bool CheckPermission(Permission targetLevel,Group group = null)
+        {
+            if (group is not null && group.Level >= targetLevel)
+                return true;
+            return Level >= targetLevel;
+        }
         public void SetPermission(Permission targetLevel)
         {
             Level = targetLevel;
@@ -52,6 +80,12 @@ namespace TelegramBot
         public long GroupId { get; set; }
         public Setting Setting { get; set; } = new();
         public List<Filter> Rule { get; set; } = new();
+        public Permission Level { get; set; } = Permission.Common;
+        public void SetPermission(Permission targetLevel)
+        {
+            Level = targetLevel;
+            Config.SaveData();
+        }
     }
     class Filter
     {
@@ -63,7 +97,7 @@ namespace TelegramBot
     }
     class Setting
     {
-        public bool ForceCheckReference { get; set; } = false;
+        public bool ForceCheckReference { get; set; } = true;
         public bool Listen { get; set; } = true;
     }
     internal static class Config
@@ -72,22 +106,22 @@ namespace TelegramBot
         static string AppPath = Environment.CurrentDirectory;
         static string LogsPath = Path.Combine(AppPath, "logs");
         internal static string DatabasePath = Path.Combine(AppPath, "Database");
-        public static string TempPath = Path.Combine(AppPath, "Temp");
+        internal static string TempPath = Path.Combine(AppPath, "Temp");
         internal static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
 
-        public static bool EnableAutoSave = true;
-        public static int AutoSaveInterval = 300000;
+        internal static bool EnableAutoSave = true;
+        internal static int AutoSaveInterval = 900000;
 
-        public static long TotalHandleCount = 0;
-        public static List<long> TimeSpentList = new();
+        internal static long TotalHandleCount = 0;
+        internal static List<long> TimeSpentList = new();
 
-        public static List<long> GroupIdList = new();
-        public static List<Group> GroupList = new();
+        internal static List<long> GroupIdList = new();
+        internal static List<Group> GroupList = new();
 
         static Mutex mutex = new();
 
-        public static List<long> UserIdList = new() { 1136680302 };
-        public static List<TUser> TUserList = new()
+        internal static List<long> UserIdList = new() { 1136680302 };
+        internal static List<TUser> TUserList = new()
         {
             new TUser()
             {
@@ -96,9 +130,9 @@ namespace TelegramBot
                 LastName = null,
                 Level = Permission.Root
             }
-        };
+        };        
 
-        public static List<KeyChip> keyChips = new() 
+        internal static List<KeyChip> keyChips = new() 
         {
             new KeyChip()
             {
@@ -133,6 +167,11 @@ namespace TelegramBot
                 GroupList = Load<List<Group>>(Path.Combine(DatabasePath, "GroupList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "GroupIdList.data")))
                 GroupIdList = Load<List<long>>(Path.Combine(DatabasePath, "GroupIdList.data"));
+            if (File.Exists(Path.Combine(DatabasePath, "MaiAccountList.data")))
+                MaiAccountList = Load<List<MaiAccount>>(Path.Combine(DatabasePath, "MaiAccountList.data"));
+            if (File.Exists(Path.Combine(DatabasePath, "MaiInvaildUserIdList.data")))
+                MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvaildUserIdList.data"));
+            MaiDataInit();
             AutoSave();
         }
         public static Group SearchGroup(long groupId)
@@ -176,6 +215,8 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "TimeSpentList.data"), TimeSpentList);
             Save(Path.Combine(DatabasePath, "GroupList.data"), GroupList);
             Save(Path.Combine(DatabasePath, "GroupIdList.data"), GroupIdList);
+            Save(Path.Combine(DatabasePath, "MaiAccountList.data"), MaiAccountList);
+            Save(Path.Combine(DatabasePath, "MaiInvaildUserIdList.data"), MaiInvaildUserIdList);
         }
         public static void WriteLog(string s)
         {
@@ -191,7 +232,9 @@ namespace TelegramBot
                 Directory.CreateDirectory(DatabasePath);
             if (!Directory.Exists(TempPath))
                 Directory.CreateDirectory(TempPath);
-        }
+        }        
+
+
         public static void Save<T>(string path,T target,bool debugMessage = true)
         {
             try

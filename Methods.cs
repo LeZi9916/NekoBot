@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
@@ -9,7 +10,7 @@ namespace TelegramBot
 {
     internal partial class Program
     {
-        static void AddUser(Command command, Update update, TUser querier)
+        static void AddUser(Command command, Update update, TUser querier, Group group = null)
         {
             var replyMessage = update.Message.ReplyToMessage;
             TUser target = null; 
@@ -57,7 +58,7 @@ namespace TelegramBot
                 SendMessage($"欢迎新朋友~", update);
             }
         }
-        static void BanUser(Command command, Update update, TUser querier)
+        static void BanUser(Command command, Update update, TUser querier, Group group = null)
         {
             var replyMessage = update.Message.ReplyToMessage;
             TUser target = null;
@@ -105,7 +106,7 @@ namespace TelegramBot
                 SendMessage($"已经将坏蛋踢出去了喵", update);
             }
         }
-        static void GetUserInfo(Command command, Update update,TUser querier)
+        static void GetUserInfo(Command command, Update update,TUser querier, Group group = null)
         {
             var isGroup = update.Message.Chat.Type is (ChatType.Group or ChatType.Supergroup);
             var id = (update.Message.ReplyToMessage is not null ? (update.Message.ReplyToMessage.From ?? update.Message.From) : update.Message.From).Id;
@@ -136,7 +137,7 @@ namespace TelegramBot
                     $"Permission: {target.Level}\n" +
                     $"MaiUserId: {(isGroup ? target.MaiUserId is null ? "未绑定" : "喵" : target.MaiUserId is null ? "未绑定" : target.MaiUserId)}", update);
         }
-        static void SetUserPermission(Command command, Update update, TUser querier,int diff)
+        static void SetUserPermission(Command command, Update update, TUser querier,int diff, Group group = null)
         {
             var replyMessage = update.Message.ReplyToMessage;
             Func<Permission,TUser, bool> canPromote = (s,user) => 
@@ -181,7 +182,12 @@ namespace TelegramBot
                 {
                     SendMessage($"喵不认识这个人xAx", update);
                     return;
-                }    
+                }
+                if(target.isUnknow)
+                {
+                    SendMessage($"无效操作喵", update);
+                    return;
+                }
                 if (canPromote(targetLevel, querier))
                 {
                     if(targetLevel < Permission.Ban)
@@ -249,7 +255,7 @@ namespace TelegramBot
                 $"-10分钟平均CPU占用率: {Monitor._10CPULoad}%\n" +
                 $"-15分钟平均CPU占用率: {Monitor._15CPULoad}%\n"),update,true,ParseMode.MarkdownV2);
         }
-        static async void GetBotLog(Command command, Update update, TUser querier)
+        static async void GetBotLog(Command command, Update update, TUser querier, Group group = null)
         {
             var message = update.Message;
             var chat = update.Message.Chat;
@@ -267,14 +273,14 @@ namespace TelegramBot
 
             await UploadFile(Config.LogFile,chat.Id);
         }
-        static void BotConfig(Command command, Update update, TUser querier)
+        static void BotConfig(Command command, Update update, TUser querier, Group group = null)
         {
-            if(update.Message.Chat.Type is not (ChatType.Group or ChatType.Supergroup))
+            if(group is null)
             {
                 SendMessage("此功能只能在Group里面使用喵x",update);
                 return;
             }
-            if(!querier.CheckPermission(Permission.Admin))
+            if(!querier.CheckPermission(Permission.Admin, group))
             {
                 SendMessage($"很抱歉，您不能修改bot的设置喵", update);
                 return;
@@ -285,7 +291,6 @@ namespace TelegramBot
                 return;
             }
 
-            var group = Config.SearchGroup(update.Message.Chat.Id);
             string prefix = command.Content[0].ToLower();
             bool boolValue;
             switch(prefix)
@@ -302,7 +307,7 @@ namespace TelegramBot
                     break;
             }
         }
-        static void GetHelpInfo(Command command, Update update, TUser querier)
+        static void GetHelpInfo(Command command, Update update, TUser querier, Group group = null)
         {
             var isPrivate = update.Message.Chat.Type is ChatType.Private;
             string helpStr = "```bash\n";
@@ -356,7 +361,7 @@ namespace TelegramBot
                     {
                         helpStr +=
                             "\n/mai bind      [QRCode|Image]  使用二维码进行绑定" +
-                            "\n/mai 2userId                   解析带有\"SGWCMAID\"前缀的神秘代码" +
+                            "\n/mai status                    查看DX服务器状态" +
                             "\n/mai info                      获取账号信息" +
                             "\n/mai logout                    登出";
                     }
@@ -365,7 +370,7 @@ namespace TelegramBot
                     helpStr += StringHandle(
                             "/mai 命令的用法：\n" +
                             "\n/mai bind      [QRCode|Image]  使用二维码进行绑定" +
-                            "\n/mai 2userId                   解析带有\"SGWCMAID\"前缀的神秘代码" +
+                            "\n/mai status                    查看DX服务器状态" +
                             "\n/mai info                      获取账号信息" +
                             "\n/mai logout                    登出");
                     break;
@@ -376,5 +381,98 @@ namespace TelegramBot
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
         
     }
-    
+    internal partial class Program
+    {
+        static void AdvancedCommandHandle(Command command, Update update, TUser querier, Group group = null)
+        {
+            if (!querier.CheckPermission(Permission.Root))
+            {
+                SendMessage("喵?", update);
+                return;
+            }
+
+            var suffix = command.Content[0];
+            command.Content = command.Content.Skip(1).ToArray();
+            switch (suffix)
+            {
+                case "permission":
+                    UserPermissionModify(command, update, querier);
+                    break;
+                //case "maiuserid":
+                //    SetScannerUpdate(command, update, querier);
+                //    break;
+            }
+        }
+        static void UserPermissionModify(Command command, Update update, TUser querier)
+        {
+            var chat = update.Message.Chat;
+            var chatType = chat.Type;
+            var isGroup = chatType is (ChatType.Group or ChatType.Supergroup);
+
+            long userId = 0;
+            int targetLevel = 0;
+            if(command.Content.Length < 2)
+            {
+                SendMessage("缺少参数喵x", update);
+                return;
+            }
+            if (!long.TryParse(command.Content[0], out userId))
+            {
+                if (command.Content[0] == "group")
+                {
+                    userId = -1;
+                    if(!isGroup)
+                    {
+                        SendMessage($"此参数仅对Group有效x", update);
+                        return;
+                    }
+                }
+                else
+                {
+                    SendMessage($"\"{command.Content[0]}\"不是有效的参数x",update);
+                    return;
+                }
+            }
+            if(!int.TryParse(command.Content[1], out targetLevel))
+            {
+                SendMessage($"\"{command.Content[1]}\"不是有效的参数x", update);
+                return;
+            }
+            else if(targetLevel > (int)Permission.Admin || targetLevel < (int)Permission.Unknow)
+            {
+                SendMessage($"没有这个权限喵QAQ", update);
+                return;
+            }
+
+            if(userId == -1)
+            {
+                var group = Config.SearchGroup(chat.Id);
+                if(group is null)
+                {
+                    SendMessage("发送内部错误QAQ", update);
+                    return;
+                }
+
+                group.SetPermission((Permission)targetLevel);
+                SendMessage($"已将该群组的权限修改为*{(Permission)targetLevel}*喵",update,true,ParseMode.MarkdownV2);
+                Config.SaveData();
+            }
+            else
+            {
+                var user = Config.SearchUser(userId);
+                if (user is null)
+                {
+                    SendMessage("发送内部错误QAQ", update);
+                    return;
+                }
+
+                user.SetPermission((Permission)targetLevel);
+                SendMessage($"已将*{StringHandle(user.Name)}*的权限修改为*{(Permission)targetLevel}*喵", update, true, ParseMode.MarkdownV2);
+                Config.SaveData();
+            }
+
+        }
+    }
+
+
 }

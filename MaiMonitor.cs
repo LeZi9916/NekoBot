@@ -1,9 +1,12 @@
 ﻿using AquaTools;
+using AquaTools.Requests;
+using AquaTools.Responses;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,8 +42,10 @@ namespace TelegramBot
 
         public static long TotalRequestCount = 0;
         public static long TimeoutRequestCount = 0;
+        public static long OtherErrorCount = 0;
         public static double CompressSkipRate = 0;// 跳过率
         public static long CompressSkipRequestCount = 0;
+        public static HttpStatusCode LastResponseStatusCode;
 
         const string TitleServer = "maimai-gm.wahlap.com";
         const string OAuthServer = "tgk-wcaime.wahlap.com";
@@ -64,7 +69,7 @@ namespace TelegramBot
             {
                 for(; ; )
                 {
-                    if (DateTime.Today.AddHours(4) <= DateTime.Now && DateTime.Now <= DateTime.Today.AddHours(7))
+                    if (DateTime.Today.AddHours(4) <= DateTime.Now && DateTime.Now <= DateTime.Today.AddHours(9))
                     {
                         TitleServerDelay = -1;
                         OAuthServerDelay = -1;
@@ -78,6 +83,7 @@ namespace TelegramBot
                     }
 
                     var response = Aqua.TestPostAsync(Config.keyChips[0]).Result;
+                    LastResponseStatusCode = response.Object.StatusCode;
                     TotalRequestCount++;
                     Task.Run(() => 
                     {
@@ -108,12 +114,14 @@ namespace TelegramBot
                         ServiceAvailability = true;
                     }
 
-                    if (response.Object.StatusCode == System.Net.HttpStatusCode.BadGateway)
+                    if (LastResponseStatusCode == HttpStatusCode.GatewayTimeout)
                         TimeoutRequestCount++;
-                    else if (response.Object.CompressSkip)
+                    else if(LastResponseStatusCode != HttpStatusCode.OK)
+                        OtherErrorCount++;
+                    if (response.Object.CompressSkip)
                         CompressSkipRequestCount++;
 
-                    CompressSkipRate = (double)CompressSkipRequestCount / (TotalRequestCount == 0 ? 1 : (TotalRequestCount - TimeoutRequestCount));
+                    CompressSkipRate = (double)CompressSkipRequestCount / (TotalRequestCount - TimeoutRequestCount - OtherErrorCount);
                     if (FaultIntervalList.Count != 0)
                         FaultInterval = FaultIntervalList.Sum() / FaultIntervalList.Count();
 
@@ -121,7 +129,7 @@ namespace TelegramBot
                     Config.Save(Path.Combine(Config.DatabasePath, "LastFailureTime.data"), LastFailureTime,false);
                     
 
-                    Thread.Sleep(3000);
+                    Thread.Sleep(5000);
                 }
             });
         }
@@ -129,31 +137,31 @@ namespace TelegramBot
         {
             var result = PingLogs.Where(x => x.Type == type).Select(x => x.Delay);
             var count = result.Count();
-            if (count == 0)
+            if (count < 60)
                 return -1;
-            var match = result.Skip(Math.Max(0, count - 100)).Sum();
+            var match = result.Skip(Math.Max(0, count - 60)).Sum();
 
-            return match / 100;
+            return match / 60;
         }
         public static long Get10minAvgPing(ServerType type)
         {
             var result = PingLogs.Where(x => x.Type == type).Select(x => x.Delay);
             var count = result.Count();
-            if (count == 0)
+            if (count < 120)
                 return -1;
-            var match = result.Skip(Math.Max(0, count - 200)).Sum();
+            var match = result.Skip(Math.Max(0, count - 120)).Sum();
 
-            return match / 200;
+            return match / 120;
         }
         public static long Get15minAvgPing(ServerType type)
         {
             var result = PingLogs.Where(x => x.Type == type).Select(x => x.Delay);
             var count = result.Count();
-            if (count == 0)
+            if (count < 160)
                 return -1;
-            var match = result.Skip(Math.Max(0, count - 300)).Sum();
+            var match = result.Skip(Math.Max(0, count - 160)).Sum();
 
-            return match / 300;
+            return match / 160;
         }
         static long TCPing(string host,int port)
         {
@@ -177,5 +185,6 @@ namespace TelegramBot
             stopwatch.Stop();
             return -1;
         }
+        
     }
 }

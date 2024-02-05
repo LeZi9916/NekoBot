@@ -6,6 +6,8 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using System.Diagnostics;
+using System.Net.Http;
+using System.Net;
 
 namespace TelegramBot
 {
@@ -28,8 +30,16 @@ namespace TelegramBot
             Config.Init();
             MaiMonitor.Init();
             startTime = DateTime.Now;
-            botClient = new TelegramBotClient(Token);
-            botClient.StartReceiving(
+            HttpClient httpClient = new(new SocketsHttpHandler 
+            { 
+                Proxy = new WebProxy("socks5://192.168.31.3:8080")
+                {
+                    Credentials = new NetworkCredential("", "")
+                }, 
+                UseProxy = true, 
+            });
+            botClient = new TelegramBotClient(Token, httpClient);
+            botClient.ReceiveAsync(
                 updateHandler: UpdateHandleAsync,
                 pollingErrorHandler: HandlePollingErrorAsync,
                 receiverOptions: new ReceiverOptions()
@@ -55,7 +65,7 @@ namespace TelegramBot
                     var userId = message.From.Id;
 
                     var text = message.Text is null ? message.Caption ?? "" : message.Text;
-                    CommandPreHandle(text.Split(" "), update);
+                    CommandPreHandle(text.Split(" ",StringSplitOptions.RemoveEmptyEntries), update);
 
                     Debug(DebugType.Info, $"Received message:\n" +
                         $"Chat Type: {message.Chat.Type}\n" +
@@ -73,8 +83,7 @@ namespace TelegramBot
             });
         }
         static async Task UpdateHandleAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
-        {
-            
+        {            
             try
             {
                 FindUser(update);

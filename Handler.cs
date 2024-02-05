@@ -36,6 +36,7 @@ namespace TelegramBot
             Mai,
             Logs,
             Config,
+            Set,
             Unknow
         }
         struct Command
@@ -71,6 +72,8 @@ namespace TelegramBot
                         return CommandType.Config;
                     case "logs":
                         return CommandType.Logs;
+                    case "set":
+                        return CommandType.Set;
                     default:
                         return CommandType.Unknow;
                 }
@@ -88,7 +91,7 @@ namespace TelegramBot
 
 
             
-            if (string.IsNullOrEmpty(param[0]))
+            if (param.Length == 0  || string.IsNullOrEmpty(param[0]))
                 return;
             if (param[0].Substring(0, 1) != "/")
             {
@@ -106,24 +109,22 @@ namespace TelegramBot
                 if (!(_param.Length == 2 && _param[1] == BotUsername))
                     return;
 
-            if (!user.CheckPermission(Permission.Common))
-            {
-                if (chat.Type is ChatType.Private)
+            if(!user.CheckPermission(Permission.Root))
+                if (!user.CheckPermission(Permission.Common,group))
+                {
                     SendMessage("很抱歉，您不能使用该Bot哦~", update);
-                else
-                    SendMessage("很抱歉，您不能使用该Bot哦~", update);
-                Debug(DebugType.Info, "Banned user access,rejected");
-                return;
-            }
+                    Debug(DebugType.Info, "Banned user access,rejected");
+                    return;
+                }
 
             Command command = new();
 
             command.Prefix = Command.GetCommandType(prefix);
             command.Content = param.Skip(1).ToArray();
-            CommandHandle(command, update,user);
+            CommandHandle(command, update,user,group);
             
         }
-        static void CommandHandle(Command command,Update update,TUser querier)
+        static void CommandHandle(Command command,Update update,TUser querier,Group group)
         {
             var message = update.Message;
             var isPrivate = update.Message.Chat.Type is ChatType.Private;
@@ -135,38 +136,40 @@ namespace TelegramBot
                         "\n请输入 /help 以获得更多信息", update,true);
                     break;
                 case CommandType.Add:
-                    AddUser(command, update, querier);
+                    AddUser(command, update, querier, group);
                     break;
                 case CommandType.Ban:
-                    BanUser(command, update, querier);
+                    BanUser(command, update, querier, group);
                     break;
                 case CommandType.Status:
                     GetSystemInfo(command, update);
                     break;
                 case CommandType.Info:
-                    GetUserInfo(command, update, querier);
+                    GetUserInfo(command, update, querier, group);
                     break;
                 case CommandType.Promote:
-                    SetUserPermission(command, update, querier,1);
+                    SetUserPermission(command, update, querier, 1, group);
                     break;
                 case CommandType.Demote:
-                    SetUserPermission(command, update, querier, -1);
+                    SetUserPermission(command, update, querier, -1, group);
                     break;
                 case CommandType.Config:
-                    BotConfig(command, update, querier);
+                    BotConfig(command, update, querier, group);
                     break;
                 case CommandType.Help:
-                    GetHelpInfo(command, update, querier);
+                    GetHelpInfo(command, update, querier, group);
                     break;
                 case CommandType.Logs:
-                    GetBotLog(command, update, querier);
+                    GetBotLog(command, update, querier, group);
+                    break;
+                case CommandType.Set:
+                    AdvancedCommandHandle(command, update, querier, group);
                     break;
                 case CommandType.Mai:
-                    MaiCommandHandle(command, update, querier);
+                    MaiCommandHandle(command, update, querier, group);
                     break;
             }
         }
-        
         static void FilterGroupMessage(string content, Update update, TUser querier)
         {
             var chat = update.Message?.Chat ?? update.EditedMessage?.Chat;
