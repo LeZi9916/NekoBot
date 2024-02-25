@@ -315,64 +315,74 @@ namespace TelegramBot
             {
                 case CommandType.Add:
                     helpStr += StringHandle(
-                        "/add 命令的用法:\n" +
-                        "\n/add                           允许reply对象访问bot" +
-                        "\n/add             <TGUserId>    允许指定用户访问bot");
+                        "命令用法:\n" +
+                        "\n/add             允许reply对象访问bot" +
+                        "\n/add [TGUserId]  允许指定用户访问bot");
                     break;
                 case CommandType.Ban:
                     helpStr += StringHandle(
-                        "/ban 命令的用法:\n" +
-                        "\n/ban                           封禁reply对象" +
-                        "\n/ban             <TGUserId>    封禁指定用户");
+                        "命令用法:\n" +
+                        "\n/ban             封禁reply对象" +
+                        "\n/ban [TGUserId]  封禁指定用户");
                     break;
                 case CommandType.Status:
                     return;
                 case CommandType.Info:
                     helpStr += StringHandle(
-                        "/info 命令的用法:\n" +
-                        "\n/info                          获取reply对象的用户信息" +
-                        "\n/info            <TGUserId>    获取指定用户的用户信息");
+                        "命令用法:\n" +
+                        "\n/info             获取reply对象的用户信息" +
+                        "\n/info [TGUserId]  获取指定用户的用户信息");
                     break;
                 case CommandType.Promote:
                     helpStr += StringHandle(
-                        "/promote 命令的用法:\n" +
-                        "\n/promote                       提升reply对象的权限等级" +
-                        "\n/promote         <TGUserId>    提升指定用户的权限等级");
+                        "命令用法:\n" +
+                        "\n/promote             提升reply对象的权限等级" +
+                        "\n/promote [TGUserId]  提升指定用户的权限等级");
                     break;
                 case CommandType.Demote:
                     helpStr += StringHandle(
-                        "/demote 命令的用法:\n" +
-                        "\n/demote                        降低reply对象的权限等级" +
-                        "\n/demote          <TGUserId>    降低指定用户的权限等级");
+                        "命令用法:\n" +
+                        "\n/demote             降低reply对象的权限等级" +
+                        "\n/demote [TGUserId]  降低指定用户的权限等级");
                     break;
                 case CommandType.Help:
                     helpStr += StringHandle(
                         "\n相关命令：\n" +
-                        "\n/add             <TGUserId>    允许指定用户访问bot" +
-                        "\n/ban             <TGUserId>    禁止指定用户访问bot" +
-                        "\n/info            <TGUserId>    获取指定用户信息" +
-                        "\n/promote         <TGUserId>    提升指定用户权限" +
-                        "\n/demote          <TGUserId>    降低指定用户权限" +
-                        "\n/status                        显示bot服务器状态" +
-                        "\n/logs                          获取本次运行日志" +
-                        "\n/help                          显示帮助信息\n");
-
-                    if (isPrivate && querier.CheckPermission(Permission.Advanced))
-                    {
-                        helpStr +=
-                            "\n/mai bind      [QRCode|Image]  使用二维码进行绑定" +
-                            "\n/mai status                    查看DX服务器状态" +
-                            "\n/mai info                      获取账号信息" +
-                            "\n/mai logout                    登出";
-                    }
+                        "\n/add     [TGUserId]  允许指定用户访问bot" +
+                        "\n/ban     [TGUserId]  禁止指定用户访问bot" +
+                        "\n/info    [TGUserId]  获取指定用户信息" +
+                        "\n/promote [TGUserId]  提升指定用户权限" +
+                        "\n/demote  [TGUserId]  降低指定用户权限" +
+                        "\n/status              显示bot服务器状态" +
+                        "\n/logs                获取本次运行日志" +
+                        "\n/maistatus           查看土豆服务器状况" +
+                        "\n/set     [Command]   权限狗专用" +
+                        "\n/help                显示帮助信息\n");
                     break;
                 case CommandType.Mai:
                     helpStr += StringHandle(
-                            "/mai 命令的用法：\n" +
-                            "\n/mai bind      [QRCode|Image]  使用二维码进行绑定" +
-                            "\n/mai status                    查看DX服务器状态" +
-                            "\n/mai info                      获取账号信息" +
-                            "\n/mai logout                    登出");
+                            "命令用法：\n" +
+                            "\n/mai bind image        上传二维码并进行绑定" +
+                            "\n/mai bind [String]     使用SDWC标识符进行绑定" +
+                            "\n/mai region            获取登录地区信息" +
+                            "\n/mai rank              获取国服排行榜" +
+                            "\n/mai rank refresh      重新加载排行榜" +
+                            "\n/mai status            查看DX服务器状态" +
+                            "\n/mai backup [String]   使用密码备份账号数据" +
+                            "\n/mai info              获取账号信息" +
+                            "\n/mai ticket [id]       获取一张指定类型的票" +
+                            "\n/mai ticket [id] [num] 获取指定数量的票" +
+                            "\n/mai sync              强制刷新账号信息" +
+                            "\n/mai logout            登出");
+                    break;
+                case CommandType.MaiScanner:
+                    helpStr += StringHandle(
+                            "命令用法：\n" +
+                            "\n/maiscanner status       获取扫描器状态" +
+                            "\n/maiscanner update [int] 从指定位置更新数据库" +
+                            "\n/maiscanner update       更新数据库" +
+                            "\n/maiscanner stop         终止当前任务" +
+                            "\n/maiscanner set [int]    设置QPS限制");
                     break;
             }
             helpStr += "\n```";

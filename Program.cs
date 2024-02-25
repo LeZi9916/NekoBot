@@ -21,7 +21,7 @@ namespace TelegramBot
     internal partial class Program
     {
         static TelegramBotClient botClient;
-        static string Token = "6872337338:AAEylSFo-QmT0B49_q_oF3Cy6ah6PbxkCxI";
+        internal static string Token = "";
         static string BotUsername = "ZzyFuckComputerbot";
         static DateTime startTime;
         static void Main(string[] args)

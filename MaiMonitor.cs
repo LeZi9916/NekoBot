@@ -45,6 +45,7 @@ namespace TelegramBot
         public static long OtherErrorCount = 0;
         public static double CompressSkipRate = 0;// 跳过率
         public static long CompressSkipRequestCount = 0;
+        public static List<long> CompressSkipLogs = new();
         public static HttpStatusCode LastResponseStatusCode;
 
         const string TitleServer = "maimai-gm.wahlap.com";
@@ -78,6 +79,9 @@ namespace TelegramBot
                         TotalRequestCount = 0;
                         TimeoutRequestCount = 0;
                         CompressSkipRate = 0;
+                        OtherErrorCount = 0;
+                        CompressSkipRequestCount = 0;
+                        CompressSkipLogs.Clear();
                         PingLogs.Clear();
                         continue;
                     }
@@ -119,7 +123,12 @@ namespace TelegramBot
                     else if(LastResponseStatusCode != HttpStatusCode.OK)
                         OtherErrorCount++;
                     if (response.Object.CompressSkip)
+                    {
                         CompressSkipRequestCount++;
+                        CompressSkipLogs.Add(1);
+                    }
+                    else
+                        CompressSkipLogs.Add(0);
 
                     CompressSkipRate = (double)CompressSkipRequestCount / (TotalRequestCount - TimeoutRequestCount - OtherErrorCount);
                     if (FaultIntervalList.Count != 0)
@@ -133,35 +142,47 @@ namespace TelegramBot
                 }
             });
         }
-        public static long Get5minAvgPing(ServerType type)
+        public static long[] GetAvgPing(ServerType type)
         {
+            long _5min = -1;
+            long _10min = -1;
+            long _15min = -1;
+
             var result = PingLogs.Where(x => x.Type == type).Select(x => x.Delay);
             var count = result.Count();
-            if (count < 60)
-                return -1;
-            var match = result.Skip(Math.Max(0, count - 60)).Sum();
+            if (count >= 60)
+                _5min = result.Skip(Math.Max(0, count - 60)).Sum() / 60;
+            if (count >= 120)
+                _10min = result.Skip(Math.Max(0, count - 120)).Sum() / 120;
+            if (count >= 180)
+                _15min = result.Skip(Math.Max(0, count - 180)).Sum() / 180;
 
-            return match / 60;
+            return new long[] { _5min, _10min , _15min};
         }
-        public static long Get10minAvgPing(ServerType type)
+        public static double[] GetAvgSkipRate()
         {
-            var result = PingLogs.Where(x => x.Type == type).Select(x => x.Delay);
-            var count = result.Count();
-            if (count < 120)
-                return -1;
-            var match = result.Skip(Math.Max(0, count - 120)).Sum();
+            double _5min = double.NaN;
+            double _10min = double.NaN;
+            double _15min = double.NaN;
+            var count = CompressSkipLogs.Count;             
 
-            return match / 120;
-        }
-        public static long Get15minAvgPing(ServerType type)
-        {
-            var result = PingLogs.Where(x => x.Type == type).Select(x => x.Delay);
-            var count = result.Count();
-            if (count < 160)
-                return -1;
-            var match = result.Skip(Math.Max(0, count - 160)).Sum();
+            if(count >= 60)
+            {
+                double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 60)).Where(x => x == 1).Sum();
+                _5min = skipCount / 60;
+            }
+            if (count >= 120)
+            {
+                double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 120)).Where(x => x == 1).Sum();
+                _10min = skipCount / 120;
+            }
+            if (count >= 180)
+            {
+                double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 180)).Where(x => x == 1).Sum();
+                _15min = skipCount / 180;
+            }
 
-            return match / 160;
+            return new double[] { _5min, _10min , _15min};
         }
         static long TCPing(string host,int port)
         {

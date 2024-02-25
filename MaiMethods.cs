@@ -10,8 +10,9 @@ using AquaTools.Requests;
 using AquaTools.Responses;
 using System;
 using static TelegramBot.MaiDatabase;
-using System.Reflection;
 using static TelegramBot.MaiScanner;
+using AquaTools.Exception;
+using System.Collections.Generic;
 using AquaTools.Users;
 
 namespace TelegramBot
@@ -30,7 +31,7 @@ namespace TelegramBot
 
             var suffix = command.Content[0];
             command.Content = command.Content.Skip(1).ToArray();
-            if (suffix != "bind" && querier.MaiUserId is null)
+            if (suffix is not ("bind" or "status") && querier.MaiUserId is null)
             {
                 SendMessage("你还没有绑定账号喵x", update);
                 return;
@@ -55,9 +56,18 @@ namespace TelegramBot
                 case "logout":
                     Logout(command,update, querier);
                     break;
-                case "scanner":
-                    MaiScannerHandle(command, update, querier);
+                case "backup":
+                    MaiDataBackup(command, update, querier);
                     break;
+                case "sync":
+                    UpdateMaiUserData(command, update, querier);
+                    break;
+                case "ticket":
+                    GetMaiTicket(command, update, querier);
+                    break;
+                    //case "upsert":
+                    //    MaiUpsert(command, update, querier);
+                    //    break;
             }
 
         }
@@ -210,7 +220,7 @@ namespace TelegramBot
                         selfMessage = EditMessage("正在解析二维码...", update, selfMessage.MessageId).Result;
                         Thread.Sleep(500);
 
-                        maiUserId = QRCode.FromImage(filePath).Object.userID;
+                        maiUserId = QRCode.ToUserId(Image.FromFile(filePath)).Object.userID;
                     }
                     else
                     {
@@ -218,7 +228,7 @@ namespace TelegramBot
                         return;
                     }
                 }
-                else if (param.Length > 13 && param.Substring(0, 8) == "SGWCMAID")
+                else if (QRCode.IsWeChatId(param))
                     maiUserId = QRCode.ToUserId(param).Object.userID;
                 else
                 {
@@ -257,14 +267,287 @@ namespace TelegramBot
                 SendMessage("参数错误喵x", update);
             }
         }
+        static async void MaiUserLogin(Command command, Update update, TUser querier)
+        {
+            var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0],a => { });
+            return;
+        }
+        /// <summary>
+        /// 备份用户数据
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="update"></param>
+        /// <param name="querier"></param>
+        static async void MaiDataBackup(Command command, Update update, TUser querier)
+        {
+            int userid = (int)querier.MaiUserId;
+            string password = "";
+
+            if (command.Content.Length < 1)
+            {
+                SendMessage("缺少参数喵x", update);
+                return;
+            }
+            if (command.Content.Length == 2)
+            {
+                if (!int.TryParse(command.Content[0],out userid))
+                {
+                    SendMessage("缺少参数喵x", update);
+                    return;
+                }
+                password = command.Content[1];
+            }
+            else
+                password = command.Content[0];
+
+
+            var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
+
+            EditMessage("正在尝试登录... (0/15)", update, selfMessage.MessageId);
+            try
+            {
+                var user = await AquaTools.Users.User.Login(userid, Config.keyChips[0], async a => await EditMessage($"正在获取数据... ({a}/15)", update, selfMessage.MessageId));
+                await EditMessage("获取数据成功,正在上传备份文件...", update, selfMessage.MessageId);
+                var userdata = user.Export(password);                
+                var stream = new MemoryStream(userdata);
+                await UploadFile(stream, $"UserDataBackup{DateTime.Now.ToString("yyyyMMddhhmm")}.data", update.Message.Chat.Id);
+                EditMessage("数据备份完成喵x", update, selfMessage.MessageId);
+                user.Logout();
+            }
+            catch(LoginFailureException e)
+            {
+                
+                EditMessage("登录失败,请检查二维码是否过期QAQ\n" +
+                    $"```csharp\n" +
+                    $"{StringHandle($"{e.Message}")}\n" +
+                    $"```", update, selfMessage.MessageId, ParseMode.MarkdownV2);
+                
+            }
+            catch(Exception e)
+            {
+                EditMessage($"出现未知错误QAQ\n" +
+                    $"```csharp\n" +
+                    $"{StringHandle($"{e.Message}")}\n" +
+                    $"```", update, selfMessage.MessageId,ParseMode.MarkdownV2);
+            }
+            finally
+            {
+                AquaTools.Users.User.Logout((int)querier.MaiUserId);
+            }
+        }
+        /// <summary>
+        /// 强制更新MaiAccount数据
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="update"></param>
+        /// <param name="querier"></param>
+        static async void UpdateMaiUserData(Command command, Update update, TUser querier)
+        {
+            var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
+            var userId = (int)querier.MaiUserId;
+            try
+            {
+                var maiUser = MaiDatabase.Search(userId);
+                bool isNew = maiUser == null;
+                var response = (await GetUserPreview(userId)).Object;
+
+                if (maiUser is null)
+                    maiUser = new MaiAccount();
+                maiUser.playerRating = response.playerRating ?? 0;
+                maiUser.lastDataVersion = response.lastDataVersion;
+                maiUser.lastRomVersion = response.lastRomVersion;
+                maiUser.lastGameId = response.lastGameId;
+                maiUser.banState = response.banState;
+                maiUser.lastUpdate = DateTime.Now;
+
+                querier.Account = maiUser;
+                if(isNew)
+                    MaiDatabase.MaiAccountList.Add(maiUser);
+                Config.SaveData();
+
+                EditMessage("更新完成喵wAw", update, selfMessage.MessageId);
+            }
+            catch(Exception e)
+            {
+                EditMessage("发生了未知错误QAQ\n" +
+                    "```csharp\n" +
+                    $"{e.Message}\n" +
+                    $"```", update, selfMessage.MessageId,ParseMode.MarkdownV2);
+            }
+        }
+        static async void GetMaiTicket(Command command, Update update, TUser querier)
+        {
+            int count = 1;
+            int ticketType = 0;
+            var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
+            Dictionary<string, int> vaildTicketType = new()
+            { 
+                { "2",2 } ,
+                { "3",3 } ,
+                { "5",5 } ,
+                { "20",20020 } ,
+            };
+
+            if (command.Content.Length < 3)
+            {
+                if (!vaildTicketType.ContainsKey(command.Content[0]))
+                {
+                    EditMessage("参数错误喵x", update, selfMessage.MessageId);
+                    return;
+                }
+                else if (command.Content.Length == 2 && !int.TryParse(command.Content[1], out count))
+                {
+                    EditMessage("参数错误喵x", update, selfMessage.MessageId);
+                    return;
+                }
+                ticketType = vaildTicketType[command.Content[0]];
+            }
+            else if (command.Content.Length == 0)
+            {
+                GetHelpInfo(command, update, querier);
+                return;
+            }
+            else
+            {
+                EditMessage("参数错误喵x", update, selfMessage.MessageId);
+                return;
+            }
+
+
+
+            EditMessage("正在尝试登录... (0/15)", update, selfMessage.MessageId);
+            try
+            {
+                var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], async a => await EditMessage($"正在获取数据... ({a}/15)", update, selfMessage.MessageId));
+                await EditMessage("正在尝试申请跑图券...", update, selfMessage.MessageId);
+                var result = user.CreateNewTicket((ChargeType)ticketType, count, DateTime.Now.AddDays(14));
+                if(result)
+                    EditMessage("跑图券获取成功wAw", update, selfMessage.MessageId);
+                else
+                    EditMessage("跑图券获取失败，请检查你是否已有相同的券QAQ", update, selfMessage.MessageId);
+            }
+            catch(Exception e)
+            {
+                EditMessage($"出现未知错误QAQ\n" +
+                    $"```csharp\n" +
+                    $"{StringHandle($"{e.Message}")}\n" +
+                    $"```", update, selfMessage.MessageId, ParseMode.MarkdownV2);
+            }
+            finally
+            {
+                AquaTools.Users.User.Logout((int)querier.MaiUserId);
+            }
+        }
+        static async void MaiUpsert(Command command, Update update, TUser querier)
+        {
+            var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], a => { });
+            var playlogs = new List<UserPlaylog>();
+            var musicDetail = user.CreatePlaylog(11422, new Dictionary<string, int>
+            {
+                { "Achievement" , 1008750 },
+                { "ComboStatus" , 3 },
+                { "SyncStatus" , 0 },
+                { "DeluxscoreMax" , 1815 },
+                { "ScoreRank" , 13 },
+            }, MusicLevelType.Master, false);
+
+            NoteInfo[] noteInfo = 
+            {
+                new NoteInfo
+                    {
+                        CriticalPerfect = 382,
+                        Perfect = 0,
+                        Fast = 0,
+                        Late = 0,
+                        Good = 0,
+                        Great = 0,
+                        Miss = 0
+                    },
+                new NoteInfo
+                    {
+                        CriticalPerfect = 38,
+                        Perfect = 0,
+                        Fast = 0,
+                        Late = 0,
+                        Good = 0,
+                        Great = 0,
+                        Miss = 0
+                    },
+                new NoteInfo
+                    {
+                        CriticalPerfect = 135,
+                        Perfect = 0,
+                        Fast = 0,
+                        Late = 0,
+                        Good = 0,
+                        Great = 0,
+                        Miss = 0
+                    },
+                new NoteInfo
+                    {
+                        CriticalPerfect = 44,
+                        Perfect = 0,
+                        Fast = 0,
+                        Late = 0,
+                        Good = 0,
+                        Great = 0,
+                        Miss = 0
+                    },
+                new NoteInfo
+                    {
+                        CriticalPerfect = 4,
+                        Perfect = 2,
+                        Fast = 2,
+                        Late = 0,
+                        Good = 0,
+                        Great = 0,
+                        Miss = 0
+                    }
+            };
+
+            playlogs.Add(user.CreateUserPlaylog(musicDetail, 
+                new Dictionary<string, int>() 
+                {
+                    { "isRandom" , 0},
+                    { "MaxCombo" , 605}
+                }, 
+                noteInfo , null, (long)user.LoginId, 1));
+            playlogs.Add(user.CreateUserPlaylog(musicDetail, 
+                new Dictionary<string, int>() 
+                {
+                    { "isRandom" , 0},
+                    { "MaxCombo" , 605}
+                }, 
+                noteInfo , null, (long)user.LoginId, 2));
+            playlogs.Add(user.CreateUserPlaylog(musicDetail, 
+                new Dictionary<string, int>() 
+                {
+                    { "isRandom" , 0},
+                    { "MaxCombo" , 605}
+                }, 
+                noteInfo , null, (long)user.LoginId, 3));
+
+            var result = user.UpsertAll(playlogs.ToArray(), (long)user.LoginId);
+            user.Logout();
+            return;
+        }
         /// <summary>
         /// 逃离小黑屋
         /// </summary>
         /// <param name="command"></param>
         /// <param name="update"></param>
         /// <param name="querier"></param>
-        static void Logout(Command command, Update update, TUser querier)
+        static void Logout(Command command, Update update, TUser querier, Group group = null)
         {
+            if(command.Content.Length != 0)
+            {
+                if(!querier.CheckPermission(Permission.Admin,group))
+                {
+                    GetHelpInfo(command, update, querier);
+                return;
+                }
+            }
+
             var request = new Request<UserLogoutRequest>(new UserLogoutRequest() { userId = (int)querier.MaiUserId });
 
             var result = Aqua.PostAsync<UserLogoutRequest,UserLogoutResponse>(request).Result;
@@ -285,6 +568,21 @@ namespace TelegramBot
         /// <param name="querier"></param>
         static void GetMaiTopRank(Command command, Update update, TUser querier)
         {
+            if(command.Content.Length != 0)
+            {
+                if (command.Content[0] == "refresh")
+                {
+                    MaiDatabase.CalRating();
+                    SendMessage("排行榜已刷新~", update);
+                    return;
+                }
+                else
+                {
+                    GetHelpInfo(command, update, querier);
+                    return;
+                }
+            }
+
             var rank = Top.Select(x => x.ToList()).ToList();
             var strHeader = "全国前300排行榜\n" +
                             "```markdown\n" +
@@ -320,36 +618,46 @@ namespace TelegramBot
         /// <param name="querier"></param>
         static void GetMaiServerStatus(Command command, Update update, TUser querier)
         {
+            var titlePingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.Title);
+            var oauthPingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.OAuth);
+            var netPingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.Net);
+            var mainPingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.Main);
+            var skipRateInfo = MaiMonitor.GetAvgSkipRate();
+
             string text = "maimai服务器状态:\n" +
                           "```python" +
                          StringHandle(
                           "\nTcping延迟:" +
                          $"\n- Title服务器  : {MaiMonitor.TitleServerDelay}ms\n" +
-                         $"  -  5min  : {MaiMonitor.Get5minAvgPing(MaiMonitor.ServerType.Title)}ms\n" +
-                         $"  - 10min  : {MaiMonitor.Get10minAvgPing(MaiMonitor.ServerType.Title)}ms\n" +
-                         $"  - 15min  : {MaiMonitor.Get15minAvgPing(MaiMonitor.ServerType.Title)}ms" +
+                         $"  -  5min  : {titlePingInfo[0]}ms\n" +
+                         $"  - 10min  : {titlePingInfo[1]}ms\n" +
+                         $"  - 15min  : {titlePingInfo[2]}ms" +
                          $"\n- OAuth服务器  : {MaiMonitor.OAuthServerDelay}ms\n" +
-                         $"  -  5min  : {MaiMonitor.Get5minAvgPing(MaiMonitor.ServerType.OAuth)}ms\n" +
-                         $"  - 10min  : {MaiMonitor.Get10minAvgPing(MaiMonitor.ServerType.OAuth)}ms\n" +
-                         $"  - 15min  : {MaiMonitor.Get15minAvgPing(MaiMonitor.ServerType.OAuth)}ms" +
+                         $"  -  5min  : {oauthPingInfo[0]}ms\n" +
+                         $"  - 10min  : {oauthPingInfo[1]}ms\n" +
+                         $"  - 15min  : {oauthPingInfo[2]}ms" +
                          $"\n- DXNet服务器  : {MaiMonitor.NetServerDelay}ms\n" +
-                         $"  -  5min  : {MaiMonitor.Get5minAvgPing(MaiMonitor.ServerType.Net)}ms\n" +
-                         $"  - 10min  : {MaiMonitor.Get10minAvgPing(MaiMonitor.ServerType.Net)}ms\n" +
-                         $"  - 15min  : {MaiMonitor.Get15minAvgPing(MaiMonitor.ServerType.Net)}ms" +
+                         $"  -  5min  : {netPingInfo[0]}ms\n" +
+                         $"  - 10min  : {netPingInfo[1]}ms\n" +
+                         $"  - 15min  : {netPingInfo[2]}ms" +
                          $"\n- Main 服务器  : {MaiMonitor.MainServerDelay}ms\n" +
-                         $"  -  5min  : {MaiMonitor.Get5minAvgPing(MaiMonitor.ServerType.Main)}ms\n" +
-                         $"  - 10min  : {MaiMonitor.Get10minAvgPing(MaiMonitor.ServerType.Main)}ms\n" +
-                         $"  - 15min  : {MaiMonitor.Get15minAvgPing(MaiMonitor.ServerType.Main)}ms" +
+                         $"  -  5min  : {mainPingInfo[0]}ms\n" +
+                         $"  - 10min  : {mainPingInfo[1]}ms\n" +
+                         $"  - 15min  : {mainPingInfo[2]}ms" +
                          $"\n\n" +
                           "响应状态:\n" +
                          $"- 发送包数累计 : {MaiMonitor.TotalRequestCount}\n" +
                          $"- 响应超时累计 : {MaiMonitor.TimeoutRequestCount}\n" +
                          $"- 其他错误累计 : {MaiMonitor.OtherErrorCount}\n" +
                          $"- 非压缩包累计 : {MaiMonitor.CompressSkipRequestCount}\n" +
-                         $"- 响应包跳过率 : {MaiMonitor.CompressSkipRate * 100}%\n" +
+                         $"- 响应包跳过率 : \n" +
+                         $"  -  5min  : {Math.Round(skipRateInfo[0] * 100, 2)}%\n" +
+                         $"  - 10min  : {Math.Round(skipRateInfo[1] * 100, 2)}%\n" +
+                         $"  - 15min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
+                         $"  -  Avg   : {Math.Round(MaiMonitor.CompressSkipRate * 100,2)}%\n" +
                          $"- 最新一次响应 : {MaiMonitor.LastResponseStatusCode}\n\n" +
                          $"土豆性:\n" +
-                         $"-       土豆？: {(MaiMonitor.ServiceAvailability ? MaiMonitor.CompressSkipRate > 0.18 ? "差不多熟了" : "否" : "是")}\n" +
+                         $"-       土豆？: {(MaiMonitor.ServiceAvailability ? MaiMonitor.CompressSkipRate > 0.18 ? "差不多熟了" : "新鲜的" : "熟透了")}\n" +
                          $"- 平均土豆间隔 : {(MaiMonitor.FaultInterval == -1 ?"不可用" : $"{MaiMonitor.FaultInterval}s")}\n" +
                          $"\n") +
                           "```";
@@ -407,6 +715,7 @@ namespace TelegramBot
 
             return await Aqua.PostAsync<UserPreviewRequest,UserPreviewResponse>(request);
         }
+        
     }
     internal partial class Program
     {
@@ -415,6 +724,11 @@ namespace TelegramBot
             if (!querier.CheckPermission(Permission.Admin, group))
             {
                 SendMessage("喵?", update);
+                return;
+            }
+            if (command.Content.Length == 0)
+            {
+                GetHelpInfo(command, update, querier);
                 return;
             }
 
@@ -430,6 +744,9 @@ namespace TelegramBot
                     break;
                 case "stop":
                     SetScannerStop(command, update, querier);
+                    break;
+                case "set":
+                    SetScannerConfig(command, update, querier);
                     break;
             }
         }
@@ -449,6 +766,21 @@ namespace TelegramBot
             MaiScanner.isRunning = false;
             MaiScanner.cancelSource.Cancel();
             SendMessage("已执行~", update);
+        }
+        static void SetScannerConfig(Command command, Update update, TUser querier)
+        {
+            if (command.Content.Length != 0)
+            {
+                int index = 0;
+                if (int.TryParse(command.Content[0], out index))
+                {
+                    MaiScanner.QpsLimit = index;
+                    SendMessage("已执行~", update);
+                    return;
+                }
+            }
+            SendMessage("参数错误喵x", update);
+            return;
         }
         static void SetScannerUpdate(Command command, Update update, TUser querier)
         {

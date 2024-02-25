@@ -47,5 +47,13 @@ namespace TelegramBot
                 return -1;
             });
         }
+        internal static MaiAccount Search(int userId)
+        {
+            var result = MaiAccountList.Where(x => x.userId == userId).ToArray();
+            if (result.Length == 0)
+                return null;
+            else
+                return result[0];
+        }
     }
 }

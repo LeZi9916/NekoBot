@@ -37,6 +37,8 @@ namespace TelegramBot
             Logs,
             Config,
             Set,
+            MaiStatus,
+            MaiScanner,
             Unknow
         }
         struct Command
@@ -68,12 +70,16 @@ namespace TelegramBot
                         return CommandType.Demote;
                     case "mai":
                         return CommandType.Mai;
+                    case "maistatus":
+                        return CommandType.MaiStatus;
                     case "config":
                         return CommandType.Config;
                     case "logs":
                         return CommandType.Logs;
                     case "set":
                         return CommandType.Set;
+                    case "maiscanner":
+                        return CommandType.MaiScanner;
                     default:
                         return CommandType.Unknow;
                 }
@@ -168,6 +174,12 @@ namespace TelegramBot
                 case CommandType.Mai:
                     MaiCommandHandle(command, update, querier, group);
                     break;
+                case CommandType.MaiStatus:
+                    GetMaiServerStatus(command, update, querier);
+                    break;
+                case CommandType.MaiScanner:
+                    MaiScannerHandle(command, update, querier);
+                    break;
             }
         }
         static void FilterGroupMessage(string content, Update update, TUser querier)
@@ -258,6 +270,22 @@ namespace TelegramBot
                 return true;
             }
             catch(Exception e)
+            {
+                Debug(DebugType.Error, $"Failure to upload file : \n{e.Message}\n{e.StackTrace}");
+                return false;
+            }
+        }
+        static async Task<bool> UploadFile(Stream stream,string fileName, long chatId)
+        {
+            try
+            {
+                await botClient.SendDocumentAsync(
+                        chatId: chatId,
+                        document: InputFile.FromStream(stream: stream,fileName : fileName));
+                stream.Close();
+                return true;
+            }
+            catch (Exception e)
             {
                 Debug(DebugType.Error, $"Failure to upload file : \n{e.Message}\n{e.StackTrace}");
                 return false;

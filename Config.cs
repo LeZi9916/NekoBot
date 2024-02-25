@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Telegram.Bot.Types.Enums;
 using static TelegramBot.MaiScanner;
 using static TelegramBot.MaiDatabase;
+using System.Diagnostics;
 
 namespace TelegramBot
 {
@@ -171,6 +172,13 @@ namespace TelegramBot
                 MaiAccountList = Load<List<MaiAccount>>(Path.Combine(DatabasePath, "MaiAccountList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "MaiInvaildUserIdList.data")))
                 MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvaildUserIdList.data"));
+            if (File.Exists(Path.Combine(DatabasePath, "token.config")))
+                Program.Token = File.ReadAllText(Path.Combine(DatabasePath, "token.config"));
+            else
+            {
+                Program.Debug(DebugType.Error, "Config file isn't exist");
+                Environment.Exit(-1);
+            }
             MaiDataInit();
             AutoSave();
         }
