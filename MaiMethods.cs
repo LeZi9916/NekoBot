@@ -85,12 +85,12 @@ namespace TelegramBot
         {
             //var maiUserId = querier.MaiUserId;
             //var response = GetUserPreview((int)maiUserId).Result.Object;
-            var account = querier.Account;
-            if (account is null)
+            MaiAccount account = querier.Account;
+            Func<int, Task<MaiAccount?>> getAccount = async userid => 
             {
                 var response = (await GetUserPreview((int)querier.MaiUserId)).Object;
 
-                if (response.StatusCode is  HttpStatusCode.OK)
+                if (response.StatusCode is HttpStatusCode.OK)
                 {
                     var maiAccount = new MaiAccount();
                     maiAccount.userName = StringHandle(response.userName);
@@ -104,12 +104,45 @@ namespace TelegramBot
 
                     MaiAccountList.Add(maiAccount);
                     Config.SaveData();
-                    querier.Account = account = maiAccount;
+                    return maiAccount;
                 }
                 else
                 {
                     SendMessage("获取数据失败QAQ", update);
+                    return null;
+                }
+            };
+
+            if(command.Content.Length == 1)
+            {
+                int id;
+                if (!querier.CheckPermission(Permission.Admin))
+                {
+                    SendMessage("Access denied", update);
                     return;
+                }
+                else if (!int.TryParse(command.Content[0], out id))
+                {
+                    SendMessage("请确认参数是Int32~", update);
+                    return;
+                }
+
+                account = MaiDatabase.Search(id);
+
+                if (account is null)
+                    account = await getAccount(id);
+            }
+            else if(command.Content.Length > 1)
+            {
+                SendMessage("参数错误QAQ", update);
+                return;
+            }
+            else
+            {
+                if (account is null)
+                {
+                    querier.Account = await getAccount((int)querier.MaiUserId);
+                    account = querier.Account;
                 }
             }
 
@@ -344,7 +377,28 @@ namespace TelegramBot
         static async void UpdateMaiUserData(Command command, Update update, TUser querier)
         {
             var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
-            var userId = (int)querier.MaiUserId;
+            int userId;
+            if (command.Content.Length == 1)
+            {
+                if(!querier.CheckPermission(Permission.Admin))
+                {
+                    EditMessage("Access denied", update, selfMessage.MessageId);
+                    return;
+                }
+                else if (!int.TryParse(command.Content[0],out userId))
+                {
+                    EditMessage("请确认参数是Int32~", update, selfMessage.MessageId);
+                    return;
+                }
+            }
+            else if(command.Content.Length > 1)
+            {
+                EditMessage("参数错误QAQ", update, selfMessage.MessageId);
+                return;
+            }
+            else
+                userId = (int)querier.MaiUserId;
+
             try
             {
                 var maiUser = MaiDatabase.Search(userId);

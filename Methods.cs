@@ -370,9 +370,11 @@ namespace TelegramBot
                             "\n/mai status            查看DX服务器状态" +
                             "\n/mai backup [String]   使用密码备份账号数据" +
                             "\n/mai info              获取账号信息" +
+                            "\n/mai info [int]        获取指定账号信息" +
                             "\n/mai ticket [id]       获取一张指定类型的票" +
                             "\n/mai ticket [id] [num] 获取指定数量的票" +
                             "\n/mai sync              强制刷新账号信息" +
+                            "\n/mai sync [int]        强制刷新指定账号信息" +
                             "\n/mai logout            登出");
                     break;
                 case CommandType.MaiScanner:
