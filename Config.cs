@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Telegram.Bot.Types.Enums;
 using static TelegramBot.MaiScanner;
 using static TelegramBot.MaiDatabase;
-using System.Diagnostics;
 
 namespace TelegramBot
 {
@@ -105,7 +104,7 @@ namespace TelegramBot
     {
         static DateTime Up = DateTime.Now;
         static string AppPath = Environment.CurrentDirectory;
-        static string LogsPath = Path.Combine(AppPath, "logs");
+        internal static string LogsPath = Path.Combine(AppPath, "logs");
         internal static string DatabasePath = Path.Combine(AppPath, "Database");
         internal static string TempPath = Path.Combine(AppPath, "Temp");
         internal static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
@@ -119,7 +118,6 @@ namespace TelegramBot
         internal static List<long> GroupIdList = new();
         internal static List<Group> GroupList = new();
 
-        static Mutex mutex = new();
 
         internal static List<long> UserIdList = new() { 1136680302 };
         internal static List<TUser> TUserList = new()
@@ -170,8 +168,8 @@ namespace TelegramBot
                 GroupIdList = Load<List<long>>(Path.Combine(DatabasePath, "GroupIdList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "MaiAccountList.data")))
                 MaiAccountList = Load<List<MaiAccount>>(Path.Combine(DatabasePath, "MaiAccountList.data"));
-            if (File.Exists(Path.Combine(DatabasePath, "MaiInvaildUserIdList.data")))
-                MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvaildUserIdList.data"));
+            if (File.Exists(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data")))
+                MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "token.config")))
                 Program.Token = File.ReadAllText(Path.Combine(DatabasePath, "token.config"));
             else
@@ -210,7 +208,7 @@ namespace TelegramBot
                     Thread.Sleep(AutoSaveInterval);
                     if (!EnableAutoSave)
                         break;
-                    Program.Debug(DebugType.Info, "Auto save data start");
+                    Program.Debug(DebugType.Debug, "Auto save data start");
                     SaveData();
                 }
             });
@@ -224,14 +222,9 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "GroupList.data"), GroupList);
             Save(Path.Combine(DatabasePath, "GroupIdList.data"), GroupIdList);
             Save(Path.Combine(DatabasePath, "MaiAccountList.data"), MaiAccountList);
-            Save(Path.Combine(DatabasePath, "MaiInvaildUserIdList.data"), MaiInvaildUserIdList);
+            Save(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"), MaiInvaildUserIdList);
         }
-        public static void WriteLog(string s)
-        {
-            mutex.WaitOne();
-            File.AppendAllText(LogFile,$"{s}\n",Encoding.UTF8);
-            mutex.ReleaseMutex();
-        }
+        
         static void Check()
         {
             if (!Directory.Exists(LogsPath))
@@ -266,12 +259,12 @@ namespace TelegramBot
                 var json = File.ReadAllText(path);
                 var result = FromJsonString<T>(json);
 
-                Program.Debug(DebugType.Info, $"Loaded File: {path}\n");
+                Program.Debug(DebugType.Info, $"Loaded File: {path}");
                 return result;
             }
             catch (Exception e) 
             {
-                Program.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}\n");
+                Program.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
                 return new T();
             }
         }

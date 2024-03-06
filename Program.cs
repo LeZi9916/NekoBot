@@ -13,16 +13,16 @@ namespace TelegramBot
 {
     enum DebugType
     {
-        Info,
-        Warning,
         Debug,
+        Info,
+        Warning,        
         Error
     }
     internal partial class Program
     {
         static TelegramBotClient botClient;
         internal static string Token = "";
-        static string BotUsername = "ZzyFuckComputerbot";
+        static string BotUsername = "";
         static DateTime startTime;
         static void Main(string[] args)
         {
@@ -30,13 +30,13 @@ namespace TelegramBot
             Config.Init();
             MaiMonitor.Init();
             startTime = DateTime.Now;
-            HttpClient httpClient = new(new SocketsHttpHandler 
-            { 
+            HttpClient httpClient = new(new SocketsHttpHandler
+            {
                 Proxy = new WebProxy("socks5://192.168.31.3:8080")
                 {
                     Credentials = new NetworkCredential("", "")
-                }, 
-                UseProxy = true, 
+                },
+                UseProxy = true,
             });
             botClient = new TelegramBotClient(Token, httpClient);
             botClient.ReceiveAsync(
@@ -47,7 +47,27 @@ namespace TelegramBot
                     AllowedUpdates = Array.Empty<UpdateType>()
                 }
             );
-            Debug(DebugType.Info,"Connect Successful\n");
+            Debug(DebugType.Info, "Connecting to telegram...");
+
+            while (BotUsername == "")
+            {
+                
+                try
+                {
+                    BotUsername = botClient.GetMeAsync().Result.Username;
+                    if (string.IsNullOrEmpty(BotUsername))
+                        Debug(DebugType.Info, "Connect failure,retrying...");
+                    else
+                    {
+                        Debug(DebugType.Info, "Connect Successful");
+                        break;
+                    }
+                }
+                catch
+                {
+                    Debug(DebugType.Info, "Connect failure,retrying...");
+                }
+            }            
             while(true)
                 Console.ReadKey();
         }
@@ -67,7 +87,7 @@ namespace TelegramBot
                     var text = message.Text is null ? message.Caption ?? "" : message.Text;
                     CommandPreHandle(text.Split(" ",StringSplitOptions.RemoveEmptyEntries), update);
 
-                    Debug(DebugType.Info, $"Received message:\n" +
+                    Debug(DebugType.Debug, $"Received message:\n" +
                         $"Chat Type: {message.Chat.Type}\n" +
                         $"Message Type: {message.Type}\n" +
                         $"Form User: {chat.FirstName} {chat.LastName}[@{chat.Username}]({userId})\n" +
@@ -172,11 +192,11 @@ namespace TelegramBot
                         LastName = user.LastName
                     });
 
-                    Debug(DebugType.Info, $"Find New User:\n" +
+                    Debug(DebugType.Debug, $"Find New User:\n" +
                     $"Name: {user.FirstName} {user.LastName}\n" +
                     $"isBot: {user.IsBot}\n" +
                     $"Username: {user.Username}\n" +
-                    $"isPremium: {user.IsPremium}\n");
+                    $"isPremium: {user.IsPremium}");
                 }
             });
         }
@@ -205,7 +225,7 @@ namespace TelegramBot
                     Config.GroupList.Add(group);
                     Config.GroupIdList.Add(groupId);
                     Config.SaveData();
-                    Debug(DebugType.Info, $"Find New Group:\n" +
+                    Debug(DebugType.Debug, $"Find New Group:\n" +
                         $"Name: {chat.FirstName} {chat.LastName}\n" +
                         $"Id: {groupId}\n");
                 }
@@ -233,7 +253,7 @@ namespace TelegramBot
                     return;
 
                 Console.WriteLine($"[{time}][{_type}] {message}");
-                Config.WriteLog($"[{time}][{_type}] {message}");
+                LogManager.WriteLog($"[{time}][{_type}] {message}");
             });
         }
     }

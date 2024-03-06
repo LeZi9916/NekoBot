@@ -22,7 +22,10 @@ namespace TelegramBot
         static void MaiCommandHandle(Command command, Update update, TUser querier, Group group = null)
         {
             if (!querier.CheckPermission(Permission.Advanced,group))
-                return ;
+            {
+                SendMessage("Permission Denied", update, true);
+                return;
+            }
             if (command.Content.Length == 0)
             {
                 GetHelpInfo(command, update, querier);
@@ -31,7 +34,7 @@ namespace TelegramBot
 
             var suffix = command.Content[0];
             command.Content = command.Content.Skip(1).ToArray();
-            if (suffix is not ("bind" or "status") && querier.MaiUserId is null)
+            if (suffix is not ("bind" or "status" or "rank") && querier.MaiUserId is null)
             {
                 SendMessage("你还没有绑定账号喵x", update);
                 return;
@@ -151,6 +154,9 @@ namespace TelegramBot
                 $"名称: {account.userName}\n" +
                 $"Rating: {account.playerRating}\n" +
                 $"排名: 计算中...\n" +
+                $"Rom版本: {account.lastRomVersion}\n" +
+                $"Data版本: {account.lastDataVersion}\n" +
+                $"DX主要版本: {account.lastGameId}\n" +
                 $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}", update);
 
             var ranking = await GetUserRank(account.playerRating);
@@ -160,6 +166,9 @@ namespace TelegramBot
                 $"名称: {account.userName}\n" +
                 $"Rating: {account.playerRating}\n" +
                 $"排名: {ranking}\n" +
+                $"Rom版本: {account.lastRomVersion}\n" +
+                $"Data版本: {account.lastDataVersion}\n" +
+                $"DX主要版本: {account.lastGameId}\n" +
                 $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}", update, message.MessageId);
 
 
@@ -433,6 +442,12 @@ namespace TelegramBot
         {
             int count = 1;
             int ticketType = 0;
+            if (command.Content.Length == 0)
+            {
+                GetHelpInfo(command, update, querier);
+                return;
+            }
+
             var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
             Dictionary<string, int> vaildTicketType = new()
             { 
@@ -442,6 +457,7 @@ namespace TelegramBot
                 { "20",20020 } ,
             };
 
+            
             if (command.Content.Length < 3)
             {
                 if (!vaildTicketType.ContainsKey(command.Content[0]))
@@ -455,11 +471,6 @@ namespace TelegramBot
                     return;
                 }
                 ticketType = vaildTicketType[command.Content[0]];
-            }
-            else if (command.Content.Length == 0)
-            {
-                GetHelpInfo(command, update, querier);
-                return;
             }
             else
             {

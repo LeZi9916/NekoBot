@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CSScripting;
+using System;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -132,7 +133,7 @@ namespace TelegramBot
             else
                 SendMessage(
                     $"用户信息:\n" +
-                    $"Name: {target.Name}\n" +
+                    $"Name: {StringHandle(target.Name)}\n" +
                     $"Id: {target.Id}\n" +
                     $"Permission: {target.Level}\n" +
                     $"MaiUserId: {(isGroup ? target.MaiUserId is null ? "未绑定" : "喵" : target.MaiUserId is null ? "未绑定" : target.MaiUserId)}", update);
@@ -260,18 +261,84 @@ namespace TelegramBot
             var message = update.Message;
             var chat = update.Message.Chat;
             var isPrivate = chat.Type is ChatType.Private;
-            if(!isPrivate)
-            {
-                SendMessage("喵呜呜", update, true);
-                return;
-            }
+            int count = 15;
+            DebugType? level = DebugType.Error;
+
+            //if(!isPrivate)
+            //{
+            //    SendMessage("喵呜呜", update, true);
+            //    return;
+            //}
             if(!querier.CheckPermission(Permission.Root))
             {
                 SendMessage("喵?", update, true);
                 return;
             }
+            switch(command.Content.Length)
+            {
+                case 0:
+                    break;
+                case 1:
+                    level = command.Content[0] switch
+                    {
+                        "debug" => DebugType.Debug,
+                        "info" => DebugType.Info,
+                        "warning" => DebugType.Warning,
+                        "err" => DebugType.Error,
+                        _ => null
+                    };
+                    if(level is null)
+                    {
+                        if(!int.TryParse(command.Content[0],out count))
+                        {
+                            SendMessage($"\"{command.Content[0]}\"不是有效参数喵x", update);
+                            return;
+                        }
+                    }
+                    break;
+                case 2:
+                    level = command.Content[0] switch
+                    {
+                        "debug" => DebugType.Debug,
+                        "info" => DebugType.Info,
+                        "warning" => DebugType.Warning,
+                        "err" => DebugType.Error,
+                        _ => null
+                    };
+                    if (level is null)
+                    {
+                        SendMessage($"\"{command.Content[0]}\"不是有效参数喵x", update);
+                        return;
+                    }
+                    else if (!int.TryParse(command.Content[1], out count))
+                    {
+                        SendMessage($"\"{command.Content[1]}\"不是有效参数喵x", update);
+                        return;
+                    }
+                    break;
 
-            await UploadFile(Config.LogFile,chat.Id);
+            }
+
+            if(level < DebugType.Warning)
+            {
+                if (!querier.CheckPermission(Permission.Admin))
+                {
+                    SendMessage("Permission Denied", update, true);
+                    return;
+                }
+            }
+
+            var logs = LogManager.GetLog(count,(DebugType)level);
+
+            if (logs.IsEmpty())
+                SendMessage("暂无可用日志喵", update);
+            else
+            {
+                await SendMessage("```csharp\n" +
+                             $"{StringHandle(string.Join("", logs).Replace("\\", "\\\\"))}\n" +
+                             $"```", update, true, ParseMode.MarkdownV2);
+            }
+            //await UploadFile(Config.LogFile,chat.Id);
         }
         static void BotConfig(Command command, Update update, TUser querier, Group group = null)
         {

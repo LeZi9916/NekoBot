@@ -101,7 +101,7 @@ namespace TelegramBot
                 return;
             if (param[0].Substring(0, 1) != "/")
             {
-                Debug(DebugType.Info, $"\"{param[0]}\" is not valid command,skipped");
+                Debug(DebugType.Debug, $"\"{param[0]}\" is not valid command,skipped");
                 return;
             }
             if (user is null)
