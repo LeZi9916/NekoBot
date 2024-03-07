@@ -133,7 +133,7 @@ namespace TelegramBot
             else
                 SendMessage(
                     $"用户信息:\n" +
-                    $"Name: {StringHandle(target.Name)}\n" +
+                    $"Name: {target.Name}\n" +
                     $"Id: {target.Id}\n" +
                     $"Permission: {target.Level}\n" +
                     $"MaiUserId: {(isGroup ? target.MaiUserId is null ? "未绑定" : "喵" : target.MaiUserId is null ? "未绑定" : target.MaiUserId)}", update);
@@ -204,11 +204,11 @@ namespace TelegramBot
 
                     if (target.Level >= querier.Level)
                     {
-                        SendMessage($"你不可以修改 *{target.Name}*的权限喵xAx", update, parseMode: ParseMode.MarkdownV2);
+                        SendMessage($"你不可以修改 *{StringHandle(target.Name)}*的权限喵xAx", update, parseMode: ParseMode.MarkdownV2);
                         return;
                     }
                     target.SetPermission(targetLevel);
-                    SendMessage($"成功将*{target.Name}*\\({target.Id}\\)的权限修改为*{targetLevel}*", update, parseMode:ParseMode.MarkdownV2);
+                    SendMessage($"成功将*{StringHandle(target.Name)}*\\({target.Id}\\)的权限修改为*{targetLevel}*", update, parseMode:ParseMode.MarkdownV2);
                 }
                 else
                 {
@@ -517,7 +517,7 @@ namespace TelegramBot
                 SendMessage($"\"{command.Content[1]}\"不是有效的参数x", update);
                 return;
             }
-            else if(targetLevel > (int)Permission.Admin || targetLevel < (int)Permission.Unknow)
+            else if(targetLevel > (int)Permission.Root || targetLevel < (int)Permission.Unknow)
             {
                 SendMessage($"没有这个权限喵QAQ", update);
                 return;
@@ -526,9 +526,12 @@ namespace TelegramBot
             if(userId == -1)
             {
                 var group = Config.SearchGroup(chat.Id);
+                Program.Debug(DebugType.Warning, $"Group not found,Group Id is \"{chat.Id}\"");
+
                 if(group is null)
                 {
-                    SendMessage("发送内部错误QAQ", update);
+                    SendMessage("发生内部错误QAQ", update);
+                    Program.Debug(DebugType.Warning, $"Group not found,Group Id is \"{chat.Id}\"");
                     return;
                 }
 
@@ -539,9 +542,11 @@ namespace TelegramBot
             else
             {
                 var user = Config.SearchUser(userId);
+                
                 if (user is null)
                 {
-                    SendMessage("发送内部错误QAQ", update);
+                    SendMessage("发生内部错误QAQ", update);
+                    Program.Debug(DebugType.Warning, $"TUser not found,User Id is \"{userId}\"");
                     return;
                 }
 

@@ -688,8 +688,29 @@ namespace TelegramBot
             var netPingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.Net);
             var mainPingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.Main);
             var skipRateInfo = MaiMonitor.GetAvgSkipRate();
-
-            string text = "maimai服务器状态:\n" +
+            string text = "";
+            if (command.Content.Length == 0)
+            {
+                text = "maimai服务器状态:\n" +
+                          "```python" +
+                         StringHandle(
+                          "\nTcping延迟:" +
+                         $"\n  - Title服务器  : {MaiMonitor.TitleServerDelay}ms" +
+                         $"\n  - OAuth服务器  : {MaiMonitor.OAuthServerDelay}ms" +
+                         $"\n  - DXNet服务器  : {MaiMonitor.NetServerDelay}ms" +
+                         $"\n  - Main 服务器  : {MaiMonitor.MainServerDelay}ms" +
+                         $"\n" +
+                         $"响应包跳过率 : \n" +
+                         $"  -  5min  : {Math.Round(skipRateInfo[0] * 100, 2)}%\n" +
+                         $"  - 10min  : {Math.Round(skipRateInfo[1] * 100, 2)}%\n" +
+                         $"  - 15min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
+                         $"  -  Avg   : {Math.Round(MaiMonitor.CompressSkipRate * 100, 2)}%" +
+                         $"\n") +
+                          "```";
+            }
+            else if (command.Content.Length == 1 && command.Content[0] is "full")
+            {
+                text = "maimai服务器状态:\n" +
                           "```python" +
                          StringHandle(
                           "\nTcping延迟:" +
@@ -719,13 +740,16 @@ namespace TelegramBot
                          $"  -  5min  : {Math.Round(skipRateInfo[0] * 100, 2)}%\n" +
                          $"  - 10min  : {Math.Round(skipRateInfo[1] * 100, 2)}%\n" +
                          $"  - 15min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
-                         $"  -  Avg   : {Math.Round(MaiMonitor.CompressSkipRate * 100,2)}%\n" +
+                         $"  -  Avg   : {Math.Round(MaiMonitor.CompressSkipRate * 100, 2)}%\n" +
                          $"- 最新一次响应 : {MaiMonitor.LastResponseStatusCode}\n\n" +
                          $"土豆性:\n" +
                          $"-       土豆？: {(MaiMonitor.ServiceAvailability ? MaiMonitor.CompressSkipRate > 0.18 ? "差不多熟了" : "新鲜的" : "熟透了")}\n" +
-                         $"- 平均土豆间隔 : {(MaiMonitor.FaultInterval == -1 ?"不可用" : $"{MaiMonitor.FaultInterval}s")}\n" +
+                         $"- 平均土豆间隔 : {(MaiMonitor.FaultInterval == -1 ? "不可用" : $"{MaiMonitor.FaultInterval}s")}\n" +
                          $"\n") +
                           "```";
+            }
+            else
+                text = $"\"{string.Join(" ",command.Content)}\"为无效参数喵x";
 
             SendMessage(text, update,true,ParseMode.MarkdownV2);
         }

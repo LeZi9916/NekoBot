@@ -163,36 +163,36 @@ namespace TelegramBot
         {
             await Task.Run(() => 
             {
-                var message = update.Message ?? update.EditedMessage ?? update.ChannelPost;
-                if (message is null)
-                    return;
+                //var message = update.Message ?? update.EditedMessage ?? update.ChannelPost;
+                //if (message is null)
+                //    return;
 
-                User[] userList = new User[4];
-                userList[0] = message.From;
-                userList[1] = message.ForwardFrom;
-                if (message.ReplyToMessage is not null)
-                {
-                    userList[2] = message.ReplyToMessage.From;
-                    userList[3] = message.ReplyToMessage.ForwardFrom;
-                }
-                
+                //User[] userList = new User[4];
+                User[] userList = TUser.GetUsers(update);
+                //userList[0] = message.From;
+                //userList[1] = message.ForwardFrom;
+                //if (message.ReplyToMessage is not null)
+                //{
+                //    userList[2] = message.ReplyToMessage.From;
+                //    userList[3] = message.ReplyToMessage.ForwardFrom;
+                //}
+
+                if (userList is null)
+                    return;
 
                 foreach (var user in userList)
                 {
                     if (user is null)
                         continue;
                     if (Config.UserIdList.Contains(user.Id))
-                        continue;
-
-                    Config.AddUser(new TUser()
                     {
-                        Id = user.Id,
-                        Username = user.Username,
-                        FirstName = user.FirstName,
-                        LastName = user.LastName
-                    });
+                        TUser.Update(update);
+                        continue;
+                    }
 
-                    Debug(DebugType.Debug, $"Find New User:\n" +
+                    Config.AddUser(TUser.Serialize(user));
+
+                    Debug(DebugType.Info, $"Find New User:\n" +
                     $"Name: {user.FirstName} {user.LastName}\n" +
                     $"isBot: {user.IsBot}\n" +
                     $"Username: {user.Username}\n" +

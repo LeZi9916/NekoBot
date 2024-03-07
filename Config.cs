@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using Telegram.Bot.Types.Enums;
 using static TelegramBot.MaiScanner;
 using static TelegramBot.MaiDatabase;
+using Telegram.Bot.Types;
+using File = System.IO.File;
 
 namespace TelegramBot
 {
@@ -74,6 +76,66 @@ namespace TelegramBot
             Level = targetLevel;
             Config.SaveData();
         }
+        public static void Update(Update update)
+        {
+            var users = GetUsers(update);
+
+            foreach(var user in users)
+            {
+                if (user is null)
+                    continue;
+
+                var target = Config.SearchUser(user.Id);
+                var _user = TUser.Serialize(user);
+
+                if (target is null)
+                    continue;
+                else if (target.Equals(_user))
+                    continue;
+                else
+                {
+                    target.Username = _user.Username;
+                    target.FirstName = _user.FirstName;
+                    target.LastName = _user.LastName;
+
+                    Program.Debug(DebugType.Info, $"User info had been updated:\n" +
+                    $"Name: {user.FirstName} {user.LastName}\n" +
+                    $"isBot: {user.IsBot}\n" +
+                    $"Username: {user.Username}\n" +
+                    $"isPremium: {user.IsPremium}");
+                }
+            }
+        }
+        public static User[] GetUsers(Update update)
+        {
+            var message = update.Message ?? update.EditedMessage ?? update.ChannelPost ?? update.EditedChannelPost;
+            var request = update.ChatJoinRequest;
+
+            if (message is null)
+                return null;
+
+            User[] userList = new User[5];
+            userList[0] = message.From;
+            userList[1] = message.ForwardFrom;
+            userList[2] = message?.ReplyToMessage?.From;
+            userList[3] = message?.ReplyToMessage?.ForwardFrom;
+            userList[4] = request?.From;
+            //if (message.ReplyToMessage is not null)
+            //{
+            //    userList[2] = message?.ReplyToMessage?.From;
+            //    userList[3] = message.ReplyToMessage.ForwardFrom;
+            //}
+
+            return userList;
+        }
+        public bool Equals(TUser user) => user.Username == Username && user.FirstName == FirstName && user.LastName == LastName;
+        public static TUser Serialize(User user) => new TUser()
+        {
+            Id = user.Id,
+            Username = user.Username,
+            FirstName = user.FirstName,
+            LastName = user.LastName
+        };
     }
     class Group
     {
