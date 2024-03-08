@@ -8,6 +8,7 @@ using Telegram.Bot.Types.Enums;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Net;
+using TelegramBot.Class;
 
 namespace TelegramBot
 {

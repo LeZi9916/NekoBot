@@ -3,9 +3,9 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
-using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using TelegramBot.Class;
 
 namespace TelegramBot
 {

@@ -14,6 +14,7 @@ using static TelegramBot.MaiScanner;
 using AquaTools.Exception;
 using System.Collections.Generic;
 using AquaTools.Users;
+using TelegramBot.Class;
 
 namespace TelegramBot
 {

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using TelegramBot.Class;
 
 namespace TelegramBot
 {
@@ -182,48 +183,8 @@ namespace TelegramBot
                     break;
             }
         }
-        static void FilterGroupMessage(string content, Update update, TUser querier)
+        static void MessageFilter(string content, Update update, TUser querier,Group group)
         {
-            var chat = update.Message?.Chat ?? update.EditedMessage?.Chat;
-            if (chat is null)
-                return;
-            else if (chat.Type is not (ChatType.Group or ChatType.Supergroup))
-                return;
-
-            var group = Config.SearchGroup(chat.Id);
-            if (group.Rule.Count == 0)
-                return;
-
-            var ruleList = group.Rule;
-            var commonRuleList = ruleList.Where(x => x.Target is null);
-            var specificRuleList = ruleList.Where(x => x.Target.Id == querier.Id);
-            var activeRuleList = new List<Filter>();
-            activeRuleList.AddRange(specificRuleList);
-            activeRuleList.AddRange(commonRuleList);
-            Action<Filter> FilterHandler = rule =>
-            {
-                switch (rule.ActionType)
-                {
-                    case ActionType.Modify:
-                        break;
-                    case ActionType.Delete:
-                        DeleteMessage(update);
-                        break;
-                }
-                if (rule.ActionString is not null)
-                    SendMessage(rule.ActionString, update);
-            };
-
-            foreach (var rule in activeRuleList)
-            {
-                if(update.Message.Type  == rule.MessageType)
-                {
-                    if(update.Message.Text is null)
-                        FilterHandler(rule);
-                    else if(rule.MatchString is not null && update.Message.Text.Contains(rule.MatchString))
-                        FilterHandler(rule);
-                }
-            }
             
         }
         static async Task<Message> SendMessage(string text,Update update,bool isReply = true, ParseMode? parseMode = null)

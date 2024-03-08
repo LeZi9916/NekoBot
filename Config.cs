@@ -6,162 +6,18 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Telegram.Bot.Types.Enums;
 using static TelegramBot.MaiScanner;
 using static TelegramBot.MaiDatabase;
-using Telegram.Bot.Types;
 using File = System.IO.File;
+using TelegramBot.Class;
 
 namespace TelegramBot
-{
-    enum Permission
-    {
-        Unknow = -1,
-        Ban,
-        Common,
-        Advanced,
-        Admin,
-        Root
-    }
-    enum ActionType
-    {
-        Modify,
-        Reply,
-        Delete
-    }
-    class TUser
-    {
-        public long Id { get; set; }
-        public string Username { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Name
-        {
-            get => FirstName + " " + LastName;
-        }
-        public Permission Level { get; set; } = Permission.Common;
-        public int? MaiUserId { get; set; } = null;
-        public bool isBanned => Level <= Permission.Ban; 
-        public bool isUnknow => Level == Permission.Unknow; 
-        [JsonIgnore]
-        public MaiAccount Account { get; set; }
-        public async Task<bool> GetMaiAccountInfo()
-        {
-            return await Task.Run(() =>
-            {
-                if (MaiUserId is null)
-                    return false;
-
-                var userid = (int)MaiUserId;
-                var result = MaiAccountList.Where(x => x.userId == userid);
-
-                if (result.Count() == 0)
-                    return false;
-
-                Account = result.ToArray()[0];
-                return true;
-            });
-        }
-        public bool CheckPermission(Permission targetLevel,Group group = null)
-        {
-            if (group is not null && group.Level >= targetLevel)
-                return true;
-            return Level >= targetLevel;
-        }
-        public void SetPermission(Permission targetLevel)
-        {
-            Level = targetLevel;
-            Config.SaveData();
-        }
-        public static void Update(Update update)
-        {
-            var users = GetUsers(update);
-
-            foreach(var user in users)
-            {
-                if (user is null)
-                    continue;
-
-                var target = Config.SearchUser(user.Id);
-                var _user = TUser.Serialize(user);
-
-                if (target is null)
-                    continue;
-                else if (target.Equals(_user))
-                    continue;
-                else
-                {
-                    target.Username = _user.Username;
-                    target.FirstName = _user.FirstName;
-                    target.LastName = _user.LastName;
-
-                    Program.Debug(DebugType.Info, $"User info had been updated:\n" +
-                    $"Name: {user.FirstName} {user.LastName}\n" +
-                    $"isBot: {user.IsBot}\n" +
-                    $"Username: {user.Username}\n" +
-                    $"isPremium: {user.IsPremium}");
-                }
-            }
-        }
-        public static User[] GetUsers(Update update)
-        {
-            var message = update.Message ?? update.EditedMessage ?? update.ChannelPost ?? update.EditedChannelPost;
-            var request = update.ChatJoinRequest;
-
-            if (message is null)
-                return null;
-
-            User[] userList = new User[5];
-            userList[0] = message.From;
-            userList[1] = message.ForwardFrom;
-            userList[2] = message?.ReplyToMessage?.From;
-            userList[3] = message?.ReplyToMessage?.ForwardFrom;
-            userList[4] = request?.From;
-            //if (message.ReplyToMessage is not null)
-            //{
-            //    userList[2] = message?.ReplyToMessage?.From;
-            //    userList[3] = message.ReplyToMessage.ForwardFrom;
-            //}
-
-            return userList;
-        }
-        public bool Equals(TUser user) => user.Username == Username && user.FirstName == FirstName && user.LastName == LastName;
-        public static TUser Serialize(User user) => new TUser()
-        {
-            Id = user.Id,
-            Username = user.Username,
-            FirstName = user.FirstName,
-            LastName = user.LastName
-        };
-    }
-    class Group
-    {
-        public long GroupId { get; set; }
-        public Setting Setting { get; set; } = new();
-        public List<Filter> Rule { get; set; } = new();
-        public Permission Level { get; set; } = Permission.Common;
-        public void SetPermission(Permission targetLevel)
-        {
-            Level = targetLevel;
-            Config.SaveData();
-        }
-    }
-    class Filter
-    {
-        public required TUser Target { get; set; }
-        public required ActionType ActionType { get; set; }
-        public required MessageType MessageType { get; set; }
-        public string MatchString { get; set; }
-        public string ActionString { get; set; }
-    }
-    class Setting
-    {
-        public bool ForceCheckReference { get; set; } = true;
-        public bool Listen { get; set; } = true;
-    }
+{    
+    
+    
+    
     internal static class Config
     {
         static DateTime Up = DateTime.Now;
