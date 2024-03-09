@@ -12,6 +12,8 @@ using static TelegramBot.MaiScanner;
 using static TelegramBot.MaiDatabase;
 using File = System.IO.File;
 using TelegramBot.Class;
+using Telegram.Bot.Types;
+using Telegram.Bot;
 
 namespace TelegramBot
 {    
@@ -134,7 +136,7 @@ namespace TelegramBot
                 }
             });
         }
-        public static void SaveData()
+        public static async void SaveData()
         {
             Save(Path.Combine(DatabasePath, "UserList.data"), TUserList);
             Save(Path.Combine(DatabasePath, "UserIdList.data"), UserIdList);
@@ -145,6 +147,7 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "MaiAccountList.data"), MaiAccountList);
             Save(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"), MaiInvaildUserIdList);
             Save(Path.Combine(DatabasePath, "HotpAuthenticator.data"), Authenticator);
+            Program.BotCommands = await Program.botClient.GetMyCommandsAsync();
         }
         
         static void Check()
@@ -158,12 +161,12 @@ namespace TelegramBot
         }        
 
 
-        public static void Save<T>(string path,T target,bool debugMessage = true)
+        public static async void Save<T>(string path,T target,bool debugMessage = true)
         {
             try
             {
                 var fileStream = File.Open(path, FileMode.Create);
-                fileStream.Write(Encoding.UTF8.GetBytes(ToJsonString(target)));
+                await fileStream.WriteAsync(Encoding.UTF8.GetBytes(ToJsonString(target)));
                 fileStream.Close();
                 if (debugMessage)
                     Program.Debug(DebugType.Info, $"Saved File {path}");

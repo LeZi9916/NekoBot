@@ -21,10 +21,11 @@ namespace TelegramBot
     }
     internal partial class Program
     {
-        static TelegramBotClient botClient;
+        internal static TelegramBotClient botClient;
         internal static string Token = "";
         static string BotUsername = "";
         static DateTime startTime;
+        internal static BotCommand[] BotCommands;
         static void Main(string[] args)
         {
             Monitor.Init();
@@ -33,11 +34,11 @@ namespace TelegramBot
             startTime = DateTime.Now;
             HttpClient httpClient = new(new SocketsHttpHandler
             {
-                Proxy = new WebProxy("socks5://127.0.0.1:10808")
+                Proxy = new WebProxy("socks5://192.168.31.3:8080")
                 {
                     Credentials = new NetworkCredential("", "")
                 },
-                UseProxy = true,
+                UseProxy = false,
             });
             botClient = new TelegramBotClient(Token, httpClient);
             botClient.ReceiveAsync(
@@ -56,6 +57,7 @@ namespace TelegramBot
                 try
                 {
                     BotUsername = botClient.GetMeAsync().Result.Username;
+                    BotCommands = botClient.GetMyCommandsAsync().Result;
                     if (string.IsNullOrEmpty(BotUsername))
                         Debug(DebugType.Info, "Connect failure,retrying...");
                     else

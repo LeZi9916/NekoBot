@@ -88,8 +88,10 @@ namespace TelegramBot
             }
         }
         static void CommandPreHandle(string[] param, Update update)
-        {          
-            
+        {
+            if (param.Length == 0 || string.IsNullOrEmpty(param[0]))
+                return;
+
             var message = update.Message;
             var chat = message.Chat;
             var userId = message.From.Id;
@@ -97,11 +99,12 @@ namespace TelegramBot
             Group group = null;
             var isGroup = chat.Type is (ChatType.Group or ChatType.Supergroup);
 
+            //分割 /status@botusername
+            var _param = param[0].Split("@");
+            var prefix = _param[0].Replace("/", "");
 
             
-            if (param.Length == 0  || string.IsNullOrEmpty(param[0]))
-                return;
-            if (param[0].Substring(0, 1) != "/")
+            if (param[0].Substring(0, 1) != "/" || BotCommands.Where(x => x.Command == prefix).IsEmpty())
             {
                 Debug(DebugType.Debug, $"\"{param[0]}\" is not valid command,skipped");
                 return;
@@ -110,33 +113,38 @@ namespace TelegramBot
                 return;
             else if (isGroup)
                 group = Config.SearchGroup(chat.Id);
-            if(!user.isNormal)
+
+            param = param.Skip(1).ToArray();
+
+
+            if (group is not null && group.Setting.ForceCheckReference)
+                if (!(_param.Length == 2 && _param[1] == BotUsername))
+                    return;
+            
+            if (!user.isNormal)
             {
-                var sArray = string.Join(" ",param.Skip(1)).Split("-token");
-                if(sArray.Length < 2)
+                var sArray = string.Join(" ", param).Split("-token");
+                if (sArray.Length < 2)
                 {
-                    SendMessage("Authentication failed:\nChannel access is not allowed", update);
+                    SendMessage("Authentication failed:\nGroup or channel anonymous access is not allowed", update);
                     Debug(DebugType.Info, "Channel access,rejected");
                     return;
                 }
 
                 //var sArray = param[1].Split("--token");
                 var token = sArray[1];
-                if(!Config.Authenticator.Compare(token.Trim()))
+                if (!Config.Authenticator.Compare(token.Trim()))
                 {
                     SendMessage("Authentication failed:\nInvalid HOTP code", update);
                     Debug(DebugType.Info, "HOTP code is invalid,rejected");
                     return;
                 }
+                else
+                    param = sArray[0].Split(" ",StringSplitOptions.RemoveEmptyEntries);
+
             }
 
-            var _param = param[0].Split("@");
-            var prefix = _param[0].Replace("/","");
-            if (group is not null && group.Setting.ForceCheckReference)
-                if (!(_param.Length == 2 && _param[1] == BotUsername))
-                    return;
-
-            if(!user.CheckPermission(Permission.Root))
+            if (!user.CheckPermission(Permission.Root))
                 if (!user.CheckPermission(Permission.Common,group))
                 {
                     SendMessage("Access Denied", update);
@@ -147,7 +155,7 @@ namespace TelegramBot
             Command command = new();
 
             command.Prefix = Command.GetCommandType(prefix);
-            command.Content = param.Skip(1).ToArray();
+            command.Content = param;
             CommandHandle(command, update,user,group);
             
         }

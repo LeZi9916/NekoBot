@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <StartupObject></StartupObject>
-    <AssemblyVersion>0.9.23</AssemblyVersion>
+    <AssemblyVersion>0.9.41</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>

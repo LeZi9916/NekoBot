@@ -3,7 +3,6 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
-using Google.Authenticator;
 
 namespace TelegramBot.Class
 {
@@ -16,6 +15,7 @@ namespace TelegramBot.Class
         [JsonInclude]
         string secretKey = "";
         static string Base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        public int FailureCount { get; private set; }
         public string Code { get => GetCode(); }
 
         public HotpAuthenticator()
@@ -51,15 +51,20 @@ namespace TelegramBot.Class
         public string GetCode() => GetCode(counter);
         public bool Compare(string code)
         {
-            for (int index = -1;index < 1;index++)
+            if (FailureCount >= 4)
+                return false;
+
+            for (int index = -1; index < 1; index++)
             {
                 if (GetCode(counter + index) == code)
                 {
                     counter++;
+                    FailureCount = 0;
                     Config.Save(Path.Combine(Config.DatabasePath, "HotpAuthenticator.data"), this);
                     return true;
-                }                    
+                }
             }
+            FailureCount++;
             return false;
         }
         public static string ToBase32String(byte[] bytes)
