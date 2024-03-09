@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CSScripting;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -107,8 +108,27 @@ namespace TelegramBot
             }
             if (user is null)
                 return;
-            if (isGroup)
+            else if (isGroup)
                 group = Config.SearchGroup(chat.Id);
+            if(!user.isNormal)
+            {
+                var sArray = string.Join(" ",param.Skip(1)).Split("-token");
+                if(sArray.Length < 2)
+                {
+                    SendMessage("Authentication failed:\nChannel access is not allowed", update);
+                    Debug(DebugType.Info, "Channel access,rejected");
+                    return;
+                }
+
+                //var sArray = param[1].Split("--token");
+                var token = sArray[1];
+                if(!Config.Authenticator.Compare(token.Trim()))
+                {
+                    SendMessage("Authentication failed:\nInvalid HOTP code", update);
+                    Debug(DebugType.Info, "HOTP code is invalid,rejected");
+                    return;
+                }
+            }
 
             var _param = param[0].Split("@");
             var prefix = _param[0].Replace("/","");
@@ -119,7 +139,7 @@ namespace TelegramBot
             if(!user.CheckPermission(Permission.Root))
                 if (!user.CheckPermission(Permission.Common,group))
                 {
-                    SendMessage("很抱歉，您不能使用该Bot哦~", update);
+                    SendMessage("Access Denied", update);
                     Debug(DebugType.Info, "Banned user access,rejected");
                     return;
                 }
@@ -183,9 +203,38 @@ namespace TelegramBot
                     break;
             }
         }
-        static void MessageFilter(string content, Update update, TUser querier,Group group)
+        static bool MessageFilter(string content, Update update, TUser querier,Group group)
         {
-            
+            if (group is null)
+                return false;
+            else if (group.Rules.IsEmpty())
+                return false;
+
+            bool isMatch = false;
+            var genericRules = group.Rules.Where(x => x.Target is null).ToArray();
+            var matchedRules = group.Rules.Where(x => x is not null && x.Target.Id == querier.Id).ToArray();
+            FilterRule[] rules = new FilterRule[genericRules.Length + matchedRules.Length];
+            Array.Copy(genericRules, rules, genericRules.Length);
+            Array.Copy(matchedRules, 0, rules, genericRules.Length, matchedRules.Length);
+
+            foreach ( var rule in rules )
+            {
+                if (rule.Action is Action.Ban)
+                    continue;
+                else if (rule.MessageType is MessageType.Unknown || rule.MessageType == update.Message.Type)
+                {
+                    switch(rule.Action)
+                    {
+                        case Action.Reply:
+                            break;
+                        case Action.Delete:
+                            break;
+                    }
+                }
+                else
+                    continue;           
+            }
+            return isMatch;
         }
         static async Task<Message> SendMessage(string text,Update update,bool isReply = true, ParseMode? parseMode = null)
         {

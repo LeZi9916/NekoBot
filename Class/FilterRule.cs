@@ -13,6 +13,6 @@ namespace TelegramBot.Class
         public required Action Action { get; set; }
         public required MessageType MessageType { get; set; }
         public string MatchString { get; set; }
-        public string ActionString { get; set; }
+        public string ReplyString { get; set; }
     }
 }

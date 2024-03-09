@@ -33,7 +33,7 @@ namespace TelegramBot
             startTime = DateTime.Now;
             HttpClient httpClient = new(new SocketsHttpHandler
             {
-                Proxy = new WebProxy("socks5://192.168.31.3:8080")
+                Proxy = new WebProxy("socks5://127.0.0.1:10808")
                 {
                     Credentials = new NetworkCredential("", "")
                 },

@@ -26,6 +26,7 @@ namespace TelegramBot
         internal static string DatabasePath = Path.Combine(AppPath, "Database");
         internal static string TempPath = Path.Combine(AppPath, "Temp");
         internal static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
+        internal static HotpAuthenticator Authenticator = new HotpAuthenticator();
 
         internal static bool EnableAutoSave = true;
         internal static int AutoSaveInterval = 900000;
@@ -88,6 +89,8 @@ namespace TelegramBot
                 MaiAccountList = Load<List<MaiAccount>>(Path.Combine(DatabasePath, "MaiAccountList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data")))
                 MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"));
+            if (File.Exists(Path.Combine(DatabasePath, "HotpAuthenticator.data")))
+                Authenticator = Load<HotpAuthenticator>(Path.Combine(DatabasePath, "HotpAuthenticator.data"));
             if (File.Exists(Path.Combine(DatabasePath, "token.config")))
                 Program.Token = File.ReadAllText(Path.Combine(DatabasePath, "token.config"));
             else
@@ -141,6 +144,7 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "GroupIdList.data"), GroupIdList);
             Save(Path.Combine(DatabasePath, "MaiAccountList.data"), MaiAccountList);
             Save(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"), MaiInvaildUserIdList);
+            Save(Path.Combine(DatabasePath, "HotpAuthenticator.data"), Authenticator);
         }
         
         static void Check()

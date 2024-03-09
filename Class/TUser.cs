@@ -24,6 +24,7 @@ namespace TelegramBot.Class
         public int? MaiUserId { get; set; } = null;
         public bool isBanned => Level <= Permission.Ban;
         public bool isUnknow => Level == Permission.Unknow;
+        public bool isNormal => !(Id is 136817688 or 1087968824);
         [JsonIgnore]
         public MaiAccount Account { get; set; }
         public async Task<bool> GetMaiAccountInfo()
