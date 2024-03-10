@@ -263,7 +263,13 @@ namespace TelegramBot
                         selfMessage = EditMessage("正在解析二维码...", update, selfMessage.MessageId).Result;
                         Thread.Sleep(500);
 
-                        maiUserId = QRCode.ToUserId(Image.FromFile(filePath)).Object.userID;
+                        var request = new QRCodeRequest()
+                        {
+                            KeyChip = Config.keyChips[0],
+                            QrCode = Image.FromFile(filePath)
+                        };
+
+                        maiUserId = QRCode.ToUserId(request).Object.userID;
                     }
                     else
                     {
@@ -272,10 +278,17 @@ namespace TelegramBot
                     }
                 }
                 else if (QRCode.IsWeChatId(param))
-                    maiUserId = QRCode.ToUserId(param).Object.userID;
+                {
+                    var request = new QRCodeRequest()
+                    {
+                        KeyChip = Config.keyChips[0],
+                        QrCode = param
+                    };
+                    maiUserId = QRCode.ToUserId(request).Object.userID;
+                }
                 else
                 {
-                    SendMessage("这是什么喵?", update, true);
+                    SendMessage("获取UserId时发送错误QAQ:\nWeChatID无效", update, true);
                     return;
                 }
 

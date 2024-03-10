@@ -33,11 +33,16 @@ namespace TelegramBot
             Config.Init();
             MaiMonitor.Init();
             startTime = DateTime.Now;
+            Config.Load(Path.Combine(Config.DatabasePath, "Proxy.config"),out string proxyStr);
             HttpClient httpClient = new(new SocketsHttpHandler
             {
-                Proxy = Config.Load<WebProxy>(Path.Combine(Config.DatabasePath, "Proxy.config")),
+                //Proxy = Config.Load<WebProxy>(Path.Combine(Config.DatabasePath, "Proxy.config")),
+                Proxy = new WebProxy(proxyStr)
+                {
+                    Credentials = new NetworkCredential("", "")
+                },
                 UseProxy = true,
-            });
+            }); ;
             botClient = new TelegramBotClient(Token, httpClient);
             botClient.ReceiveAsync(
                 updateHandler: UpdateHandleAsync,

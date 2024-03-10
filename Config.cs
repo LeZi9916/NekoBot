@@ -193,6 +193,22 @@ namespace TelegramBot
                 return new T();
             }
         }
+        public static void Load<T>(string path,out T obj)
+        {
+            try
+            {
+                var json = File.ReadAllText(path);
+                obj = FromJsonString<T>(json);
+
+                Program.Debug(DebugType.Info, $"Loaded File: {path}");
+                
+            }
+            catch (Exception e)
+            {
+                Program.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
+                obj = default(T);
+            }
+        }
         public static string ToJsonString<T>(T target) => JsonSerializer.Serialize(target);
         public static T FromJsonString<T>(string json) => JsonSerializer.Deserialize<T>(json);
     }
