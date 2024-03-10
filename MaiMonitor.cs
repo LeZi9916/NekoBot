@@ -188,23 +188,25 @@ namespace TelegramBot
         {
             Stopwatch stopwatch = new();
             stopwatch.Start();
-            for(int i = 0;i<5;i++)
+            try
             {
-                try
-                {
-                    TcpClient client = new TcpClient();
-                    client.Connect(host, port);
-                    client.Close();
-                    stopwatch.Stop();
-                    return stopwatch.ElapsedMilliseconds;
-                }
-                catch
-                {
-                    continue;
-                }
+                TcpClient client = new TcpClient();
+                client.SendTimeout = 2000;
+                client.ReceiveTimeout = 2000;
+                client.Connect(host, port);
+                client.Close();
+                stopwatch.Stop();
+                return stopwatch.ElapsedMilliseconds;
             }
-            stopwatch.Stop();
-            return -1;
+            catch
+            {
+                return -1;
+            }
+            finally 
+            { 
+                stopwatch.Stop(); 
+            }
+            
         }
         
     }

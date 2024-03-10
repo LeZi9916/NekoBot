@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Net;
 using TelegramBot.Class;
+using System.IO;
 
 namespace TelegramBot
 {
@@ -34,11 +35,8 @@ namespace TelegramBot
             startTime = DateTime.Now;
             HttpClient httpClient = new(new SocketsHttpHandler
             {
-                Proxy = new WebProxy("socks5://192.168.31.3:8080")
-                {
-                    Credentials = new NetworkCredential("", "")
-                },
-                UseProxy = false,
+                Proxy = Config.Load<WebProxy>(Path.Combine(Config.DatabasePath, "Proxy.config")),
+                UseProxy = true,
             });
             botClient = new TelegramBotClient(Token, httpClient);
             botClient.ReceiveAsync(
