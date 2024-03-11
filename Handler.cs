@@ -201,10 +201,10 @@ namespace TelegramBot
                     AdvancedCommandHandle(command, update, querier, group);
                     break;
                 case CommandType.Mai:
-                    MaiCommandHandle(command, update, querier, group);
+                    Mai.CommandHandle(command, update, querier, group);
                     break;
                 case CommandType.MaiStatus:
-                    GetMaiServerStatus(command, update, querier);
+                    Mai.GetServerStatus(command, update, querier);
                     break;
                 case CommandType.MaiScanner:
                     MaiScannerHandle(command, update, querier);
