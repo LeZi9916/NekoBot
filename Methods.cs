@@ -294,6 +294,7 @@ namespace TelegramBot
                             SendMessage($"\"{command.Content[0]}\"不是有效参数喵x", update);
                             return;
                         }
+                        level = DebugType.Error;
                     }
                     break;
                 case 2:

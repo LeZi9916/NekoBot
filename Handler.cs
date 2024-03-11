@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -22,71 +21,8 @@ namespace TelegramBot
                 s = s.Replace(c, $"\\{c}");
             return s;
 
-        };
-        static string[] AdminCommands = { "update" };
-        enum CommandType
-        {
-            Start,
-            Add,
-            Ban,
-            Bind,
-            Status,
-            Help,
-            Info,
-            Promote,
-            Demote,
-            Mai,
-            Logs,
-            Config,
-            Set,
-            MaiStatus,
-            MaiScanner,
-            Unknow
-        }
-        struct Command
-        {
-            public CommandType Prefix;
-            public string[] Content;
-
-            public static CommandType GetCommandType(string s)
-            {
-                switch (s)
-                {
-                    case "start":
-                        return CommandType.Start;
-                    case "add":
-                        return CommandType.Add;
-                    case "ban":
-                        return CommandType.Ban;
-                    case "bind":
-                        return CommandType.Bind;
-                    case "status":
-                        return CommandType.Status;
-                    case "help": 
-                        return CommandType.Help;
-                    case "info":
-                        return CommandType.Info;
-                    case "promote":
-                        return CommandType.Promote;
-                    case "demote":
-                        return CommandType.Demote;
-                    case "mai":
-                        return CommandType.Mai;
-                    case "maistatus":
-                        return CommandType.MaiStatus;
-                    case "config":
-                        return CommandType.Config;
-                    case "logs":
-                        return CommandType.Logs;
-                    case "set":
-                        return CommandType.Set;
-                    case "maiscanner":
-                        return CommandType.MaiScanner;
-                    default:
-                        return CommandType.Unknow;
-                }
-            }
-        }
+        };        
+        
         static void CommandPreHandle(string[] param, Update update)
         {
             if (param.Length == 0 || string.IsNullOrEmpty(param[0]))

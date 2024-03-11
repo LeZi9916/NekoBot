@@ -26,4 +26,23 @@ namespace TelegramBot
         Group,
         Global
     }
+    enum CommandType
+    {
+        Start,
+        Add,
+        Ban,
+        Bind,
+        Status,
+        Help,
+        Info,
+        Promote,
+        Demote,
+        Mai,
+        Logs,
+        Config,
+        Set,
+        MaiStatus,
+        MaiScanner,
+        Unknow
+    }
 }
