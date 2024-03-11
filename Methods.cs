@@ -1,8 +1,10 @@
 ﻿using CSScripting;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
+using Telegram.Bot.Requests;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using TelegramBot.Class;
@@ -335,8 +337,44 @@ namespace TelegramBot
                 SendMessage("暂无可用日志喵", update);
             else
             {
-                await SendMessage("```csharp\n" +
-                             $"{StringHandle(string.Join("", logs).Replace("\\", "\\\\"))}\n" +
+                var logText = string.Join("", logs).Replace("\\", "\\\\");
+                if(logText.Length > 4000)
+                {
+                    //int index = 0;
+                    //string[] msgGroup = new string[(int)Math.Ceiling((double)logText.Length / 4000)];
+                    //while(index * 4000 < logText.Length)
+                    //{
+                    //    msgGroup[index] = logText.Substring(index * 4000, Math.Min(4000,logText.Length - 1 - index * 4000));
+                    //    index++;
+                    //}
+
+                    //foreach(var s in msgGroup)
+                    //    await SendMessage("```csharp\n" +
+                    //         $"{StringHandle(s)}\n" +
+                    //         $"```", update, true, ParseMode.MarkdownV2);
+
+                    List<string> msgGroup = new();
+                    string msg = "";
+
+                    foreach(var s in logs)
+                    {
+                        if (($"{msg}{s.Replace("\\", "\\\\")}").Length > 4000)
+                        {
+                            msgGroup.Add(msg);
+                            msg = $"{s.Replace("\\", "\\\\")}";
+                        }
+                        else
+                            msg += $"{s.Replace("\\", "\\\\")}";
+                    }
+                    msgGroup.Add(msg);
+                    foreach (var s in msgGroup)
+                        await SendMessage("```csharp\n" +
+                             $"{StringHandle(s)}\n" +
+                             $"```", update, true, ParseMode.MarkdownV2);
+                }
+                else
+                    await SendMessage("```csharp\n" +
+                             $"{StringHandle(logText)}\n" +
                              $"```", update, true, ParseMode.MarkdownV2);
             }
             //await UploadFile(Config.LogFile,chat.Id);
@@ -378,72 +416,70 @@ namespace TelegramBot
         static void GetHelpInfo(Command command, Update update, TUser querier, Group group = null)
         {
             var isPrivate = update.Message.Chat.Type is ChatType.Private;
-            string helpStr = "```bash\n";
+            string helpStr = "```python\n";
             switch (command.Prefix)
             {
                 case CommandType.Add:
                     helpStr += StringHandle(
                         "命令用法:\n" +
-                        "\n/add             允许reply对象访问bot" +
-                        "\n/add [TGUserId]  允许指定用户访问bot");
+                        "\n/add        允许reply对象访问bot" +
+                        "\n/add [int]  允许指定用户访问bot");
                     break;
                 case CommandType.Ban:
                     helpStr += StringHandle(
                         "命令用法:\n" +
-                        "\n/ban             封禁reply对象" +
-                        "\n/ban [TGUserId]  封禁指定用户");
+                        "\n/ban        封禁reply对象" +
+                        "\n/ban [int]  封禁指定用户");
                     break;
-                case CommandType.Status:
-                    return;
                 case CommandType.Info:
                     helpStr += StringHandle(
                         "命令用法:\n" +
-                        "\n/info             获取reply对象的用户信息" +
-                        "\n/info [TGUserId]  获取指定用户的用户信息");
+                        "\n/info        获取reply对象的用户信息" +
+                        "\n/info [int]  获取指定用户的用户信息");
                     break;
                 case CommandType.Promote:
                     helpStr += StringHandle(
                         "命令用法:\n" +
-                        "\n/promote             提升reply对象的权限等级" +
-                        "\n/promote [TGUserId]  提升指定用户的权限等级");
+                        "\n/promote        提升reply对象的权限等级" +
+                        "\n/promote [int]  提升指定用户的权限等级");
                     break;
                 case CommandType.Demote:
                     helpStr += StringHandle(
                         "命令用法:\n" +
-                        "\n/demote             降低reply对象的权限等级" +
-                        "\n/demote [TGUserId]  降低指定用户的权限等级");
+                        "\n/demote        降低reply对象的权限等级" +
+                        "\n/demote [int]  降低指定用户的权限等级");
                     break;
                 case CommandType.Help:
                     helpStr += StringHandle(
                         "\n相关命令：\n" +
-                        "\n/add     [TGUserId]  允许指定用户访问bot" +
-                        "\n/ban     [TGUserId]  禁止指定用户访问bot" +
-                        "\n/info    [TGUserId]  获取指定用户信息" +
-                        "\n/promote [TGUserId]  提升指定用户权限" +
-                        "\n/demote  [TGUserId]  降低指定用户权限" +
-                        "\n/status              显示bot服务器状态" +
-                        "\n/logs                获取本次运行日志" +
-                        "\n/maistatus           查看土豆服务器状况" +
-                        "\n/set     [Command]   权限狗专用" +
-                        "\n/help                显示帮助信息\n");
+                        "\n/add        允许指定用户访问bot" +
+                        "\n/ban        禁止指定用户访问bot" +
+                        "\n/info       获取指定用户信息" +
+                        "\n/promote    提升指定用户权限" +
+                        "\n/demote     降低指定用户权限" +
+                        "\n/status     显示bot服务器状态" +
+                        "\n/logs       获取本次运行日志" +
+                        "\n/maistatus  查看土豆服务器状况" +
+                        "\n/set        权限狗专用" +
+                        "\n/help       显示帮助信息\n" +
+                        "\n更详细的信息请输入\"/{command} help\"");
                     break;
                 case CommandType.Mai:
                     helpStr += StringHandle(
                             "命令用法：\n" +
-                            "\n/mai bind image        上传二维码并进行绑定" +
-                            "\n/mai bind [String]     使用SDWC标识符进行绑定" +
-                            "\n/mai region            获取登录地区信息" +
-                            "\n/mai rank              获取国服排行榜" +
-                            "\n/mai rank refresh      重新加载排行榜" +
-                            "\n/mai status            查看DX服务器状态" +
-                            "\n/mai backup [String]   使用密码备份账号数据" +
-                            "\n/mai info              获取账号信息" +
-                            "\n/mai info [int]        获取指定账号信息" +
-                            "\n/mai ticket [id]       获取一张指定类型的票" +
-                            "\n/mai ticket [id] [num] 获取指定数量的票" +
-                            "\n/mai sync              强制刷新账号信息" +
-                            "\n/mai sync [int]        强制刷新指定账号信息" +
-                            "\n/mai logout            登出");
+                            "\n/mai bind image    上传二维码并进行绑定" +
+                            "\n/mai bind [str]    使用SDWC标识符进行绑定" +
+                            "\n/mai region        获取登录地区信息" +
+                            "\n/mai rank          获取国服排行榜" +
+                            "\n/mai rank refresh  重新加载排行榜" +
+                            "\n/mai status        查看DX服务器状态" +
+                            "\n/mai backup [str]  使用密码备份账号数据" +
+                            "\n/mai info          获取账号信息" +
+                            "\n/mai info [int]    获取指定账号信息" +
+                            "\n/mai ticket [int]  获取一张指定类型的票" +
+                            "\n/mai sync          强制刷新账号信息" +
+                            "\n/mai sync [int]    强制刷新指定账号信息" +
+                            "\n/mai logout        登出");
                     break;
                 case CommandType.MaiScanner:
                     helpStr += StringHandle(
@@ -454,6 +490,21 @@ namespace TelegramBot
                             "\n/maiscanner stop         终止当前任务" +
                             "\n/maiscanner set [int]    设置QPS限制");
                     break;
+                case CommandType.Logs:
+                    helpStr += StringHandle(
+                            "命令用法：\n" +
+                            "\n/logs            获取最近15条等级为Error或以上的日志信息" +
+                            "\n/logs [Lv|int]   获取自定义数量或等级的日志信息" +
+                            "\n/logs [Lv] [int] 获取最近指定数量和等级的日志信息\n\n" +
+                            "Lv参数的可用值:\n" +
+                            "debug\n" +
+                            "info\n" +
+                            "warning\n" +
+                            "err");
+                    break;
+                default:
+                    SendMessage("该命令暂未添加说明信息喵x", update);
+                    return;
             }
             helpStr += "\n```";
             SendMessage(helpStr, update, true, ParseMode.MarkdownV2);

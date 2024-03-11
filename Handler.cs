@@ -1,6 +1,5 @@
 ﻿using CSScripting;
 using System;
-using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -99,7 +98,11 @@ namespace TelegramBot
         {
             var message = update.Message;
             var isPrivate = update.Message.Chat.Type is ChatType.Private;
-
+            if(command.Content.Length > 0 && command.Content[0] is "help")
+            {
+                GetHelpInfo(command, update, querier, group);
+                return;
+            }
             switch (command.Prefix)
             {
                 case CommandType.Start:
