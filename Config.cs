@@ -95,6 +95,8 @@ namespace TelegramBot
                 MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "HotpAuthenticator.data")))
                 Authenticator = Load<HotpAuthenticator>(Path.Combine(DatabasePath, "HotpAuthenticator.data"));
+            if (File.Exists(Path.Combine(DatabasePath, "CompressSkipLogs.data")))
+                MaiMonitor.CompressSkipLogs = Load<List<MaiMonitor.SkipLog>>(Path.Combine(DatabasePath, "CompressSkipLogs.data"));
             if (File.Exists(Path.Combine(DatabasePath, "token.config")))
                 Program.Token = File.ReadAllText(Path.Combine(DatabasePath, "token.config"));
             else
@@ -156,6 +158,7 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "MaiAccountList.data"), MaiAccountList);
             Save(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"), MaiInvaildUserIdList);
             Save(Path.Combine(DatabasePath, "HotpAuthenticator.data"), Authenticator);
+            Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), MaiMonitor.CompressSkipLogs);
             Program.BotCommands = await Program.botClient.GetMyCommandsAsync();
         }
         

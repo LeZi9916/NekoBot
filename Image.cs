@@ -3,13 +3,11 @@ using System.Collections.Generic;
 using System;
 using ZXing.SkiaSharp;
 using System.IO;
-using static TelegramBot.Image;
 using System.Linq;
-using System.Numerics;
 
 namespace TelegramBot
 {
-    class ChartHelper
+    public class ChartHelper
     {
         public class KNode
         {
@@ -34,11 +32,7 @@ namespace TelegramBot
             /// </summary>
             public float Close { get; set; }
         }
-        public class CandlestickChartHelper<TX,TY> 
-            where TX: struct,IComparable, IComparable<TX>,
-                                           IConvertible, IEquatable<TX>, IFormattable 
-            where TY: struct, IComparable, IComparable<TY>,
-                                           IConvertible, IEquatable<TY>, IFormattable
+        public class CandlestickChartHelper<TX,TY> where TY:struct where TX:struct
         {
             
             /// <summary>

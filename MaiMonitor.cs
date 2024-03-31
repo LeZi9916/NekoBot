@@ -27,6 +27,11 @@ namespace TelegramBot
             public ServerType Type {  get; set; }
             public long Delay { get; set; }
         }
+        public class SkipLog
+        {
+            public DateTime Timestamp { get; set; }
+            public bool IsSkip { get; set; }
+        }
         public static bool ServiceAvailability = true;
 
         public static long FaultInterval = -1;//平均故障间隔
@@ -45,7 +50,7 @@ namespace TelegramBot
         public static long OtherErrorCount = 0;
         public static double CompressSkipRate = 0;// 跳过率
         public static long CompressSkipRequestCount = 0;
-        public static List<long> CompressSkipLogs = new();
+        public static List<SkipLog> CompressSkipLogs = new();
         public static HttpStatusCode LastResponseStatusCode;
 
         const string TitleServer = "maimai-gm.wahlap.com";
@@ -81,7 +86,7 @@ namespace TelegramBot
                         CompressSkipRate = 0;
                         OtherErrorCount = 0;
                         CompressSkipRequestCount = 0;
-                        CompressSkipLogs.Clear();
+                        //CompressSkipLogs.Clear();
                         PingLogs.Clear();
                         continue;
                     }
@@ -119,16 +124,18 @@ namespace TelegramBot
                     }
 
                     if (LastResponseStatusCode == HttpStatusCode.GatewayTimeout)
-                        TimeoutRequestCount++;
-                    else if(LastResponseStatusCode != HttpStatusCode.OK)
-                        OtherErrorCount++;
-                    if (response.Object.CompressSkip)
+                        TimeoutRequestCount++;                    
+                    else if (LastResponseStatusCode is HttpStatusCode.OK)
                     {
                         CompressSkipRequestCount++;
-                        CompressSkipLogs.Add(1);
+                        CompressSkipLogs.Add(new SkipLog()
+                        {
+                            Timestamp = DateTime.Now,
+                            IsSkip = response.Object.CompressSkip
+                        });
                     }
-                    else
-                        CompressSkipLogs.Add(0);
+                    else 
+                        OtherErrorCount++;
 
                     CompressSkipRate = (double)CompressSkipRequestCount / (TotalRequestCount - TimeoutRequestCount - OtherErrorCount);
                     if (FaultIntervalList.Count != 0)
@@ -165,22 +172,41 @@ namespace TelegramBot
             double _10min = double.NaN;
             double _15min = double.NaN;
             var count = CompressSkipLogs.Count;             
+            var now = DateTime.Now;
 
-            if(count >= 60)
-            {
-                double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 60)).Where(x => x == 1).Sum();
-                _5min = skipCount / 60;
-            }
-            if (count >= 120)
-            {
-                double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 120)).Where(x => x == 1).Sum();
-                _10min = skipCount / 120;
-            }
-            if (count >= 180)
-            {
-                double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 180)).Where(x => x == 1).Sum();
-                _15min = skipCount / 180;
-            }
+            var _5minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 5);
+            var _10minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 10);
+            var _15minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 15);
+
+            var _5minSkip = _5minLogs.Where(x => x.IsSkip);
+            var _10minSkip = _10minLogs.Where(x => x.IsSkip);
+            var _15minSkip = _15minLogs.Where(x => x.IsSkip);
+
+            _5min = _5minSkip.Count() / (double)_5minLogs.Count();
+            _10min = _10minSkip.Count() / (double)_10minLogs.Count();
+            _15min = _15minSkip.Count() / (double)_15minLogs.Count();
+
+            //if (count >= 60)
+            //{
+            //    double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 60))
+            //                                       .Where(x => x.IsSkip && (now - x.Timestamp).Minutes <= 5)
+            //                                       .Count();
+            //    _5min = skipCount / 60;
+            //}
+            //if (count >= 120)
+            //{
+            //    double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 120))
+            //                                       .Where(x => x.IsSkip)
+            //                                       .Count();
+            //    _10min = skipCount / 120;
+            //}
+            //if (count >= 180)
+            //{
+            //    double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 180))
+            //                                       .Where(x => x.IsSkip)
+            //                                       .Count();
+            //    _15min = skipCount / 180;
+            //}
 
             return new double[] { _5min, _10min , _15min};
         }
