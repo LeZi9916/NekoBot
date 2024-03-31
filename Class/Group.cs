@@ -1,10 +1,13 @@
 ﻿using System.Collections.Generic;
+using Telegram.Bot.Types;
 
 namespace TelegramBot.Class
 {
-    class Group
+    class Group : IAccount
     {
-        public long GroupId { get; set; }
+        public long Id { get; set; }
+        public string Username { get; set; }
+        public string Name { get; set; }
         public BotConfig Setting { get; set; } = new();
         public List<FilterRule> Rules { get; set; } = new();
         public Permission Level { get; set; } = Permission.Common;
@@ -12,6 +15,11 @@ namespace TelegramBot.Class
         {
             Level = targetLevel;
             Config.SaveData();
+        }
+        public bool CheckPermission(Permission targetLevel) => Level >= targetLevel;
+        public static void Update(Update update)
+        {
+
         }
     }
 }

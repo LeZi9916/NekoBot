@@ -430,21 +430,26 @@ namespace TelegramBot
                     bool isNew = maiUser == null;
                     var response = (await GetUserPreview(userId)).Object;
 
-                    if (maiUser is null)
-                        maiUser = new MaiAccount();
-                    maiUser.playerRating = response.playerRating ?? 0;
-                    maiUser.lastDataVersion = response.lastDataVersion;
-                    maiUser.lastRomVersion = response.lastRomVersion;
-                    maiUser.lastGameId = response.lastGameId;
-                    maiUser.banState = response.banState;
-                    maiUser.lastUpdate = DateTime.Now;
+                    if (response.StatusCode is HttpStatusCode.OK)
+                    {
+                        if (maiUser is null)
+                            maiUser = new MaiAccount();
+                        maiUser.playerRating = response.playerRating ?? 0;
+                        maiUser.lastDataVersion = response.lastDataVersion;
+                        maiUser.lastRomVersion = response.lastRomVersion;
+                        maiUser.lastGameId = response.lastGameId;
+                        maiUser.banState = response.banState;
+                        maiUser.lastUpdate = DateTime.Now;
 
-                    querier.Account = maiUser;
-                    if (isNew)
-                        MaiDatabase.MaiAccountList.Add(maiUser);
-                    Config.SaveData();
+                        querier.Account = maiUser;
+                        if (isNew)
+                            MaiDatabase.MaiAccountList.Add(maiUser);
+                        Config.SaveData();
 
-                    EditMessage("更新完成喵wAw", update, selfMessage.MessageId);
+                        EditMessage("更新完成喵wAw", update, selfMessage.MessageId);
+                    }
+                    else
+                        throw new Exception("");
                 }
                 catch (Exception e)
                 {

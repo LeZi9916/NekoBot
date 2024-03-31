@@ -10,6 +10,9 @@ using System.Net.Http;
 using System.Net;
 using TelegramBot.Class;
 using System.IO;
+using static TelegramBot.Image;
+using System.Collections.Generic;
+using static TelegramBot.ChartHelper;
 
 namespace TelegramBot
 {
@@ -27,8 +30,31 @@ namespace TelegramBot
         static string BotUsername = "";
         static DateTime startTime;
         internal static BotCommand[] BotCommands;
+        static void Test()
+        {
+            List<KNode> data = new List<KNode>
+            {
+                new KNode { Date = DateTime.Now.AddDays(-4), Open = 100, High = 110, Low = 90, Close = 105 },
+                new KNode { Date = DateTime.Now.AddDays(-3), Open = 105, High = 115, Low = 95, Close = 110 },
+                new KNode { Date = DateTime.Now.AddDays(-2), Open = 110, High = 120, Low = 100, Close = 115 },
+                new KNode { Date = DateTime.Now.AddDays(-1), Open = 115, High = 125, Low = 105, Close = 120 },
+                new KNode { Date = DateTime.Now, Open = 120, High = 130, Low = 110, Close = 125 },
+                new KNode { Date = DateTime.Now, Open = 120, High = 130, Low = 110, Close = 125 },
+            };
+            List<int> XSamples = new List<int>()
+            {
+                1210,1220,1230,1240,1250,1260
+            };
+            List<int> YSamples = new List<int>()
+            {
+                130,115,100,85,70
+            };
+            var helper = new CandlestickChartHelper<int,int>(data, XSamples, YSamples);
+            helper.Draw("KLineChart.png");
+        }
         static void Main(string[] args)
         {
+            Test();
             Monitor.Init();
             Config.Init();
             MaiMonitor.Init();
@@ -196,7 +222,7 @@ namespace TelegramBot
                         continue;
                     }
 
-                    Config.AddUser(TUser.Serialize(user));
+                    Config.AddUser(TUser.FromUser(user));
 
                     Debug(DebugType.Info, $"Find New User:\n" +
                     $"Name: {user.FirstName} {user.LastName}\n" +
@@ -226,14 +252,17 @@ namespace TelegramBot
 
                     var group = new Group()
                     {
-                        GroupId = groupId
+                        Id = groupId,
+                        Name = chat.Title,
+                        Username = chat.Username,                        
                     };
                     Config.GroupList.Add(group);
                     Config.GroupIdList.Add(groupId);
                     Config.SaveData();
                     Debug(DebugType.Debug, $"Find New Group:\n" +
-                        $"Name: {chat.FirstName} {chat.LastName}\n" +
-                        $"Id: {groupId}\n");
+                        $"Name: {group.Name}\n" +
+                        $"Id: {groupId}\n" +
+                        $"Username：{group.Username}\n");
                 }
                 catch(Exception e)
                 {

@@ -10,7 +10,7 @@ using static TelegramBot.MaiDatabase;
 
 namespace TelegramBot.Class
 {
-    class TUser
+    class TUser: IAccount
     {
         public long Id { get; set; }
         public string Username { get; set; }
@@ -44,9 +44,10 @@ namespace TelegramBot.Class
                 return true;
             });
         }
-        public bool CheckPermission(Permission targetLevel, Group group = null)
+        public bool CheckPermission(Permission targetLevel) => Level >= targetLevel;
+        public bool CheckPermission(Permission targetLevel, Group group)
         {
-            if (group is not null && group.Level >= targetLevel)
+            if (group is not null && group.CheckPermission(targetLevel))
                 return Level >= Permission.Common;
             return Level >= targetLevel;
         }
@@ -65,7 +66,7 @@ namespace TelegramBot.Class
                     continue;
 
                 var target = Config.SearchUser(user.Id);
-                var _user = TUser.Serialize(user);
+                var _user = TUser.FromUser(user);
 
                 if (target is null)
                     continue;
@@ -108,7 +109,7 @@ namespace TelegramBot.Class
             return userList;
         }
         public bool Equals(TUser user) => user.Username == Username && user.FirstName == FirstName && user.LastName == LastName;
-        public static TUser Serialize(User user) => new TUser()
+        public static TUser FromUser(User user) => new TUser()
         {
             Id = user.Id,
             Username = user.Username,

@@ -14,6 +14,8 @@ using File = System.IO.File;
 using TelegramBot.Class;
 using Telegram.Bot.Types;
 using Telegram.Bot;
+using System.Text.RegularExpressions;
+using Group = TelegramBot.Class.Group;
 
 namespace TelegramBot
 {    
@@ -103,18 +105,25 @@ namespace TelegramBot
             MaiDataInit();
             AutoSave();
         }
-        public static Group SearchGroup(long groupId)
+#nullable enable
+        public static Group? SearchGroup(long groupId)
         {
-            var result = GroupList.Where(u => u.GroupId == groupId).ToArray();
+            if (!GroupIdList.Contains(groupId))
+                return null;
+            var result = GroupList.Where(u => u.Id == groupId).ToArray();
 
-            return result.Length == 0 ? null : result[0];
+            return result[0];
         }
-        public static TUser SearchUser(long userId)
+        public static TUser? SearchUser(long userId)
         {
+            if (!UserIdList.Contains(userId))
+                return null;
+
             var result = TUserList.Where(u => u.Id == userId).ToArray();
 
-            return result.Length == 0 ? null: result[0];
+            return result[0];
         }
+#nullable disable
         public static void AddUser(TUser user)
         {
             TUserList.Add(user);

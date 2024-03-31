@@ -114,31 +114,51 @@ namespace TelegramBot
             var isGroup = update.Message.Chat.Type is (ChatType.Group or ChatType.Supergroup);
             var id = (update.Message.ReplyToMessage is not null ? (update.Message.ReplyToMessage.From ?? update.Message.From) : update.Message.From).Id;
 
-            if (command.Content.Length > 0)
+
+            if (id != querier.Id && !querier.CheckPermission(Permission.Admin))
             {
-                if (!long.TryParse(command.Content[0], out id))
+                SendMessage("Permission denied.", update);
+                return;
+            }
+            else if (command.Content.Length > 0)
+            {
+                if(command.Content[0] is "group")
+                {
+                    if(group is null)
+                        SendMessage("获取群组信息时发生错误QAQ:\n此功能只能在群组内使用", update);
+                    else
+                    {
+                        SendMessage(
+                            $"群组信息:\n" +
+                            $"Name: {group.Name}\n" +
+                            $"Id: {group.Id}\n" +
+                            $"Permission: {group.Level}", update);
+                    }
+                }
+                else if (!long.TryParse(command.Content[0], out id))
                 {
                     GetHelpInfo(command, update, querier);
                     return;
                 }
             }
-            if (id != querier.Id && !querier.CheckPermission(Permission.Admin))
+            else
             {
-                SendMessage("很抱歉，您不能查看别人的信息哦~", update);
-                return;
+                var target = Config.SearchUser(id);
+
+                if (target is null)
+                    SendMessage("查无此人喵", update);
+                else
+                    SendMessage(
+                        $"用户信息:\n" +
+                        $"Name: {target.Name}\n" +
+                        $"Id: {target.Id}\n" +
+                        $"Permission: {target.Level}\n" +
+                        $"MaiUserId: {(isGroup ? target.MaiUserId is null ? "未绑定" : "喵" : target.MaiUserId is null ? "未绑定" : target.MaiUserId)}", update);
             }
             
+            
 
-            var target = Config.SearchUser(id);            
-            if (target is null)
-                SendMessage("查无此人喵", update);
-            else
-                SendMessage(
-                    $"用户信息:\n" +
-                    $"Name: {target.Name}\n" +
-                    $"Id: {target.Id}\n" +
-                    $"Permission: {target.Level}\n" +
-                    $"MaiUserId: {(isGroup ? target.MaiUserId is null ? "未绑定" : "喵" : target.MaiUserId is null ? "未绑定" : target.MaiUserId)}", update);
+            
         }
         static void SetUserPermission(Command command, Update update, TUser querier,int diff, Group group = null)
         {
