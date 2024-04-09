@@ -10,7 +10,7 @@ using static TelegramBot.MaiDatabase;
 
 namespace TelegramBot.Class
 {
-    class TUser: IAccount
+    public class TUser: IAccount
     {
         public long Id { get; set; }
         public string Username { get; set; }

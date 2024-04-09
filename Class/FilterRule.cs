@@ -7,7 +7,7 @@ using Telegram.Bot.Types.Enums;
 
 namespace TelegramBot.Class
 {
-    class FilterRule
+    public class FilterRule
     {
         public required TUser Target { get; set; }
         public required Action Action { get; set; }

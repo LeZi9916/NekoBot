@@ -4,16 +4,115 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
-using Telegram.Bot.Requests;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using TelegramBot.Class;
+using TelegramBot.Interfaces;
+using static TelegramBot.Program;
 
 namespace TelegramBot
 {
-    internal partial class Program
+    internal partial class GenericHandler : IExtension
     {
-        static void AddUser(Command command, Update update, TUser querier, Group group = null)
+        public Command[] Commands { get; } = 
+        {
+            new Command()
+            {
+                Prefix = "",
+                Description = ""
+            }
+        };
+        public string Name { get; } = "Generic";
+        public void Handle(InputCommand command, Update update, TUser querier, Group group)
+        {
+            var message = update.Message;
+            var isPrivate = update.Message.Chat.Type is ChatType.Private;
+            if (command.Content.Length > 0 && command.Content[0] is "help")
+            {
+                GetHelpInfo(command, update, querier, group);
+                return;
+            }
+            switch (command.Prefix)
+            {
+                case "start":
+                    SendMessage("你好，我是钟致远，我出生于广西壮族自治区南宁市，从小就擅长滥用，有关我的滥用事迹请移步 @hax_server\n" +
+                        "\n请输入 /help 以获得更多信息", update, true);
+                    break;
+                case "add":
+                    AddUser(command, update, querier, group);
+                    break;
+                case "ban":
+                    BanUser(command, update, querier, group);
+                    break;
+                case "status":
+                    GetSystemInfo(command, update);
+                    break;
+                case "info":
+                    GetUserInfo(command, update, querier, group);
+                    break;
+                case "promote":
+                    SetUserPermission(command, update, querier, 1, group);
+                    break;
+                case "demote":
+                    SetUserPermission(command, update, querier, -1, group);
+                    break;
+                case "config":
+                    BotConfig(command, update, querier, group);
+                    break;
+                case "help":
+                    GetHelpInfo(command, update, querier, group);
+                    break;
+                case "logs":
+                    GetBotLog(command, update, querier, group);
+                    break;
+                case "set":
+                    AdvancedCommandHandle(command, update, querier, group);
+                    break;
+                case "mai":
+                    Mai.CommandHandle(command, update, querier, group);
+                    break;
+                case "maistatus":
+                    Mai.GetServerStatus(command, update, querier);
+                    break;
+                case "maiscanner":
+                    MaiScannerHandle(command, update, querier);
+                    break;
+            }
+        }
+        static bool MessageFilter(string content, Update update, TUser querier, Group group)
+        {
+            if (group is null)
+                return false;
+            else if (group.Rules.IsEmpty())
+                return false;
+
+            bool isMatch = false;
+            var genericRules = group.Rules.Where(x => x.Target is null).ToArray();
+            var matchedRules = group.Rules.Where(x => x is not null && x.Target.Id == querier.Id).ToArray();
+            FilterRule[] rules = new FilterRule[genericRules.Length + matchedRules.Length];
+            Array.Copy(genericRules, rules, genericRules.Length);
+            Array.Copy(matchedRules, 0, rules, genericRules.Length, matchedRules.Length);
+
+            foreach (var rule in rules)
+            {
+                if (rule.Action is Action.Ban)
+                    continue;
+                else if (rule.MessageType is MessageType.Unknown || rule.MessageType == update.Message.Type)
+                {
+                    switch (rule.Action)
+                    {
+                        case Action.Reply:
+                            break;
+                        case Action.Delete:
+                            break;
+                    }
+                }
+                else
+                    continue;
+            }
+            return isMatch;
+        }
+        static void AddUser(InputCommand command, Update update, TUser querier, Group group = null)
         {
             var replyMessage = update.Message.ReplyToMessage;
             TUser target = null; 
@@ -61,7 +160,7 @@ namespace TelegramBot
                 SendMessage($"欢迎新朋友~", update);
             }
         }
-        static void BanUser(Command command, Update update, TUser querier, Group group = null)
+        static void BanUser(InputCommand command, Update update, TUser querier, Group group = null)
         {
             var replyMessage = update.Message.ReplyToMessage;
             TUser target = null;
@@ -109,7 +208,7 @@ namespace TelegramBot
                 SendMessage($"已经将坏蛋踢出去了喵", update);
             }
         }
-        static void GetUserInfo(Command command, Update update,TUser querier, Group group = null)
+        static void GetUserInfo(InputCommand command, Update update,TUser querier, Group group = null)
         {
             var isGroup = update.Message.Chat.Type is (ChatType.Group or ChatType.Supergroup);
             var id = (update.Message.ReplyToMessage is not null ? (update.Message.ReplyToMessage.From ?? update.Message.From) : update.Message.From).Id;
@@ -160,7 +259,7 @@ namespace TelegramBot
 
             
         }
-        static void SetUserPermission(Command command, Update update, TUser querier,int diff, Group group = null)
+        static void SetUserPermission(InputCommand command, Update update, TUser querier,int diff, Group group = null)
         {
             var replyMessage = update.Message.ReplyToMessage;
             Func<Permission,TUser, bool> canPromote = (s,user) => 
@@ -260,25 +359,27 @@ namespace TelegramBot
             else
                 SendMessage("喵?", update);
         }        
-        static async void GetSystemInfo(Command command, Update update)
+        static async void GetSystemInfo(InputCommand command, Update update)
         {
             var uptime = DateTime.Now - startTime;
             await SendMessage(StringHandle(
                 $"当前版本: v{Assembly.GetExecutingAssembly().GetName().Version}\n\n" +
-                "系统信息:\n" +
+                "硬件信息:\n" +
                 $"-核心数: {Monitor.ProcessorCount}\n" +
-                $"-使用率: {Monitor.CPULoad}%\n" +
-                $"-总内存: {Monitor.TotalMemory/1000000} MiB\n" +
+                $"-使用率: {Monitor.CPULoad}%\n" +     
+                $"-进程占用: {GC.GetTotalMemory(false) / (1024 * 1024)} MiB\n" +
                 $"-剩余内存: {Monitor.FreeMemory/1000000} MiB\n" +
                 $"-已用内存: {Monitor.UsedMemory/1000000} MiB ({Monitor.UsedMemory * 100 / Monitor.TotalMemory }%)\n" +
+                $"-总内存: {Monitor.TotalMemory / 1000000} MiB\n" +
                 $"-在线时间: {uptime.Hours}h{uptime.Minutes}m{uptime.Seconds}s\n\n" +
+                $"统计器:\n" +
                 $"-总计处理消息数: {Config.TotalHandleCount}\n" +
                 $"-平均耗时: {(Config.TotalHandleCount is 0 ? 0 :Config.TimeSpentList.Sum() / Config.TotalHandleCount)}ms\n" +
                 $"-5分钟平均CPU占用率: {Monitor._5CPULoad}%\n" +
                 $"-10分钟平均CPU占用率: {Monitor._10CPULoad}%\n" +
                 $"-15分钟平均CPU占用率: {Monitor._15CPULoad}%\n"),update,true,ParseMode.MarkdownV2);
         }
-        static async void GetBotLog(Command command, Update update, TUser querier, Group group = null)
+        static async void GetBotLog(InputCommand command, Update update, TUser querier, Group group = null)
         {
             var message = update.Message;
             var chat = update.Message.Chat;
@@ -399,7 +500,7 @@ namespace TelegramBot
             }
             //await UploadFile(Config.LogFile,chat.Id);
         }
-        static void BotConfig(Command command, Update update, TUser querier, Group group = null)
+        static void BotConfig(InputCommand command, Update update, TUser querier, Group group = null)
         {
             if(group is null)
             {
@@ -433,43 +534,43 @@ namespace TelegramBot
                     break;
             }
         }
-        static void GetHelpInfo(Command command, Update update, TUser querier, Group group = null)
+        static void GetHelpInfo(InputCommand command, Update update, TUser querier, Group group = null)
         {
             var isPrivate = update.Message.Chat.Type is ChatType.Private;
             string helpStr = "```python\n";
             switch (command.Prefix)
             {
-                case CommandType.Add:
+                case "add":
                     helpStr += StringHandle(
                         "命令用法:\n" +
                         "\n/add        允许reply对象访问bot" +
                         "\n/add [int]  允许指定用户访问bot");
                     break;
-                case CommandType.Ban:
+                case "ban":
                     helpStr += StringHandle(
                         "命令用法:\n" +
                         "\n/ban        封禁reply对象" +
                         "\n/ban [int]  封禁指定用户");
                     break;
-                case CommandType.Info:
+                case "info":
                     helpStr += StringHandle(
                         "命令用法:\n" +
                         "\n/info        获取reply对象的用户信息" +
                         "\n/info [int]  获取指定用户的用户信息");
                     break;
-                case CommandType.Promote:
+                case "promote":
                     helpStr += StringHandle(
                         "命令用法:\n" +
                         "\n/promote        提升reply对象的权限等级" +
                         "\n/promote [int]  提升指定用户的权限等级");
                     break;
-                case CommandType.Demote:
+                case "demote":
                     helpStr += StringHandle(
                         "命令用法:\n" +
                         "\n/demote        降低reply对象的权限等级" +
                         "\n/demote [int]  降低指定用户的权限等级");
                     break;
-                case CommandType.Help:
+                case "help":
                     helpStr += StringHandle(
                         "\n相关命令：\n" +
                         "\n/add        允许指定用户访问bot" +
@@ -484,7 +585,7 @@ namespace TelegramBot
                         "\n/help       显示帮助信息\n" +
                         "\n更详细的信息请输入\"/{command} help\"");
                     break;
-                case CommandType.Mai:
+                case "mai":
                     helpStr += StringHandle(
                             "命令用法：\n" +
                             "\n/mai bind image    上传二维码并进行绑定" +
@@ -501,7 +602,7 @@ namespace TelegramBot
                             "\n/mai sync [int]    强制刷新指定账号信息" +
                             "\n/mai logout        登出");
                     break;
-                case CommandType.MaiScanner:
+                case "maiscanner":
                     helpStr += StringHandle(
                             "命令用法：\n" +
                             "\n/maiscanner status       获取扫描器状态" +
@@ -510,7 +611,7 @@ namespace TelegramBot
                             "\n/maiscanner stop         终止当前任务" +
                             "\n/maiscanner set [int]    设置QPS限制");
                     break;
-                case CommandType.Logs:
+                case "logs":
                     helpStr += StringHandle(
                             "命令用法：\n" +
                             "\n/logs            获取最近15条等级为Error或以上的日志信息" +
@@ -532,9 +633,9 @@ namespace TelegramBot
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
         
     }
-    internal partial class Program
+    internal partial class GenericHandler
     {
-        static void AdvancedCommandHandle(Command command, Update update, TUser querier, Group group = null)
+        static void AdvancedCommandHandle(InputCommand command, Update update, TUser querier, Group group = null)
         {
             if (!querier.CheckPermission(Permission.Root))
             {
@@ -554,7 +655,7 @@ namespace TelegramBot
                 //    break;
             }
         }
-        static void UserPermissionModify(Command command, Update update, TUser querier)
+        static void UserPermissionModify(InputCommand command, Update update, TUser querier)
         {
             var chat = update.Message.Chat;
             var chatType = chat.Type;

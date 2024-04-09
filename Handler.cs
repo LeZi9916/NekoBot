@@ -13,7 +13,7 @@ namespace TelegramBot
 {
     internal partial class Program
     {
-        static Func<string, string> StringHandle = s =>
+        internal static Func<string, string> StringHandle = s =>
         {
             string[] reservedChar = { "_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!" };
             foreach (var c in reservedChar)
@@ -87,103 +87,15 @@ namespace TelegramBot
                     return;
                 }
 
-            Command command = new();
+            InputCommand command = new();
 
-            command.Prefix = Command.GetCommandType(prefix);
+            command.Prefix = prefix;
             command.Content = param;
-            CommandHandle(command, update,user,group);
+            ScriptManager.CommandHandle(command, update,user,group);
             
         }
-        static void CommandHandle(Command command,Update update,TUser querier,Group group)
-        {
-            var message = update.Message;
-            var isPrivate = update.Message.Chat.Type is ChatType.Private;
-            if(command.Content.Length > 0 && command.Content[0] is "help")
-            {
-                GetHelpInfo(command, update, querier, group);
-                return;
-            }
-            switch (command.Prefix)
-            {
-                case CommandType.Start:
-                    SendMessage("你好，我是钟致远，我出生于广西壮族自治区南宁市，从小就擅长滥用，有关我的滥用事迹请移步 @hax_server\n" +
-                        "\n请输入 /help 以获得更多信息", update,true);
-                    break;
-                case CommandType.Add:
-                    AddUser(command, update, querier, group);
-                    break;
-                case CommandType.Ban:
-                    BanUser(command, update, querier, group);
-                    break;
-                case CommandType.Status:
-                    GetSystemInfo(command, update);
-                    break;
-                case CommandType.Info:
-                    GetUserInfo(command, update, querier, group);
-                    break;
-                case CommandType.Promote:
-                    SetUserPermission(command, update, querier, 1, group);
-                    break;
-                case CommandType.Demote:
-                    SetUserPermission(command, update, querier, -1, group);
-                    break;
-                case CommandType.Config:
-                    BotConfig(command, update, querier, group);
-                    break;
-                case CommandType.Help:
-                    GetHelpInfo(command, update, querier, group);
-                    break;
-                case CommandType.Logs:
-                    GetBotLog(command, update, querier, group);
-                    break;
-                case CommandType.Set:
-                    AdvancedCommandHandle(command, update, querier, group);
-                    break;
-                case CommandType.Mai:
-                    Mai.CommandHandle(command, update, querier, group);
-                    break;
-                case CommandType.MaiStatus:
-                    Mai.GetServerStatus(command, update, querier);
-                    break;
-                case CommandType.MaiScanner:
-                    MaiScannerHandle(command, update, querier);
-                    break;
-            }
-        }
-        static bool MessageFilter(string content, Update update, TUser querier,Group group)
-        {
-            if (group is null)
-                return false;
-            else if (group.Rules.IsEmpty())
-                return false;
-
-            bool isMatch = false;
-            var genericRules = group.Rules.Where(x => x.Target is null).ToArray();
-            var matchedRules = group.Rules.Where(x => x is not null && x.Target.Id == querier.Id).ToArray();
-            FilterRule[] rules = new FilterRule[genericRules.Length + matchedRules.Length];
-            Array.Copy(genericRules, rules, genericRules.Length);
-            Array.Copy(matchedRules, 0, rules, genericRules.Length, matchedRules.Length);
-
-            foreach ( var rule in rules )
-            {
-                if (rule.Action is Action.Ban)
-                    continue;
-                else if (rule.MessageType is MessageType.Unknown || rule.MessageType == update.Message.Type)
-                {
-                    switch(rule.Action)
-                    {
-                        case Action.Reply:
-                            break;
-                        case Action.Delete:
-                            break;
-                    }
-                }
-                else
-                    continue;           
-            }
-            return isMatch;
-        }
-        static async Task<Message> SendMessage(string text,Update update,bool isReply = true, ParseMode? parseMode = null)
+        
+        internal static async Task<Message> SendMessage(string text,Update update,bool isReply = true, ParseMode? parseMode = null)
         {
             try
             {
@@ -199,7 +111,7 @@ namespace TelegramBot
                 return null;
             }
         }
-        static async void DeleteMessage(Update update)
+        internal static async void DeleteMessage(Update update)
         {
             try
             {

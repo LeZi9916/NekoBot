@@ -22,7 +22,7 @@ namespace TelegramBot
     {
         static class Mai
         {
-            internal static void CommandHandle(Command command, Update update, TUser querier, Group group = null)
+            internal static void CommandHandle(InputCommand command, Update update, TUser querier, Group group = null)
             {
                 if (!querier.CheckPermission(Permission.Advanced, group))
                 {
@@ -77,7 +77,7 @@ namespace TelegramBot
                 }
 
             }
-            internal static void GetMaiUserId(Command command, Update update, TUser querier)
+            internal static void GetMaiUserId(InputCommand command, Update update, TUser querier)
             {
 
             }
@@ -87,7 +87,7 @@ namespace TelegramBot
             /// <param name="command"></param>
             /// <param name="update"></param>
             /// <param name="querier"></param>
-            internal static async void GetUserInfo(Command command, Update update, TUser querier)
+            internal static async void GetUserInfo(InputCommand command, Update update, TUser querier)
             {
                 //var maiUserId = querier.MaiUserId;
                 //var response = GetUserPreview((int)maiUserId).Result.Object;
@@ -182,7 +182,7 @@ namespace TelegramBot
             /// <param name="command"></param>
             /// <param name="update"></param>
             /// <param name="querier"></param>
-            internal static void GetUserRegion(Command command, Update update, TUser querier)
+            internal static void GetUserRegion(InputCommand command, Update update, TUser querier)
             {
                 var request = new Request<UserRegionRequest>();
                 request.Object.userId = (int)querier.MaiUserId;
@@ -222,7 +222,7 @@ namespace TelegramBot
             /// <param name="command"></param>
             /// <param name="update"></param>
             /// <param name="querier"></param>
-            internal static void BindUser(Command command, Update update, TUser querier)
+            internal static void BindUser(InputCommand command, Update update, TUser querier)
             {
                 try
                 {
@@ -325,7 +325,7 @@ namespace TelegramBot
                     SendMessage("参数错误喵x", update);
                 }
             }
-            internal static async void UserLogin(Command command, Update update, TUser querier)
+            internal static async void UserLogin(InputCommand command, Update update, TUser querier)
             {
                 var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], a => { });
                 return;
@@ -336,7 +336,7 @@ namespace TelegramBot
             /// <param name="command"></param>
             /// <param name="update"></param>
             /// <param name="querier"></param>
-            internal static async void DataBackup(Command command, Update update, TUser querier)
+            internal static async void DataBackup(InputCommand command, Update update, TUser querier)
             {
                 int userid = (int)querier.MaiUserId;
                 string password = "";
@@ -399,7 +399,7 @@ namespace TelegramBot
             /// <param name="command"></param>
             /// <param name="update"></param>
             /// <param name="querier"></param>
-            internal static async void UpdateUserData(Command command, Update update, TUser querier)
+            internal static async void UpdateUserData(InputCommand command, Update update, TUser querier)
             {
                 var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
                 int userId;
@@ -459,7 +459,7 @@ namespace TelegramBot
                         $"```", update, selfMessage.MessageId, ParseMode.MarkdownV2);
                 }
             }
-            internal static async void GetTicket(Command command, Update update, TUser querier)
+            internal static async void GetTicket(InputCommand command, Update update, TUser querier)
             {
                 int count = 1;
                 int ticketType = 0;
@@ -524,7 +524,7 @@ namespace TelegramBot
                     AquaTools.Users.User.Logout((int)querier.MaiUserId);
                 }
             }
-            internal static async void Upsert(Command command, Update update, TUser querier)
+            internal static async void Upsert(InputCommand command, Update update, TUser querier)
             {
                 var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], a => { });
                 var playlogs = new List<UserPlaylog>();
@@ -623,7 +623,7 @@ namespace TelegramBot
             /// <param name="command"></param>
             /// <param name="update"></param>
             /// <param name="querier"></param>
-            internal static void Logout(Command command, Update update, TUser querier, Group group = null)
+            internal static void Logout(InputCommand command, Update update, TUser querier, Group group = null)
             {
                 if (command.Content.Length != 0)
                 {
@@ -652,7 +652,7 @@ namespace TelegramBot
             /// <param name="command"></param>
             /// <param name="update"></param>
             /// <param name="querier"></param>
-            internal static void GetTopRank(Command command, Update update, TUser querier)
+            internal static void GetTopRank(InputCommand command, Update update, TUser querier)
             {
                 if (command.Content.Length != 0)
                 {
@@ -702,7 +702,7 @@ namespace TelegramBot
             /// <param name="command"></param>
             /// <param name="update"></param>
             /// <param name="querier"></param>
-            internal static void GetServerStatus(Command command, Update update, TUser querier)
+            internal static void GetServerStatus(InputCommand command, Update update, TUser querier)
             {
                 var titlePingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.Title);
                 var oauthPingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.OAuth);
@@ -830,7 +830,7 @@ namespace TelegramBot
     }
     internal partial class Program
     {
-        static void MaiScannerHandle(Command command, Update update, TUser querier,Group group = null)
+        static void MaiScannerHandle(InputCommand command, Update update, TUser querier,Group group = null)
         {
             if (!querier.CheckPermission(Permission.Admin, group))
             {
@@ -861,7 +861,7 @@ namespace TelegramBot
                     break;
             }
         }
-        static void GetScannerStatus(Command command, Update update, TUser querier)
+        static void GetScannerStatus(InputCommand command, Update update, TUser querier)
         {
             SendMessage(
                  "目前状态:\n" +
@@ -872,13 +872,13 @@ namespace TelegramBot
                 $"Current Qps : {MaiScanner.CurrentQps}\n" +
                 $"Qps Limit   : {MaiScanner.QpsLimit}", update);
         }
-        static void SetScannerStop(Command command, Update update, TUser querier)
+        static void SetScannerStop(InputCommand command, Update update, TUser querier)
         {
             MaiScanner.isRunning = false;
             MaiScanner.cancelSource.Cancel();
             SendMessage("已执行~", update);
         }
-        static void SetScannerConfig(Command command, Update update, TUser querier)
+        static void SetScannerConfig(InputCommand command, Update update, TUser querier)
         {
             if (command.Content.Length != 0)
             {
@@ -893,7 +893,7 @@ namespace TelegramBot
             SendMessage("参数错误喵x", update);
             return;
         }
-        static void SetScannerUpdate(Command command, Update update, TUser querier)
+        static void SetScannerUpdate(InputCommand command, Update update, TUser querier)
         {
             if(command.Content.Length != 0)
             {

@@ -3,7 +3,7 @@ using Telegram.Bot.Types;
 
 namespace TelegramBot.Class
 {
-    class Group : IAccount
+    public class Group : IAccount
     {
         public long Id { get; set; }
         public string Username { get; set; }

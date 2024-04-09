@@ -5,6 +5,8 @@
     <TargetFramework>net7.0</TargetFramework>
     <StartupObject></StartupObject>
     <AssemblyVersion>0.9.45</AssemblyVersion>
+    <PublishAot>True</PublishAot>
+    <PublishTrimmed>False</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>

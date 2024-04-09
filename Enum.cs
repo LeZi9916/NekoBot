@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TelegramBot
 {
-    enum Permission
+    public enum Permission
     {
         Unknow = -1,
         Ban,
@@ -15,13 +15,13 @@ namespace TelegramBot
         Admin,
         Root
     }
-    enum Action
+    public enum Action
     {
         Ban,
         Reply,
         Delete
     }
-    enum Range
+    public enum Range
     {
         Group,
         Global

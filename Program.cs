@@ -28,8 +28,8 @@ namespace TelegramBot
         internal static TelegramBotClient botClient;
         internal static string Token = "";
         static string BotUsername = "";
-        static DateTime startTime;
-        internal static BotCommand[] BotCommands;
+        internal static DateTime startTime;
+        internal static Telegram.Bot.Types.BotCommand[] BotCommands;
         static void Test()
         {
             List<KNode> data = new List<KNode>

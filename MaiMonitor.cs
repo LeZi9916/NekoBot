@@ -10,10 +10,32 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using static TelegramBot.ChartHelper;
 
 namespace TelegramBot
 {
-    internal static class MaiMonitor
+    public struct DateTimeRange
+    {
+        public DateTime Start { get; set; }
+        public DateTime End { get; set; }
+        public bool Contains(DateTime dt) => (dt - Start).Seconds >= 0 && (dt - End).Seconds < 0;
+        public static DateTimeRange[] Create(int minute)
+        {
+            var count = 1440 / minute;
+            var range = new List<DateTimeRange>();
+
+            var day = DateTime.Today;
+
+            for (var i = 0; i < count; i++)
+                range.Add(new DateTimeRange()
+                {
+                    Start = day,
+                    End = day.AddMinutes(minute)
+                });
+            return range.ToArray();
+        }
+    }
+    internal static partial class MaiMonitor
     {
         public enum ServerType
         {
@@ -31,6 +53,7 @@ namespace TelegramBot
         {
             public DateTime Timestamp { get; set; }
             public bool IsSkip { get; set; }
+            public double LastSkipRate { get; set; }
         }
         public static bool ServiceAvailability = true;
 
@@ -122,7 +145,7 @@ namespace TelegramBot
                             LastFailureTime = DateTime.Now;
                         ServiceAvailability = true;
                     }
-
+                    var lastSkip = GetAvgSkipRate()[0] is double.NaN ? 0 : GetAvgSkipRate()[0];
                     if (LastResponseStatusCode == HttpStatusCode.GatewayTimeout)
                         TimeoutRequestCount++;                    
                     else if (LastResponseStatusCode is HttpStatusCode.OK)
@@ -131,7 +154,8 @@ namespace TelegramBot
                         CompressSkipLogs.Add(new SkipLog()
                         {
                             Timestamp = DateTime.Now,
-                            IsSkip = response.Object.CompressSkip
+                            IsSkip = response.Object.CompressSkip,
+                            LastSkipRate = lastSkip
                         });
                     }
                     else 
@@ -149,6 +173,7 @@ namespace TelegramBot
                 }
             });
         }
+        
         public static long[] GetAvgPing(ServerType type)
         {
             long _5min = -1;
@@ -235,5 +260,78 @@ namespace TelegramBot
             
         }
         
+    }
+    internal static partial class MaiMonitor
+    {
+        /// <summary>
+        /// 用于获取指定尺度的全天K线图
+        /// </summary>
+        /// <param name="minute"></param>
+        public static void CreateGraph(int minute)
+        {
+            var range = DateTimeRange.Create(minute);
+        }
+        public static void CreateGraph(DateTimeRange[] range)
+        {
+            var xSamples = range.Select(x => x.Start.ToString("HH:mm")).ToArray();
+            List<KNode> nodes = new();
+
+            foreach (var item in range)
+                nodes.Add(CreateNode(item, CompressSkipLogs.ToArray()));
+
+            var ySamples = CreateYSamples(nodes);
+        }
+        static KNode CreateNode(DateTimeRange range, SkipLog[] samples)
+        {
+            double max = 0;
+            double min = 1;
+            double open = 0;
+            double close = 0;
+
+            var matched = samples.Where(x => range.Contains(x.Timestamp))
+                                 .OrderBy(x => x.Timestamp);
+
+            if (matched.Count() == 0)
+                return new KNode()
+                {
+                    High = 0,
+                    Low = 0,
+                    Close = 0,
+                    Open = 0,
+                    Date = range.Start
+                };
+
+            foreach (var x in matched)
+            {
+                max = Math.Max(x.LastSkipRate, max);
+                min = Math.Min(x.LastSkipRate, min);
+            }
+            open = matched.First().LastSkipRate;
+            close = matched.Last().LastSkipRate;
+
+            return new KNode()
+            {
+                High = (float)max,
+                Low = (float)min,
+                Open = (float)open,
+                Close = (float)close,
+                Date = range.Start
+            };
+
+
+        }
+        static IList<float> CreateYSamples(IList<KNode> nodes)
+        {
+            List<float> samples = new();
+            var maxValue = (((int)(nodes.Select(x => x.High).Max() * 100) / 5) + 1)  * 5 / 100f;
+
+            for (float i = maxValue;i >=0;)
+            {
+                samples.Add(i);
+                i -= 0.05f;
+            }
+
+            return samples;
+        }
     }
 }
