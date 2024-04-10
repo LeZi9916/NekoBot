@@ -7,7 +7,7 @@ using CZGL.SystemInfo;
 
 namespace TelegramBot
 {
-    internal static class Monitor
+    public static class Monitor
     {
         public static int ProcessorCount = 0;
         public static int CPULoad = 0;

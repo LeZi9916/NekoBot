@@ -11,9 +11,9 @@ using TelegramBot.Class;
 
 namespace TelegramBot
 {
-    internal partial class Program
+    public partial class Program
     {
-        internal static Func<string, string> StringHandle = s =>
+        public static Func<string, string> StringHandle = s =>
         {
             string[] reservedChar = { "_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!" };
             foreach (var c in reservedChar)
@@ -95,7 +95,7 @@ namespace TelegramBot
             
         }
         
-        internal static async Task<Message> SendMessage(string text,Update update,bool isReply = true, ParseMode? parseMode = null)
+        public static async Task<Message> SendMessage(string text,Update update,bool isReply = true, ParseMode? parseMode = null)
         {
             try
             {
@@ -111,7 +111,7 @@ namespace TelegramBot
                 return null;
             }
         }
-        internal static async void DeleteMessage(Update update)
+        public static async Task DeleteMessage(Update update)
         {
             try
             {
@@ -126,7 +126,7 @@ namespace TelegramBot
                 Debug(DebugType.Error, $"Cannot delete message : \n{e.Message}\n{e.StackTrace}");
             }
         }
-        static async Task<bool> UploadFile(string filePath,long chatId)
+        public static async Task<bool> UploadFile(string filePath,long chatId)
         {
             try
             {
@@ -144,7 +144,7 @@ namespace TelegramBot
                 return false;
             }
         }
-        static async Task<bool> UploadFile(Stream stream,string fileName, long chatId)
+        public static async Task<bool> UploadFile(Stream stream,string fileName, long chatId)
         {
             try
             {
@@ -160,7 +160,7 @@ namespace TelegramBot
                 return false;
             }
         }
-        static async Task<bool> DownloadFile(string dPath,string fileId)
+        public static async Task<bool> DownloadFile(string dPath,string fileId)
         {
             try
             {
@@ -176,7 +176,7 @@ namespace TelegramBot
                 return false;                
             }
         }
-        static async Task<Message> EditMessage(string text,Update update, int messageId,ParseMode? parseMode = null)
+        public static async Task<Message> EditMessage(string text,Update update, int messageId,ParseMode? parseMode = null)
         {
             try
             {

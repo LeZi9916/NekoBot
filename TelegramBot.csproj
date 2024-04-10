@@ -22,4 +22,13 @@
     <ProjectReference Include="..\AquaTools\AquaTools.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Scripts\GenericHandler.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Scripts\MaiHandler.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -212,7 +212,7 @@ namespace TelegramBot
         }
         
     }
-    internal static class Image
+    public static class Image
     {
         public class KLineData
         {

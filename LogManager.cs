@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace TelegramBot
 {
-    internal static class LogManager
+    public static class LogManager
     {
         static Mutex mutex = new();
         static string LogFile { get => Config.LogFile; }

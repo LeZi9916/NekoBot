@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace TelegramBot.Class
 {
-    internal class HotpAuthenticator
+    public class HotpAuthenticator
     {
         [JsonInclude]
         long counter = 0;

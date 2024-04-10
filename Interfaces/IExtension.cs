@@ -15,5 +15,7 @@ namespace TelegramBot.Interfaces
         /// </summary>
         string Name { get; }
         void Handle(InputCommand command, Update update, TUser querier, Group group);
+        void Init();
+        void Save();
     }
 }

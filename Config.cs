@@ -8,42 +8,35 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using static TelegramBot.MaiScanner;
-using static TelegramBot.MaiDatabase;
 using File = System.IO.File;
 using TelegramBot.Class;
-using Telegram.Bot.Types;
 using Telegram.Bot;
-using System.Text.RegularExpressions;
 using Group = TelegramBot.Class.Group;
 
 namespace TelegramBot
-{    
-    
-    
-    
-    internal static class Config
+{
+    public static class Config
     {
         static DateTime Up = DateTime.Now;
-        static string AppPath = Environment.CurrentDirectory;
-        internal static string LogsPath = Path.Combine(AppPath, "logs");
-        internal static string DatabasePath = Path.Combine(AppPath, "Database");
-        internal static string TempPath = Path.Combine(AppPath, "Temp");
-        internal static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
-        internal static HotpAuthenticator Authenticator = new HotpAuthenticator();
+        public static string AppPath = Environment.CurrentDirectory;
+        public static string LogsPath = Path.Combine(AppPath, "logs");
+        public static string DatabasePath = Path.Combine(AppPath, "Database");
+        public static string TempPath = Path.Combine(AppPath, "Temp");
+        public static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
+        public static HotpAuthenticator Authenticator = new HotpAuthenticator();
 
-        internal static bool EnableAutoSave = true;
-        internal static int AutoSaveInterval = 900000;
+        public static bool EnableAutoSave = true;
+        public static int AutoSaveInterval = 900000;
 
-        internal static long TotalHandleCount = 0;
-        internal static List<long> TimeSpentList = new();
+        public static long TotalHandleCount = 0;
+        public static List<long> TimeSpentList = new();
 
-        internal static List<long> GroupIdList = new();
-        internal static List<Group> GroupList = new();
+        public static List<long> GroupIdList = new();
+        public static List<Group> GroupList = new();
 
 
-        internal static List<long> UserIdList = new() { 1136680302 };
-        internal static List<TUser> TUserList = new()
+        public static List<long> UserIdList = new() { 1136680302 };
+        public static List<TUser> TUserList = new()
         {
             new TUser()
             {
@@ -54,7 +47,7 @@ namespace TelegramBot
             }
         };        
 
-        internal static List<KeyChip> keyChips = new() 
+        public static List<KeyChip> keyChips = new() 
         {
             new KeyChip()
             {
@@ -89,14 +82,8 @@ namespace TelegramBot
                 GroupList = Load<List<Group>>(Path.Combine(DatabasePath, "GroupList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "GroupIdList.data")))
                 GroupIdList = Load<List<long>>(Path.Combine(DatabasePath, "GroupIdList.data"));
-            if (File.Exists(Path.Combine(DatabasePath, "MaiAccountList.data")))
-                MaiAccountList = Load<List<MaiAccount>>(Path.Combine(DatabasePath, "MaiAccountList.data"));
-            if (File.Exists(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data")))
-                MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "HotpAuthenticator.data")))
-                Authenticator = Load<HotpAuthenticator>(Path.Combine(DatabasePath, "HotpAuthenticator.data"));
-            if (File.Exists(Path.Combine(DatabasePath, "CompressSkipLogs.data")))
-                MaiMonitor.CompressSkipLogs = Load<List<MaiMonitor.SkipLog>>(Path.Combine(DatabasePath, "CompressSkipLogs.data"));
+                Authenticator = Load<HotpAuthenticator>(Path.Combine(DatabasePath, "HotpAuthenticator.data"));  
             if (File.Exists(Path.Combine(DatabasePath, "token.config")))
                 Program.Token = File.ReadAllText(Path.Combine(DatabasePath, "token.config"));
             else
@@ -104,7 +91,6 @@ namespace TelegramBot
                 Program.Debug(DebugType.Error, "Config file isn't exist");
                 Environment.Exit(-1);
             }
-            MaiDataInit();
             AutoSave();
         }
 #nullable enable
@@ -155,13 +141,9 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "TimeSpentList.data"), TimeSpentList);
             Save(Path.Combine(DatabasePath, "GroupList.data"), GroupList);
             Save(Path.Combine(DatabasePath, "GroupIdList.data"), GroupIdList);
-            Save(Path.Combine(DatabasePath, "MaiAccountList.data"), MaiAccountList);
-            Save(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"), MaiInvaildUserIdList);
-            Save(Path.Combine(DatabasePath, "HotpAuthenticator.data"), Authenticator);
-            Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), MaiMonitor.CompressSkipLogs);
+            Save(Path.Combine(DatabasePath, "HotpAuthenticator.data"), Authenticator);       
             Program.BotCommands = await Program.botClient.GetMyCommandsAsync();
         }
-        
         static void Check()
         {
             if (!Directory.Exists(LogsPath))

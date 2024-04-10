@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static TelegramBot.MaiScanner;
 using Telegram.Bot.Types;
 using System.Text.Json.Serialization;
-using static TelegramBot.MaiDatabase;
 
 namespace TelegramBot.Class
 {
@@ -27,23 +25,23 @@ namespace TelegramBot.Class
         public bool isNormal => !(Id is 136817688 or 1087968824);
         [JsonIgnore]
         public MaiAccount Account { get; set; }
-        public async Task<bool> GetMaiAccountInfo()
-        {
-            return await Task.Run(() =>
-            {
-                if (MaiUserId is null)
-                    return false;
+        //public async Task<bool> GetMaiAccountInfo()
+        //{
+        //    return await Task.Run(() =>
+        //    {
+        //        if (MaiUserId is null)
+        //            return false;
 
-                var userid = (int)MaiUserId;
-                var result = MaiAccountList.Where(x => x.userId == userid);
+        //        var userid = (int)MaiUserId;
+        //        var result = MaiAccountList.Where(x => x.userId == userid);
 
-                if (result.Count() == 0)
-                    return false;
+        //        if (result.Count() == 0)
+        //            return false;
 
-                Account = result.ToArray()[0];
-                return true;
-            });
-        }
+        //        Account = result.ToArray()[0];
+        //        return true;
+        //    });
+        //}
         public bool CheckPermission(Permission targetLevel) => Level >= targetLevel;
         public bool CheckPermission(Permission targetLevel, Group group)
         {

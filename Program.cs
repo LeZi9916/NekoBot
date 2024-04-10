@@ -16,20 +16,20 @@ using static TelegramBot.ChartHelper;
 
 namespace TelegramBot
 {
-    enum DebugType
+    public enum DebugType
     {
         Debug,
         Info,
         Warning,        
         Error
     }
-    internal partial class Program
+    public partial class Program
     {
-        internal static TelegramBotClient botClient;
-        internal static string Token = "";
+        public static TelegramBotClient botClient;
+        public static string Token = "";
         static string BotUsername = "";
-        internal static DateTime startTime;
-        internal static Telegram.Bot.Types.BotCommand[] BotCommands;
+        public static DateTime startTime;
+        public static Telegram.Bot.Types.BotCommand[] BotCommands;
         static void Test()
         {
             List<KNode> data = new List<KNode>
@@ -54,10 +54,10 @@ namespace TelegramBot
         }
         static void Main(string[] args)
         {
-            Test();
+            //Test();
+            ScriptManager.Init();
             Monitor.Init();
             Config.Init();
-            MaiMonitor.Init();
             startTime = DateTime.Now;
             Config.Load(Path.Combine(Config.DatabasePath, "Proxy.config"),out string proxyStr);
             HttpClient httpClient = new(new SocketsHttpHandler
@@ -99,7 +99,8 @@ namespace TelegramBot
                 {
                     Debug(DebugType.Info, "Connect failure,retrying...");
                 }
-            }            
+            }
+            ScriptManager.UpdateCommand();
             while(true)
                 Console.ReadKey();
         }
