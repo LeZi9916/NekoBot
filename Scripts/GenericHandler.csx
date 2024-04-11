@@ -119,10 +119,8 @@ public partial class GenericHandler : IExtension
             case "set":
                 AdvancedCommandHandle(command, update, querier, group);
                 break;
-            case "mai":
-            case "maistatus":
-            case "maiscanner":
-                ScriptManager.GetExtension("Mai").Handle(command, update, querier, group);
+            case "reload":
+                
                 break;
         }
     }
@@ -131,6 +129,10 @@ public partial class GenericHandler : IExtension
 
     }
     public void Save()
+    {
+
+    }
+    public void Destroy()
     {
 
     }
@@ -417,8 +419,9 @@ public partial class GenericHandler : IExtension
     static async void GetSystemInfo(InputCommand command, Update update)
     {
         var uptime = DateTime.Now - Program.startTime;
+        var scripts = string.Join("\n-",ScriptManager.GetLoadedScript());
         await SendMessage(Program.StringHandle(
-            $"当前版本: v{Assembly.GetExecutingAssembly().GetName().Version}\n\n" +
+            $"当前版本: v{ScriptManager.GetVersion()}\n\n" +
             "硬件信息:\n" +
             $"-核心数: {Monitor.ProcessorCount}\n" +
             $"-使用率: {Monitor.CPULoad}%\n" +
@@ -432,7 +435,9 @@ public partial class GenericHandler : IExtension
             $"-平均耗时: {(Config.TotalHandleCount is 0 ? 0 : Config.TimeSpentList.Sum() / Config.TotalHandleCount)}ms\n" +
             $"-5分钟平均CPU占用率: {Monitor._5CPULoad}%\n" +
             $"-10分钟平均CPU占用率: {Monitor._10CPULoad}%\n" +
-            $"-15分钟平均CPU占用率: {Monitor._15CPULoad}%\n"), update, true, ParseMode.MarkdownV2);
+            $"-15分钟平均CPU占用率: {Monitor._15CPULoad}%\n\n" +
+            $"已加载的Script:\n" +
+            $"-{scripts}"), update, true, ParseMode.MarkdownV2);
     }
     static async void GetBotLog(InputCommand command, Update update, TUser querier, Group group = null)
     {
@@ -686,13 +691,6 @@ public partial class GenericHandler : IExtension
         SendMessage(helpStr, update, true, ParseMode.MarkdownV2);
     }
     static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
-
-    static async Task<Message> SendMessage(string text, Update update, bool isReply = true, ParseMode? parseMode = null) => await Program.SendMessage(text, update, isReply, parseMode);
-    static async void DeleteMessage(Update update) => await Program.DeleteMessage(update);
-    static async Task<bool> UploadFile(string filePath, long chatId) => await Program.UploadFile(filePath, chatId);
-    static async Task<bool> UploadFile(Stream stream, string fileName, long chatId) => await Program.UploadFile(stream, fileName, chatId);
-    static async Task<bool> DownloadFile(string dPath, string fileId) => await Program.DownloadFile(dPath, fileId);
-    static async Task<Message> EditMessage(string text, Update update, int messageId, ParseMode? parseMode = null) => await Program.EditMessage(text, update, messageId, parseMode);
 }
 public partial class GenericHandler
 {
@@ -790,4 +788,13 @@ public partial class GenericHandler
         }
 
     }
+}
+public partial class GenericHandler
+{
+    static async Task<Message> SendMessage(string text, Update update, bool isReply = true, ParseMode? parseMode = null) => await Program.SendMessage(text, update, isReply, parseMode);
+    static async void DeleteMessage(Update update) => await Program.DeleteMessage(update);
+    static async Task<bool> UploadFile(string filePath, long chatId) => await Program.UploadFile(filePath, chatId);
+    static async Task<bool> UploadFile(Stream stream, string fileName, long chatId) => await Program.UploadFile(stream, fileName, chatId);
+    static async Task<bool> DownloadFile(string dPath, string fileId) => await Program.DownloadFile(dPath, fileId);
+    static async Task<Message> EditMessage(string text, Update update, int messageId, ParseMode? parseMode = null) => await Program.EditMessage(text, update, messageId, parseMode);
 }

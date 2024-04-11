@@ -22,8 +22,7 @@ using Telegram.Bot.Types.Enums;
 using TelegramBot;
 using TelegramBot.Class;
 using TelegramBot.Interfaces;
-using static MaiHandler.MaiScanner;
-using static MaiHandler.MaiDatabase;
+//using static MaiHandler.MaiScanner;
 using static TelegramBot.Config;
 using static TelegramBot.ChartHelper;
 using File = System.IO.File;
@@ -32,6 +31,11 @@ using System.Security.Principal;
 
 public partial class MaiHandler : IExtension
 {
+    static MaiMonitor monitor;
+    static MaiScanner scanner;
+    static MaiDatabase database;
+
+
     public Command[] Commands { get; } =
     {
             new Command()
@@ -53,14 +57,23 @@ public partial class MaiHandler : IExtension
     public string Name { get; } = "Mai";
     public void Init()
     {
-        MaiDatabase.Init();
-        MaiScanner.Init();
-        MaiMonitor.Init();
+        monitor = new();
+        scanner = new();
+        database = new();
+
+        database.Init();
+        scanner.Init();
+        monitor.Init();
     }
     public void Save()
     {
-        MaiDatabase.Save();
-        MaiMonitor.Save();
+        database.Save();
+        monitor.Save();
+    }
+    public void Destroy()
+    {
+        database = null;
+        monitor = null;
     }
     public void Handle(InputCommand command, Update update, TUser querier, Group group)
     {
@@ -84,6 +97,7 @@ public partial class MaiHandler : IExtension
         }
         switch (suffix)
         {
+            case "maistatus":
             case "status":
                 GetServerStatus(command, update, querier);
                 break;
@@ -147,7 +161,7 @@ public partial class MaiHandler : IExtension
                 maiAccount.banState = response.banState;
                 maiAccount.lastUpdate = DateTime.Now;
 
-                MaiDatabase.MaiAccountList.Add(maiAccount);
+                database.MaiAccountList.Add(maiAccount);
                 Config.SaveData();
                 return maiAccount;
             }
@@ -172,7 +186,7 @@ public partial class MaiHandler : IExtension
                 return;
             }
 
-            account = MaiDatabase.Search(id);
+            account = database.Search(id);
 
             if (account is null)
                 account = await getAccount(id);
@@ -201,7 +215,7 @@ public partial class MaiHandler : IExtension
             $"DX主要版本: {account.lastGameId}\n" +
             $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}", update);
 
-        var ranking = await MaiDatabase.GetUserRank(account.playerRating);
+        var ranking = await database.GetUserRank(account.playerRating);
 
         EditMessage(
             "用户信息:\n" +
@@ -342,7 +356,7 @@ public partial class MaiHandler : IExtension
             selfMessage = EditMessage("正在获取用户信息...", update, selfMessage.MessageId).Result;
             var response = GetUserPreview((int)maiUserId).Result.Object;
             querier.MaiUserId = maiUserId;
-            GetMaiAccount(querier);
+            database.GetMaiAccount(querier);
             if (response.StatusCode is not HttpStatusCode.OK)
             {
                 EditMessage("绑定成功，但无法获取用户信息QAQ", update, selfMessage.MessageId);
@@ -465,7 +479,7 @@ public partial class MaiHandler : IExtension
 
         try
         {
-            var maiUser = MaiDatabase.Search(userId);
+            var maiUser = database.Search(userId);
             bool isNew = maiUser == null;
             var response = (await GetUserPreview(userId)).Object;
 
@@ -482,7 +496,7 @@ public partial class MaiHandler : IExtension
 
                 querier.Account = maiUser;
                 if (isNew)
-                    MaiDatabase.MaiAccountList.Add(maiUser);
+                    database.MaiAccountList.Add(maiUser);
                 Config.SaveData();
 
                 EditMessage("更新完成喵wAw", update, selfMessage.MessageId);
@@ -510,12 +524,12 @@ public partial class MaiHandler : IExtension
 
         var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
         Dictionary<string, int> vaildTicketType = new()
-            {
-                { "2",2 } ,
-                { "3",3 } ,
-                { "5",5 } ,
-                { "20",20020 } ,
-            };
+    {
+        { "2",2 } ,
+        { "3",3 } ,
+        { "5",5 } ,
+        { "20",20020 } ,
+    };
 
 
         if (command.Content.Length < 3)
@@ -568,87 +582,87 @@ public partial class MaiHandler : IExtension
         var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], a => { });
         var playlogs = new List<UserPlaylog>();
         var musicDetail = user.CreatePlaylog(11422, new Dictionary<string, int>
-            {
-                { "Achievement" , 1008750 },
-                { "ComboStatus" , 3 },
-                { "SyncStatus" , 0 },
-                { "DeluxscoreMax" , 1815 },
-                { "ScoreRank" , 13 },
-            }, MusicLevelType.Master, false);
+    {
+        { "Achievement" , 1008750 },
+        { "ComboStatus" , 3 },
+        { "SyncStatus" , 0 },
+        { "DeluxscoreMax" , 1815 },
+        { "ScoreRank" , 13 },
+    }, MusicLevelType.Master, false);
 
         NoteInfo[] noteInfo =
         {
-                new NoteInfo
-                    {
-                        CriticalPerfect = 382,
-                        Perfect = 0,
-                        Fast = 0,
-                        Late = 0,
-                        Good = 0,
-                        Great = 0,
-                        Miss = 0
-                    },
-                new NoteInfo
-                    {
-                        CriticalPerfect = 38,
-                        Perfect = 0,
-                        Fast = 0,
-                        Late = 0,
-                        Good = 0,
-                        Great = 0,
-                        Miss = 0
-                    },
-                new NoteInfo
-                    {
-                        CriticalPerfect = 135,
-                        Perfect = 0,
-                        Fast = 0,
-                        Late = 0,
-                        Good = 0,
-                        Great = 0,
-                        Miss = 0
-                    },
-                new NoteInfo
-                    {
-                        CriticalPerfect = 44,
-                        Perfect = 0,
-                        Fast = 0,
-                        Late = 0,
-                        Good = 0,
-                        Great = 0,
-                        Miss = 0
-                    },
-                new NoteInfo
-                    {
-                        CriticalPerfect = 4,
-                        Perfect = 2,
-                        Fast = 2,
-                        Late = 0,
-                        Good = 0,
-                        Great = 0,
-                        Miss = 0
-                    }
-            };
+        new NoteInfo
+            {
+                CriticalPerfect = 382,
+                Perfect = 0,
+                Fast = 0,
+                Late = 0,
+                Good = 0,
+                Great = 0,
+                Miss = 0
+            },
+        new NoteInfo
+            {
+                CriticalPerfect = 38,
+                Perfect = 0,
+                Fast = 0,
+                Late = 0,
+                Good = 0,
+                Great = 0,
+                Miss = 0
+            },
+        new NoteInfo
+            {
+                CriticalPerfect = 135,
+                Perfect = 0,
+                Fast = 0,
+                Late = 0,
+                Good = 0,
+                Great = 0,
+                Miss = 0
+            },
+        new NoteInfo
+            {
+                CriticalPerfect = 44,
+                Perfect = 0,
+                Fast = 0,
+                Late = 0,
+                Good = 0,
+                Great = 0,
+                Miss = 0
+            },
+        new NoteInfo
+            {
+                CriticalPerfect = 4,
+                Perfect = 2,
+                Fast = 2,
+                Late = 0,
+                Good = 0,
+                Great = 0,
+                Miss = 0
+            }
+    };
 
         playlogs.Add(user.CreateUserPlaylog(musicDetail,
             new Dictionary<string, int>()
             {
-                    { "isRandom" , 0},
-                    { "MaxCombo" , 605}
+            { "isRandom" , 0},
+            { "MaxCombo" , 605}
             },
             noteInfo, null, (long)user.LoginId, 1));
         playlogs.Add(user.CreateUserPlaylog(musicDetail,
             new Dictionary<string, int>()
             {
-                    { "isRandom" , 0},
-                    { "MaxCombo" , 605}
+            { "isRandom" , 0},
+            { "MaxCombo" , 605}
             },
             noteInfo, null, (long)user.LoginId, 2));
         playlogs.Add(user.CreateUserPlaylog(musicDetail,
             new Dictionary<string, int>()
             {
-                    { "isRandom" , 0},
-                    { "MaxCombo" , 605}
+            { "isRandom" , 0},
+            { "MaxCombo" , 605}
             },
             noteInfo, null, (long)user.LoginId, 3));
 
@@ -697,7 +711,7 @@ public partial class MaiHandler : IExtension
         {
             if (command.Content[0] == "refresh")
             {
-                MaiDatabase.CalRating();
+                database.CalRating();
                 SendMessage("排行榜已刷新~", update);
                 return;
             }
@@ -708,7 +722,7 @@ public partial class MaiHandler : IExtension
             }
         }
 
-        var rank = MaiDatabase.Top.Select(x => x.ToList()).ToList();
+        var rank = database.Top.Select(x => x.ToList()).ToList();
         var strHeader = "全国前300排行榜\n" +
                         "```markdown\n" +
                         $"{"名次".PadRight(14)}{"Rating".PadRight(16)}{"名称".PadRight(12)}\n";
@@ -743,11 +757,11 @@ public partial class MaiHandler : IExtension
     /// <param name="querier"></param>
     internal static void GetServerStatus(InputCommand command, Update update, TUser querier)
     {
-        var titlePingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.Title);
-        var oauthPingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.OAuth);
-        var netPingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.Net);
-        var mainPingInfo = MaiMonitor.GetAvgPing(MaiMonitor.ServerType.Main);
-        var skipRateInfo = MaiMonitor.GetAvgSkipRate();
+        var titlePingInfo = monitor.GetAvgPing(ServerType.Title);
+        var oauthPingInfo = monitor.GetAvgPing(ServerType.OAuth);
+        var netPingInfo = monitor.GetAvgPing(ServerType.Net);
+        var mainPingInfo = monitor.GetAvgPing(ServerType.Main);
+        var skipRateInfo = monitor.GetAvgSkipRate();
         string text = "";
         if (command.Content.Length == 0)
         {
@@ -755,16 +769,16 @@ public partial class MaiHandler : IExtension
                       "```python" +
                      StringHandle(
                       "\nTcping延迟:" +
-                     $"\n  - Title服务器  : {MaiMonitor.TitleServerDelay}ms" +
-                     $"\n  - OAuth服务器  : {MaiMonitor.OAuthServerDelay}ms" +
-                     $"\n  - DXNet服务器  : {MaiMonitor.NetServerDelay}ms" +
-                     $"\n  - Main 服务器  : {MaiMonitor.MainServerDelay}ms" +
+                     $"\n  - Title服务器  : {monitor.TitleServerDelay}ms" +
+                     $"\n  - OAuth服务器  : {monitor.OAuthServerDelay}ms" +
+                     $"\n  - DXNet服务器  : {monitor.NetServerDelay}ms" +
+                     $"\n  - Main 服务器  : {monitor.MainServerDelay}ms" +
                      $"\n" +
                      $"响应包跳过率 : \n" +
                      $"  -  5min  : {Math.Round(skipRateInfo[0] * 100, 2)}%\n" +
                      $"  - 10min  : {Math.Round(skipRateInfo[1] * 100, 2)}%\n" +
                      $"  - 15min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
-                     $"  -  Avg   : {Math.Round(MaiMonitor.CompressSkipRate * 100, 2)}%" +
+                     $"  -  Avg   : {Math.Round(monitor.CompressSkipRate * 100, 2)}%" +
                      $"\n") +
                       "```";
         }
@@ -774,37 +788,37 @@ public partial class MaiHandler : IExtension
                       "```python" +
                      StringHandle(
                       "\nTcping延迟:" +
-                     $"\n- Title服务器  : {MaiMonitor.TitleServerDelay}ms\n" +
+                     $"\n- Title服务器  : {monitor.TitleServerDelay}ms\n" +
                      $"  -  5min  : {titlePingInfo[0]}ms\n" +
                      $"  - 10min  : {titlePingInfo[1]}ms\n" +
                      $"  - 15min  : {titlePingInfo[2]}ms" +
-                     $"\n- OAuth服务器  : {MaiMonitor.OAuthServerDelay}ms\n" +
+                     $"\n- OAuth服务器  : {monitor.OAuthServerDelay}ms\n" +
                      $"  -  5min  : {oauthPingInfo[0]}ms\n" +
                      $"  - 10min  : {oauthPingInfo[1]}ms\n" +
                      $"  - 15min  : {oauthPingInfo[2]}ms" +
-                     $"\n- DXNet服务器  : {MaiMonitor.NetServerDelay}ms\n" +
+                     $"\n- DXNet服务器  : {monitor.NetServerDelay}ms\n" +
                      $"  -  5min  : {netPingInfo[0]}ms\n" +
                      $"  - 10min  : {netPingInfo[1]}ms\n" +
                      $"  - 15min  : {netPingInfo[2]}ms" +
-                     $"\n- Main 服务器  : {MaiMonitor.MainServerDelay}ms\n" +
+                     $"\n- Main 服务器  : {monitor.MainServerDelay}ms\n" +
                      $"  -  5min  : {mainPingInfo[0]}ms\n" +
                      $"  - 10min  : {mainPingInfo[1]}ms\n" +
                      $"  - 15min  : {mainPingInfo[2]}ms" +
                      $"\n\n" +
                       "响应状态:\n" +
-                     $"- 发送包数累计 : {MaiMonitor.TotalRequestCount}\n" +
-                     $"- 响应超时累计 : {MaiMonitor.TimeoutRequestCount}\n" +
-                     $"- 其他错误累计 : {MaiMonitor.OtherErrorCount}\n" +
-                     $"- 非压缩包累计 : {MaiMonitor.CompressSkipRequestCount}\n" +
+                     $"- 发送包数累计 : {monitor.TotalRequestCount}\n" +
+                     $"- 响应超时累计 : {monitor.TimeoutRequestCount}\n" +
+                     $"- 其他错误累计 : {monitor.OtherErrorCount}\n" +
+                     $"- 非压缩包累计 : {monitor.CompressSkipRequestCount}\n" +
                      $"- 响应包跳过率 : \n" +
                      $"  -  5min  : {Math.Round(skipRateInfo[0] * 100, 2)}%\n" +
                      $"  - 10min  : {Math.Round(skipRateInfo[1] * 100, 2)}%\n" +
                      $"  - 15min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
-                     $"  -  Avg   : {Math.Round(MaiMonitor.CompressSkipRate * 100, 2)}%\n" +
-                     $"- 最新一次响应 : {MaiMonitor.LastResponseStatusCode}\n\n" +
+                     $"  -  Avg   : {Math.Round(monitor.CompressSkipRate * 100, 2)}%\n" +
+                     $"- 最新一次响应 : {monitor.LastResponseStatusCode}\n\n" +
                      $"土豆性:\n" +
-                     $"-       土豆？: {(MaiMonitor.ServiceAvailability ? MaiMonitor.CompressSkipRate > 0.18 ? "差不多熟了" : "新鲜的" : "熟透了")}\n" +
-                     $"- 平均土豆间隔 : {(MaiMonitor.FaultInterval == -1 ? "不可用" : $"{MaiMonitor.FaultInterval}s")}\n" +
+                     $"-       土豆？: {(monitor.ServiceAvailability ? monitor.CompressSkipRate > 0.18 ? "差不多熟了" : "新鲜的" : "熟透了")}\n" +
+                     $"- 平均土豆间隔 : {(monitor.FaultInterval == -1 ? "不可用" : $"{monitor.FaultInterval}s")}\n" +
                      $"\n") +
                       "```";
         }
@@ -868,6 +882,24 @@ public partial class MaiHandler : IExtension
 }
 public partial class MaiHandler
 {
+    public enum ServerType
+    {
+        Title,
+        OAuth,
+        Net,
+        Main
+    }
+    public class PingResult
+    {
+        public ServerType Type { get; set; }
+        public long Delay { get; set; }
+    }
+    public class SkipLog
+    {
+        public DateTime Timestamp { get; set; }
+        public bool IsSkip { get; set; }
+        public double LastSkipRate { get; set; }
+    }
     public struct DateTimeRange
     {
         public DateTime Start { get; set; }
@@ -889,14 +921,14 @@ public partial class MaiHandler
             return range.ToArray();
         }
     }
-    public static class MaiDatabase
+    public class MaiDatabase
     {
-        public static List<MaiAccount> MaiAccountList = new();
-        public static List<int> MaiInvaildUserIdList = new();
-        public static List<long> RatingList = new();
-        public static List<IGrouping<long, MaiAccount>> Top = new();
+        public List<MaiAccount> MaiAccountList = new();
+        public List<int> MaiInvaildUserIdList = new();
+        public List<long> RatingList = new();
+        public List<IGrouping<long, MaiAccount>> Top = new();
 
-        public static void Init()
+        public void Init()
         {
             if (File.Exists(Path.Combine(DatabasePath, "MaiAccountList.data")))
                 MaiAccountList = Load<List<MaiAccount>>(Path.Combine(DatabasePath, "MaiAccountList.data"));
@@ -907,7 +939,7 @@ public partial class MaiHandler
                 GetMaiAccount(user);
             CalRating();
         }
-        public static async void GetMaiAccount(TUser user)
+        public async void GetMaiAccount(TUser user)
         {
             await Task.Run(() =>
             {
@@ -924,12 +956,12 @@ public partial class MaiHandler
                 return true;
             });
         }
-        public static void Save()
+        public void Save()
         {
             Config.Save(Path.Combine(DatabasePath, "MaiAccountList.data"), MaiAccountList);
             Config.Save(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"), MaiInvaildUserIdList);
         }
-        public static void CalRating()
+        public void CalRating()
         {
             var allRating = MaiAccountList.OrderBy(x => x.playerRating);
             RatingList = allRating.OrderByDescending(x => x.playerRating).Select(x => x.playerRating).ToList();
@@ -938,7 +970,7 @@ public partial class MaiHandler
 
             Top = ratingGroup.ToList();
         }
-        public static async Task<long> GetUserRank(long rating)
+        public async Task<long> GetUserRank(long rating)
         {
             return await Task.Run(() =>
             {
@@ -953,7 +985,7 @@ public partial class MaiHandler
                 return -1;
             });
         }
-        public static MaiAccount Search(int userId)
+        public MaiAccount Search(int userId)
         {
             var result = MaiAccountList.Where(x => x.userId == userId).ToArray();
             if (result.Length == 0)
@@ -962,46 +994,29 @@ public partial class MaiHandler
                 return result[0];
         }
     }    
-    public static partial class MaiMonitor
+    public partial class MaiMonitor
     {
-        public enum ServerType
-        {
-            Title,
-            OAuth,
-            Net,
-            Main
-        }
-        public class PingResult
-        {
-            public ServerType Type { get; set; }
-            public long Delay { get; set; }
-        }
-        public class SkipLog
-        {
-            public DateTime Timestamp { get; set; }
-            public bool IsSkip { get; set; }
-            public double LastSkipRate { get; set; }
-        }
-        public static bool ServiceAvailability = true;
+        
+        public bool ServiceAvailability = true;
 
-        public static long FaultInterval = -1;//平均故障间隔
+        public long FaultInterval = -1;//平均故障间隔
         static List<long> FaultIntervalList = new();
         static DateTime LastFailureTime;
 
-        public static long TitleServerDelay = -1;// Title Server
-        public static long OAuthServerDelay = -1;// WeChat QRCode
-        public static long NetServerDelay = -1;//   DX Net
-        public static long MainServerDelay = -1;//  Main Server
+        public long TitleServerDelay = -1;// Title Server
+        public long OAuthServerDelay = -1;// WeChat QRCode
+        public long NetServerDelay = -1;//   DX Net
+        public long MainServerDelay = -1;//  Main Server
 
-        public static List<PingResult> PingLogs = new();
+        public List<PingResult> PingLogs = new();
 
-        public static long TotalRequestCount = 0;
-        public static long TimeoutRequestCount = 0;
-        public static long OtherErrorCount = 0;
-        public static double CompressSkipRate = 0;// 跳过率
-        public static long CompressSkipRequestCount = 0;
-        public static List<SkipLog> CompressSkipLogs = new();
-        public static HttpStatusCode LastResponseStatusCode;
+        public long TotalRequestCount = 0;
+        public long TimeoutRequestCount = 0;
+        public long OtherErrorCount = 0;
+        public double CompressSkipRate = 0;// 跳过率
+        public long CompressSkipRequestCount = 0;
+        public List<SkipLog> CompressSkipLogs = new();
+        public HttpStatusCode LastResponseStatusCode;
 
         const string TitleServer = "maimai-gm.wahlap.com";
         const string OAuthServer = "tgk-wcaime.wahlap.com";
@@ -1010,7 +1025,7 @@ public partial class MaiHandler
 
         static Mutex mutex = new Mutex();
 
-        public static void Init()
+        public void Init()
         {
             if (File.Exists(Path.Combine(DatabasePath, "CompressSkipLogs.data")))
                 CompressSkipLogs = Load<List<SkipLog>>(Path.Combine(DatabasePath, "CompressSkipLogs.data"));
@@ -1022,11 +1037,11 @@ public partial class MaiHandler
 
             Proc();
         }
-        public static void Save()
+        public void Save()
         {
-            Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), MaiMonitor.CompressSkipLogs);
+            Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs);
         }
-        static async void Proc()
+        async void Proc()
         {
             await Task.Run(() =>
             {
@@ -1108,7 +1123,7 @@ public partial class MaiHandler
             });
         }
 
-        public static long[] GetAvgPing(ServerType type)
+        public long[] GetAvgPing(ServerType type)
         {
             long _5min = -1;
             long _10min = -1;
@@ -1125,7 +1140,7 @@ public partial class MaiHandler
 
             return new long[] { _5min, _10min, _15min };
         }
-        public static double[] GetAvgSkipRate()
+        public double[] GetAvgSkipRate()
         {
             double _5min = double.NaN;
             double _10min = double.NaN;
@@ -1195,17 +1210,17 @@ public partial class MaiHandler
         }
 
     }
-    public static partial class MaiMonitor
+    public partial class MaiMonitor
     {
         /// <summary>
         /// 用于获取指定尺度的全天K线图
         /// </summary>
         /// <param name="minute"></param>
-        public static void CreateGraph(int minute)
+        public void CreateGraph(int minute)
         {
             var range = DateTimeRange.Create(minute);
         }
-        public static void CreateGraph(DateTimeRange[] range)
+        public void CreateGraph(DateTimeRange[] range)
         {
             var xSamples = range.Select(x => x.Start.ToString("HH:mm")).ToArray();
             List<KNode> nodes = new();
@@ -1215,7 +1230,7 @@ public partial class MaiHandler
 
             var ySamples = CreateYSamples(nodes);
         }
-        static KNode CreateNode(DateTimeRange range, SkipLog[] samples)
+        KNode CreateNode(DateTimeRange range, SkipLog[] samples)
         {
             double max = 0;
             double min = 1;
@@ -1254,7 +1269,7 @@ public partial class MaiHandler
 
 
         }
-        static IList<float> CreateYSamples(IList<KNode> nodes)
+        IList<float> CreateYSamples(IList<KNode> nodes)
         {
             List<float> samples = new();
             var maxValue = (((int)(nodes.Select(x => x.High).Max() * 100) / 5) + 1) * 5 / 100f;
@@ -1268,7 +1283,7 @@ public partial class MaiHandler
             return samples;
         }
     }
-    public static partial class MaiScanner
+    public partial class MaiScanner
     {
 
         static string AppPath = Environment.CurrentDirectory;
@@ -1276,33 +1291,38 @@ public partial class MaiHandler
         static string TempPath = Path.Combine(AppPath, "Database/ScanTempFile");
 
 
-        public static int StartIndex = 1000;
-        public static int EndIndex = 1199;
-        public static int SearchInterval = 1000;
-        public static int CurrentQps = 0;
-        public static int QpsLimit = 10;
+        public int StartIndex = 1000;
+        public int EndIndex = 1199;
+        public int SearchInterval = 1000;
+        public int CurrentQps = 0;
+        public int QpsLimit = 10;
 
-        public static long TotalAccountCount = 0;
-        public static long CurrentAccountCount = 0;
+        public long TotalAccountCount = 0;
+        public long CurrentAccountCount = 0;
 
-        public static bool isRunning = false;
+        public bool isRunning = false;
 
-        static List<Task> task = new();
-        static Mutex mutex = new();
-        static Mutex mutex2 = new();
-        static Task QpsTimer = Task.Run(() =>
+        List<Task> task = new();
+        Mutex mutex = new();
+        Mutex mutex2 = new();
+        Task QpsTimer = null;
+        public CancellationTokenSource cancelSource = new CancellationTokenSource();
+        public async void Init()
         {
-            while (true)
+            if(QpsTimer is null)
             {
-                mutex.WaitOne();
-                CurrentQps = 0;
-                mutex.ReleaseMutex();
-                Thread.Sleep(1000);
+                QpsTimer = Task.Run(() =>
+                {
+                    while (true)
+                    {
+                        mutex.WaitOne();
+                        CurrentQps = 0;
+                        mutex.ReleaseMutex();
+                        Thread.Sleep(1000);
+                    }
+                });
             }
-        });
-        public static CancellationTokenSource cancelSource = new CancellationTokenSource();
-        public static async void Init()
-        {
+
             if (isRunning)
                 return;
 
@@ -1324,7 +1344,7 @@ public partial class MaiHandler
             });
 
         }
-        public static async void Update(int index = 0)
+        public async void Update(int index = 0)
         {
             if (isRunning)
                 return;
@@ -1335,12 +1355,12 @@ public partial class MaiHandler
             task.Clear();
             cancelSource = new CancellationTokenSource();
 
-            TotalAccountCount = MaiDatabase.MaiAccountList.Count;
+            TotalAccountCount = database.MaiAccountList.Count;
             CurrentAccountCount = index;
 
             await Task.Run(() =>
             {
-                var accounts = MaiDatabase.MaiAccountList;
+                var accounts = database.MaiAccountList;
                 for (; index < accounts.Count; index++)
                     task.Add(UpdateUser(accounts[index]));
                 Task.WaitAll(task.ToArray());
@@ -1348,7 +1368,7 @@ public partial class MaiHandler
                 Config.SaveData();
             });
         }
-        static async Task UpdateUser(MaiAccount account)
+        async Task UpdateUser(MaiAccount account)
         {
             bool canUpdate = true;
             while (true)
@@ -1363,7 +1383,7 @@ public partial class MaiHandler
 
 
                 QpsIncrease();
-                for (; CurrentQps > QpsLimit || MaiMonitor.CompressSkipRate >= 0.20 || !canUpdate; QpsIncrease())
+                for (; CurrentQps > QpsLimit || monitor.CompressSkipRate >= 0.20 || !canUpdate; QpsIncrease())
                 {
                     if (cancelSource.Token.IsCancellationRequested)
                         break;
@@ -1390,7 +1410,7 @@ public partial class MaiHandler
             }
 
         }
-        static async Task GetUser(int startIndex, int endIndex)
+        async Task GetUser(int startIndex, int endIndex)
         {
             int targetUserId = startIndex;
             List<MaiAccount> accounts = new();
@@ -1398,7 +1418,7 @@ public partial class MaiHandler
 
             for (; targetUserId <= endIndex; targetUserId++)
             {
-                for (; CurrentQps > QpsLimit || MaiMonitor.CompressSkipRate >= 0.20;)
+                for (; CurrentQps > QpsLimit || monitor.CompressSkipRate >= 0.20;)
                 {
                     Thread.Sleep(100);
                     continue;
@@ -1439,7 +1459,7 @@ public partial class MaiHandler
                 var _failureList = new List<int>(failureList);
                 foreach (var userid in _failureList)
                 {
-                    for (; CurrentQps > QpsLimit || MaiMonitor.CompressSkipRate >= 0.20;)
+                    for (; CurrentQps > QpsLimit || monitor.CompressSkipRate >= 0.20;)
                     {
                         Thread.Sleep(100);
                         continue;
@@ -1483,33 +1503,15 @@ public partial class MaiHandler
                                  .Select(x => x.First())
                                  .Where(x => x.userName is not null);
 
-            MaiAccountList.AddRange(result);
-        }
-        public static string StringHandle(string s)
-        {
-            if (s is null)
-                return null;
-
-            StringBuilder sb = new();
-            foreach (char c in s)
-            {
-                if (c == '　')
-                    sb.Append(' ');
-                else if (c >= 0xFF01 && c <= 0xFF5E)
-                    sb.Append((char)(c - 0xFEE0));
-                else
-                    sb.Append(c);
-            }
-            return sb.ToString();
-        }
-
+            database.MaiAccountList.AddRange(result);
+        }    
     }
-    public static partial class MaiScanner
+    public partial class MaiScanner
     {
         /// <summary>
         /// QPS递增
         /// </summary>
-        static void QpsIncrease()
+        void QpsIncrease()
         {
             mutex.WaitOne();
             CurrentQps++;
@@ -1518,13 +1520,13 @@ public partial class MaiHandler
         /// <summary>
         /// 用于报告目前进度
         /// </summary>
-        static void CountIncrease()
+        void CountIncrease()
         {
             mutex2.WaitOne();
             CurrentAccountCount++;
             mutex2.ReleaseMutex();
         }
-        static bool IsFinished()
+        bool IsFinished()
         {
             var count = task.Where(x => x.IsCompleted == true).Count();
             if (count != task.Count)
@@ -1561,6 +1563,23 @@ public partial class MaiHandler
 
             return result;
         }
+    }
+    public static string StringHandle(string s)
+    {
+        if (s is null)
+            return null;
+
+        StringBuilder sb = new();
+        foreach (char c in s)
+        {
+            if (c == '　')
+                sb.Append(' ');
+            else if (c >= 0xFF01 && c <= 0xFF5E)
+                sb.Append((char)(c - 0xFEE0));
+            else
+                sb.Append(c);
+        }
+        return sb.ToString();
     }
 }
 public partial class MaiHandler
