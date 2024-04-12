@@ -82,7 +82,12 @@ public partial class MaiHandler : IExtension
             SendMessage("Permission Denied", update, true);
             return;
         }
-        if (command.Content.Length == 0)
+        else if(command.Prefix == "maistatus")
+        {
+            GetServerStatus(command, update, querier);
+            return;
+        }
+        else if (command.Content.Length == 0)
         {
             //GetHelpInfo(command, update, querier);
             return;
@@ -97,7 +102,6 @@ public partial class MaiHandler : IExtension
         }
         switch (suffix)
         {
-            case "maistatus":
             case "status":
                 GetServerStatus(command, update, querier);
                 break;
@@ -930,10 +934,8 @@ public partial class MaiHandler
 
         public void Init()
         {
-            if (File.Exists(Path.Combine(DatabasePath, "MaiAccountList.data")))
-                MaiAccountList = Load<List<MaiAccount>>(Path.Combine(DatabasePath, "MaiAccountList.data"));
-            if (File.Exists(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data")))
-                MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"));
+            MaiAccountList = Load<List<MaiAccount>>(Path.Combine(DatabasePath, "MaiAccountList.data"));
+            MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"));
 
             foreach (var user in TUserList)
                 GetMaiAccount(user);
@@ -1027,19 +1029,19 @@ public partial class MaiHandler
 
         public void Init()
         {
-            if (File.Exists(Path.Combine(DatabasePath, "CompressSkipLogs.data")))
-                CompressSkipLogs = Load<List<SkipLog>>(Path.Combine(DatabasePath, "CompressSkipLogs.data"));
-
             LastFailureTime = DateTime.Now;
-            FaultIntervalList = Config.Load<List<long>>(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"));
-            if (File.Exists(Path.Combine(Config.DatabasePath, "LastFailureTime.data")))
-                LastFailureTime = Config.Load<DateTime>(Path.Combine(Config.DatabasePath, "LastFailureTime.data"));
+            CompressSkipLogs = Load<List<SkipLog>>(Path.Combine(DatabasePath, "CompressSkipLogs.data"));
+            FaultIntervalList = Load<List<long>>(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"));
+            LastFailureTime = Load<DateTime>(Path.Combine(Config.DatabasePath, "LastFailureTime.data"));
+
 
             Proc();
         }
         public void Save()
         {
             Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs);
+            Config.Save(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"),FaultIntervalList);
+            Config.Save(Path.Combine(Config.DatabasePath, "LastFailureTime.data"), LastFailureTime);
         }
         async void Proc()
         {

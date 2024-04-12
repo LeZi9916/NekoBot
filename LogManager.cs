@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace TelegramBot
 {
@@ -16,7 +17,7 @@ namespace TelegramBot
         public static void WriteLog(string s)
         {
             mutex.WaitOne();
-            File.AppendAllText(LogFile, $"{s}\n", Encoding.UTF8);
+            File.AppendAllTextAsync(LogFile, $"{s}\n", Encoding.UTF8);
             LogCount++;
             mutex.ReleaseMutex();
         }

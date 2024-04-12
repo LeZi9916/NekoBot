@@ -141,7 +141,8 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "TimeSpentList.data"), TimeSpentList);
             Save(Path.Combine(DatabasePath, "GroupList.data"), GroupList);
             Save(Path.Combine(DatabasePath, "GroupIdList.data"), GroupIdList);
-            Save(Path.Combine(DatabasePath, "HotpAuthenticator.data"), Authenticator);       
+            Save(Path.Combine(DatabasePath, "HotpAuthenticator.data"), Authenticator);
+            ScriptManager.Save();
             Program.BotCommands = await Program.botClient.GetMyCommandsAsync();
         }
         static void Check()

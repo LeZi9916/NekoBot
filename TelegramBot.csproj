@@ -11,6 +11,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Scripts\GenericHandler.csx" />
+    <None Remove="Scripts\MaiHandler.csx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Scripts\GenericHandler.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="Scripts\MaiHandler.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CS-Script" Version="4.8.14" />
     <PackageReference Include="CZGL.SystemInfo" Version="2.2.0" />
     <PackageReference Include="SkiaSharp" Version="2.88.7" />
@@ -24,12 +38,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Scripts\GenericHandler.csx">
+    <Compile Update="Scripts\ScriptHandler.cs">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Scripts\MaiHandler.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </Compile>
   </ItemGroup>
 
 </Project>

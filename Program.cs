@@ -86,7 +86,7 @@ namespace TelegramBot
                 try
                 {
                     BotUsername = botClient.GetMeAsync().Result.Username;
-                    BotCommands = botClient.GetMyCommandsAsync().Result;
+                    //BotCommands = botClient.GetMyCommandsAsync().Result;
                     if (string.IsNullOrEmpty(BotUsername))
                         Debug(DebugType.Info, "Connect failure,retrying...");
                     else
@@ -273,24 +273,21 @@ namespace TelegramBot
         }
         public static async void Debug(DebugType type, string message)
         {
-            await Task.Run(() =>
+            var time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            var _type = type switch
             {
-                var time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                var _type = type switch
-                {
-                    DebugType.Info => "Info",
-                    DebugType.Warning => "Warning",
-                    DebugType.Debug => "Debug",
-                    DebugType.Error => "Error",
-                    _ => "Unknow"
-                };
+                DebugType.Info => "Info",
+                DebugType.Warning => "Warning",
+                DebugType.Debug => "Debug",
+                DebugType.Error => "Error",
+                _ => "Unknow"
+            };
 
-                if (_type == "Unknow")
-                    return;
+            if (_type == "Unknow")
+                return;
 
-                Console.WriteLine($"[{time}][{_type}] {message}");
-                LogManager.WriteLog($"[{time}][{_type}] {message}");
-            });
+            await Console.Out.WriteLineAsync($"[{time}][{_type}] {message}");
+            LogManager.WriteLog($"[{time}][{_type}] {message}");
         }
     }
 }

@@ -62,12 +62,8 @@ namespace TelegramBot
         {
             try
             {
-                var filename = GetRandomStr().Replace("/","");
-                var dllPath = $"{Config.TempPath}/{filename}.dll";
                 var eva = CSScript.Evaluator;
-                eva.CompileAssemblyFromFile(filePath,dllPath);
-                var dllRef = eva.ReferenceAssembly(dllPath);
-                var obj = dllRef.LoadFile<IExtension>(filePath);
+                var obj = eva.LoadFile<IExtension>(filePath);
                 var name = obj.Name;
                 var command = obj.Commands;
 
@@ -114,60 +110,59 @@ namespace TelegramBot
         public static Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         public static async void Reload(Update update)
         {
-            await Task.Run(() =>
+            var msg = await Program.SendMessage("正在尝试重新加载Script...", update);
+            List<IExtension> _objs = new();
+            List<Command> _commands = new();
+            Dictionary<string, IExtension> _handlers = new();
+            var scripts = new DirectoryInfo(ScriptPath).GetFiles()
+                                           .Where(x => x.Extension is ".csx" or ".cs")
+                                           .Select(x => x.FullName)
+                                           .ToArray();
+            string name = "";
+            try
             {
-                List<IExtension> _objs = new();
-                List<Command> _commands = new();
-                Dictionary<string, IExtension> _handlers = new();
-                var scripts = new DirectoryInfo(ScriptPath).GetFiles()
-                                               .Where(x => x.Extension is ".csx" or ".cs")
-                                               .Select(x => x.FullName)
-                                               .ToArray();
-                string name = "";
-                try
-                {                    
-                    foreach (var filePath in scripts)
-                    {
-                        var obj = LoadScript<IExtension>(filePath);
-                        name = obj.Name;
-                        var command = obj.Commands;
-                        var prefixs = commands.Select(x => x.Prefix);
-
-                        foreach (var c in command)
-                        {
-                            if (prefixs.Contains(c.Prefix))
-                            {
-                                Program.Debug(DebugType.Warning, $"Command \"{c.Prefix}\" is already exist,at \"{filePath}\",");
-                                continue;
-                            }
-                            _commands.Add(c);
-                            _handlers.Add(c.Prefix, obj);
-                            _objs.Add(obj);
-                        }
-                    }
-                    objs.Clear();
-                    commands.Clear();
-                    handlers.Clear();
-                    objs = _objs;
-                    commands = _commands;
-                    handlers = _handlers;
-
-                    objs.ForEach(x => x.Init());
-                    UpdateCommand();
-                    Program.SendMessage(
-                        "以下Script已加载:\n" +
-                        $"-{string.Join("\n-",objs.Select(x=>x.Name))}", update);
-                }
-                catch(Exception e)
+                foreach (var filePath in scripts)
                 {
-                    Program.SendMessage(
-                        $"重新加载\"{name}\"时发生错误:\n" +
-                        "```csharp\n" +
-                        Program.StringHandle(e.ToString()) +
-                        "\n```", 
-                        update,true,ParseMode.MarkdownV2);
+                    var obj = LoadScript<IExtension>(filePath);
+                    name = obj.Name;
+                    var command = obj.Commands;
+                    var prefixs = _commands.Select(x => x.Prefix);
+
+                    foreach (var c in command)
+                    {
+                        if (prefixs.Contains(c.Prefix))
+                        {
+                            Program.Debug(DebugType.Warning, $"Command \"{c.Prefix}\" is already exist,at \"{filePath}\",");
+                            continue;
+                        }
+                        _commands.Add(c);
+                        _handlers.Add(c.Prefix, obj);
+                        
+                    }
+                    _objs.Add(obj);
                 }
-            });
+                objs.Clear();
+                commands.Clear();
+                handlers.Clear();
+                objs = _objs;
+                commands = _commands;
+                handlers = _handlers;
+
+                objs.ForEach(x => x.Init());
+                UpdateCommand();
+                await Program.EditMessage(
+                    "以下Script已加载:\n" +
+                    $"-{string.Join("\n-", objs.Select(x => x.Name))}", update, msg.MessageId);
+            }
+            catch (Exception e)
+            {
+                await Program.EditMessage(
+                    $"重新加载\"{name}\"时发生错误:\n" +
+                    "```csharp\n" +
+                    Program.StringHandle(e.ToString()) +
+                    "\n```",
+                    update, msg.MessageId, ParseMode.MarkdownV2);
+            }
         }
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
     }

@@ -12,6 +12,7 @@ using TelegramBot;
 using Action = TelegramBot.Action;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 public partial class GenericHandler : IExtension
 {
@@ -69,6 +70,11 @@ public partial class GenericHandler : IExtension
             },
             new Command()
             {
+                Prefix = "reload",
+                Description = "重新加载Script"
+            },
+            new Command()
+            {
                 Prefix = "help",
                 Description = "显示帮助信息"
             }
@@ -120,7 +126,7 @@ public partial class GenericHandler : IExtension
                 AdvancedCommandHandle(command, update, querier, group);
                 break;
             case "reload":
-                
+                ReloadScript(command, update, querier, group);
                 break;
         }
     }
@@ -168,6 +174,15 @@ public partial class GenericHandler : IExtension
                 continue;
         }
         return isMatch;
+    }
+    static void ReloadScript(InputCommand command, Update update, TUser querier, Group group)
+    {
+        if (!querier.CheckPermission(Permission.Root))
+        {
+            SendMessage("Permission Denied", update);
+            return;
+        }
+        ScriptManager.Reload(update);
     }
     static void AddUser(InputCommand command, Update update, TUser querier, Group group = null)
     {
@@ -419,7 +434,7 @@ public partial class GenericHandler : IExtension
     static async void GetSystemInfo(InputCommand command, Update update)
     {
         var uptime = DateTime.Now - Program.startTime;
-        var scripts = string.Join("\n-",ScriptManager.GetLoadedScript());
+        var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
         await SendMessage(Program.StringHandle(
             $"当前版本: v{ScriptManager.GetVersion()}\n\n" +
             "硬件信息:\n" +
