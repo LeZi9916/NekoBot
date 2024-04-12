@@ -14,7 +14,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-public partial class GenericHandler : IExtension
+public partial class Generic : IExtension
 {
     public Command[] Commands { get; } =
     {
@@ -707,7 +707,7 @@ public partial class GenericHandler : IExtension
     }
     static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
 }
-public partial class GenericHandler
+public partial class Generic
 {
     static void AdvancedCommandHandle(InputCommand command, Update update, TUser querier, Group group = null)
     {
@@ -804,7 +804,7 @@ public partial class GenericHandler
 
     }
 }
-public partial class GenericHandler
+public partial class Generic
 {
     static async Task<Message> SendMessage(string text, Update update, bool isReply = true, ParseMode? parseMode = null) => await Program.SendMessage(text, update, isReply, parseMode);
     static async void DeleteMessage(Update update) => await Program.DeleteMessage(update);

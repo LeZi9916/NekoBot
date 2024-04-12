@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
-using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -13,11 +12,17 @@ using TelegramBot.Class;
 using TelegramBot.Interfaces;
 using File = System.IO.File;
 
+#nullable enable
 namespace TelegramBot
 {
+    public class Script<T>
+    {
+        public T? Instance { get; init; }
+        public Exception? Exception { get; init; }
+    }
     public static class ScriptManager
     {
-#nullable enable
+
         static List<IExtension> objs = new();
         static List<Command> commands = new();
         static Dictionary<string,IExtension> handlers = new();
@@ -33,30 +38,6 @@ namespace TelegramBot
                                            .ToArray();
             foreach (var filepath in scripts)
                 Load(filepath);
-        }
-        public static void CommandHandle(InputCommand command, Update update, TUser querier, Group group)
-        {
-            var prefix = command.Prefix;
-            if (handlers.ContainsKey(prefix))
-                handlers[prefix].Handle(command, update, querier, group);
-            else
-                return;
-        }
-        public static IExtension? GetExtension(string moduleName)
-        {
-            var result = objs.Where(x => x.Name == moduleName).ToArray();
-            if (result.Length > 0)
-                return result.First();
-            else
-                return null;
-        }
-        public static T? GetExtension<T>(string moduleName) where T: class
-        {
-            var result = objs.Where(x => x.Name == moduleName).ToArray();
-            if (result.Length > 0)
-                return (T)result.First();
-            else
-                return null;
         }
         public static void Load(string filePath)
         {
@@ -77,37 +58,22 @@ namespace TelegramBot
                     }
                     commands.Add(c);
                     handlers.Add(c.Prefix, obj);
-                    
+
                 }
                 objs.Add(obj);
                 obj.Init();
                 Program.Debug(DebugType.Info, $"Loaded Script : {name} (\"{filePath}\")");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Program.Debug(DebugType.Error, $"Loading script failure ({filePath}):\n{e}");
             }
         }
-        public static T LoadScript<T>(string filePath) where T:class => CSScript.Evaluator.LoadFile<T>(filePath);
-        public static async void UpdateCommand()
-        {
-            var result = commands.Select(x => 
-            new BotCommand 
-            { 
-                Command = x.Prefix,
-                Description = x.Description,                
-            });
-            Program.BotCommands = result.ToArray();
-            await Program.botClient.SetMyCommandsAsync(result);
-            Program.Debug(DebugType.Info,"Bot commands has been updated");
-        }
-        public static string[] GetLoadedScript() => objs.Select(x => x.Name).ToArray();
         public static void Save()
         {
             foreach (var obj in objs)
                 obj.Save();
         }
-        public static Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         public static async void Reload(Update update)
         {
             var msg = await Program.SendMessage("正在尝试重新加载Script...", update);
@@ -123,7 +89,7 @@ namespace TelegramBot
             {
                 foreach (var filePath in scripts)
                 {
-                    var obj = LoadScript<IExtension>(filePath);
+                    var obj = CompileScript<IExtension>(filePath).Instance;
                     name = obj.Name;
                     var command = obj.Commands;
                     var prefixs = _commands.Select(x => x.Prefix);
@@ -137,7 +103,7 @@ namespace TelegramBot
                         }
                         _commands.Add(c);
                         _handlers.Add(c.Prefix, obj);
-                        
+
                     }
                     _objs.Add(obj);
                 }
@@ -164,6 +130,79 @@ namespace TelegramBot
                     update, msg.MessageId, ParseMode.MarkdownV2);
             }
         }
+        public static void CommandHandle(InputCommand command, Update update, TUser querier, Group group)
+        {
+            var prefix = command.Prefix;
+            if (handlers.ContainsKey(prefix))
+                handlers[prefix].Handle(command, update, querier, group);
+            else
+                return;
+        }
+        public static IExtension? GetExtension(string moduleName)
+        {
+            var result = objs.Where(x => x.Name == moduleName).ToArray();
+            if (result.Length > 0)
+                return result.First();
+            else
+                return null;
+        }
+        public static void UpdateScript(IExtension ext)
+        {
+            var loadedExt = GetExtension(ext.Name);
+            if(loadedExt is not null)
+            {
+                loadedExt.Destroy();
+                objs.Remove(loadedExt);
+            }
+            objs.Add(ext);
+            ext.Init();
+        }
+        public static string? EvalCode(string code)
+        {
+            try
+            {
+                var eval = CSScript.RoslynEvaluator.Reset(false);
+                return ((object)eval.Eval(code)).ToString();
+            }
+            catch(Exception e)
+            {
+                return e.ToString();
+            }
+        }
+        public static Script<T> CompileScript<T>(string filePath) where T:class
+        {
+            try
+            {
+                return new Script<T>()
+                {
+                    Instance = CSScript.Evaluator.LoadFile<T>(filePath),
+                    Exception = null
+                };
+                
+            }
+            catch(Exception e)
+            {
+                return new Script<T>()
+                {
+                    Instance = null,
+                    Exception = e
+                };
+            }
+        }
+        public static async void UpdateCommand()
+        {
+            var result = commands.Select(x => 
+            new BotCommand 
+            { 
+                Command = x.Prefix,
+                Description = x.Description,                
+            });
+            Program.BotCommands = result.ToArray();
+            await Program.botClient.SetMyCommandsAsync(result);
+            Program.Debug(DebugType.Info,"Bot commands has been updated");
+        }
+        public static string[] GetLoadedScript() => objs.Select(x => x.Name).ToArray();
+        public static Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
     }
 }

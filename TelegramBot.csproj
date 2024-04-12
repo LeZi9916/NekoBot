@@ -11,17 +11,23 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Scripts\GenericHandler.csx" />
-    <None Remove="Scripts\MaiHandler.csx" />
+    <Compile Remove="Scripts\Script.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="Scripts\GenericHandler.csx">
+    <None Remove="Scripts\Generic.csx" />
+    <None Remove="Scripts\Mai.csx" />
+    <None Remove="Scripts\ScriptHelper.csx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Scripts\Generic.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Scripts\MaiHandler.csx">
+    <Compile Include="Scripts\Mai.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
+    <Compile Include="Scripts\ScriptHelper.csx" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,12 +41,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AquaTools\AquaTools.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="Scripts\ScriptHandler.cs">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
   </ItemGroup>
 
 </Project>

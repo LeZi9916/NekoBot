@@ -29,7 +29,7 @@ using File = System.IO.File;
 using MaiAccount = TelegramBot.Class.MaiAccount;
 using System.Security.Principal;
 
-public partial class MaiHandler : IExtension
+public partial class Mai : IExtension
 {
     static MaiMonitor monitor;
     static MaiScanner scanner;
@@ -148,88 +148,96 @@ public partial class MaiHandler : IExtension
     {
         //var maiUserId = querier.MaiUserId;
         //var response = GetUserPreview((int)maiUserId).Result.Object;
-        MaiAccount account = querier.Account;
-        Func<int, Task<MaiAccount?>> getAccount = async userid =>
+        try
         {
-            var response = (await GetUserPreview((int)querier.MaiUserId)).Object;
-
-            if (response.StatusCode is HttpStatusCode.OK)
+            querier.Account ??= database.Search((int)querier.Id);
+            MaiAccount account = querier.Account;
+            async Task<MaiAccount> getAccount(int userid)
             {
-                var maiAccount = new MaiAccount();
-                maiAccount.userName = StringHandle(response.userName);
-                maiAccount.playerRating = response.playerRating ?? 0;
-                maiAccount.userId = (int)querier.MaiUserId;
-                maiAccount.lastDataVersion = response.lastDataVersion;
-                maiAccount.lastRomVersion = response.lastRomVersion;
-                maiAccount.lastGameId = response.lastGameId;
-                maiAccount.banState = response.banState;
-                maiAccount.lastUpdate = DateTime.Now;
+                var response = (await GetUserPreview((int)querier.MaiUserId)).Object;
 
-                database.MaiAccountList.Add(maiAccount);
-                Config.SaveData();
-                return maiAccount;
+                if (response.StatusCode is HttpStatusCode.OK)
+                {
+                    var maiAccount = new MaiAccount();
+                    maiAccount.userName = StringHandle(response.userName);
+                    maiAccount.playerRating = response.playerRating ?? 0;
+                    maiAccount.userId = (int)querier.MaiUserId;
+                    maiAccount.lastDataVersion = response.lastDataVersion;
+                    maiAccount.lastRomVersion = response.lastRomVersion;
+                    maiAccount.lastGameId = response.lastGameId;
+                    maiAccount.banState = response.banState;
+                    maiAccount.lastUpdate = DateTime.Now;
+
+                    database.MaiAccountList.Add(maiAccount);
+                    Config.SaveData();
+                    return maiAccount;
+                }
+                else
+                {
+                    SendMessage("获取数据失败QAQ", update);
+                    return null;
+                }
+            }
+
+            if (command.Content.Length == 1)
+            {
+                int id;
+                if (!querier.CheckPermission(Permission.Admin))
+                {
+                    SendMessage("Access denied", update);
+                    return;
+                }
+                else if (!int.TryParse(command.Content[0], out id))
+                {
+                    SendMessage("请确认参数是Int32~", update);
+                    return;
+                }
+
+                account = database.Search(id);
+
+                if (account is null)
+                    account = await getAccount(id);
+            }
+            else if (command.Content.Length > 1)
+            {
+                SendMessage("参数错误QAQ", update);
+                return;
             }
             else
             {
-                SendMessage("获取数据失败QAQ", update);
-                return null;
-            }
-        };
-
-        if (command.Content.Length == 1)
-        {
-            int id;
-            if (!querier.CheckPermission(Permission.Admin))
-            {
-                SendMessage("Access denied", update);
-                return;
-            }
-            else if (!int.TryParse(command.Content[0], out id))
-            {
-                SendMessage("请确认参数是Int32~", update);
-                return;
+                if (account is null)
+                {
+                    querier.Account = await getAccount((int)querier.MaiUserId);
+                    account = querier.Account;
+                }
             }
 
-            account = database.Search(id);
+            var message = await SendMessage(
+                "用户信息:\n" +
+                $"名称: {account.userName}\n" +
+                $"Rating: {account.playerRating}\n" +
+                $"排名: 计算中...\n" +
+                $"Rom版本: {account.lastRomVersion}\n" +
+                $"Data版本: {account.lastDataVersion}\n" +
+                $"DX主要版本: {account.lastGameId}\n" +
+                $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}", update);
 
-            if (account is null)
-                account = await getAccount(id);
+            var ranking = await database.GetUserRank(account.playerRating);
+
+            EditMessage(
+                "用户信息:\n" +
+                $"名称: {account.userName}\n" +
+                $"Rating: {account.playerRating}\n" +
+                $"排名: {ranking}\n" +
+                $"Rom版本: {account.lastRomVersion}\n" +
+                $"Data版本: {account.lastDataVersion}\n" +
+                $"DX主要版本: {account.lastGameId}\n" +
+                $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}", update, message.MessageId);
         }
-        else if (command.Content.Length > 1)
+        catch(Exception e)
         {
-            SendMessage("参数错误QAQ", update);
-            return;
+            Program.Debug(DebugType.Error, e.ToString());
         }
-        else
-        {
-            if (account is null)
-            {
-                querier.Account = await getAccount((int)querier.MaiUserId);
-                account = querier.Account;
-            }
-        }
-
-        var message = await SendMessage(
-            "用户信息:\n" +
-            $"名称: {account.userName}\n" +
-            $"Rating: {account.playerRating}\n" +
-            $"排名: 计算中...\n" +
-            $"Rom版本: {account.lastRomVersion}\n" +
-            $"Data版本: {account.lastDataVersion}\n" +
-            $"DX主要版本: {account.lastGameId}\n" +
-            $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}", update);
-
-        var ranking = await database.GetUserRank(account.playerRating);
-
-        EditMessage(
-            "用户信息:\n" +
-            $"名称: {account.userName}\n" +
-            $"Rating: {account.playerRating}\n" +
-            $"排名: {ranking}\n" +
-            $"Rom版本: {account.lastRomVersion}\n" +
-            $"Data版本: {account.lastDataVersion}\n" +
-            $"DX主要版本: {account.lastGameId}\n" +
-            $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}", update, message.MessageId);
 
 
     }
@@ -884,7 +892,7 @@ public partial class MaiHandler : IExtension
     }
     static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
 }
-public partial class MaiHandler
+public partial class Mai
 {
     public enum ServerType
     {
@@ -925,7 +933,7 @@ public partial class MaiHandler
             return range.ToArray();
         }
     }
-    public class MaiDatabase
+    internal class MaiDatabase
     {
         public List<MaiAccount> MaiAccountList = new();
         public List<int> MaiInvaildUserIdList = new();
@@ -1584,7 +1592,7 @@ public partial class MaiHandler
         return sb.ToString();
     }
 }
-public partial class MaiHandler
+public partial class Mai
 {
     static async Task<Message> SendMessage(string text, Update update, bool isReply = true, ParseMode? parseMode = null) => await Program.SendMessage(text, update, isReply, parseMode);
     static async void DeleteMessage(Update update) => await Program.DeleteMessage(update);
