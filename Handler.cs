@@ -94,7 +94,6 @@ namespace TelegramBot
             ScriptManager.CommandHandle(command, update,user,group);
             
         }
-        
         public static async Task<Message> SendMessage(string text,Update update,bool isReply = true, ParseMode? parseMode = null)
         {
             try

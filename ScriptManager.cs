@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security;
 using System.Security.Cryptography;
+using System.Security.Permissions;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -161,8 +163,8 @@ namespace TelegramBot
         {
             try
             {
-                var eval = CSScript.RoslynEvaluator.Reset(false);
-                return ((object)eval.Eval(code)).ToString();
+                var eval = CSScript.RoslynEvaluator.Clone().Reset(false);
+                return ((object)eval.Eval(code))?.ToString();
             }
             catch(Exception e)
             {

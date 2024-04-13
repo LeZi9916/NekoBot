@@ -14,6 +14,13 @@ using System.Runtime.Intrinsics.Arm;
 using System;
 using System.Reflection.Metadata;
 using CSScripting;
+using System.Net.Sockets;
+using System.Net;
+using System.Collections.Generic;
+using ZXing;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis;
 
 public partial class ScriptHelper : IExtension
 {
@@ -75,10 +82,36 @@ public partial class ScriptHelper : IExtension
             return;
         else
         {
+            string[] bannedNs = { "System.Net","System.IO" , "TelegramBot" };
+            string[] bannedTypes = { "Environment","RuntimeEnvironment" };
             var code = string.Join("\n", command.Content);
-            var result = ScriptManager.EvalCode(code) ?? "null";
-            SendMessage(Program.StringHandle(result), update, true,ParseMode.MarkdownV2);
+            if(CheckCode(code, bannedNs, bannedTypes) || querier.CheckPermission(Permission.Root, null))
+            {
+                var result = ScriptManager.EvalCode(code) ?? "null";
+                SendMessage("```csharp\n" +
+                           $"{Program.StringHandle(result)}\n" +
+                           $"```", update, true, ParseMode.MarkdownV2);
+            }
+            else
+                SendMessage("Unsupport operate", update, true, ParseMode.MarkdownV2);
+
         }
+    }
+    bool CheckCode(string code, string[] banNamespaces, string[] banTypes)
+    {
+        var tree = CSharpSyntaxTree.ParseText(code);
+        var root = tree.GetRoot();
+        var descendantNodes = root.DescendantNodes();
+
+        var hasBannedNs = descendantNodes.OfType<UsingDirectiveSyntax>()
+                                         .Any(x => banNamespaces.Contains(x.Name.ToString()));
+        hasBannedNs = hasBannedNs || descendantNodes.OfType<QualifiedNameSyntax>()
+                                                    .Any(x => banNamespaces.Contains(x.ToString()));
+        var hasBannedType = root.DescendantNodes()
+                                .OfType<IdentifierNameSyntax>()
+                                .Any(x => banTypes.Contains(x.Identifier.ValueText));
+
+        return !(hasBannedNs || hasBannedType);
     }
     public void ScriptHandle(InputCommand command, Update update, TUser querier, Group group)
     {

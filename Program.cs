@@ -68,7 +68,7 @@ namespace TelegramBot
                     Credentials = new NetworkCredential("", "")
                 },
                 UseProxy = true,
-            }); ;
+            });
             botClient = new TelegramBotClient(Token, httpClient);
             botClient.ReceiveAsync(
                 updateHandler: UpdateHandleAsync,
