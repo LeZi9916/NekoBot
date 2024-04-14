@@ -16,6 +16,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 public partial class Generic : IExtension
 {
+    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public Command[] Commands { get; } =
     {
             new Command()
@@ -142,7 +143,8 @@ public partial class Generic : IExtension
     {
 
     }
-    static bool MessageFilter(string content, Update update, TUser querier, Group group)
+    public MethodInfo GetMethod(string methodName, BindingFlags flag) => ExtAssembly.GetType().GetMethod(methodName,flag);
+    bool MessageFilter(string content, Update update, TUser querier, Group group)
     {
         if (group is null)
             return false;
@@ -175,7 +177,7 @@ public partial class Generic : IExtension
         }
         return isMatch;
     }
-    static void ReloadScript(InputCommand command, Update update, TUser querier, Group group)
+    void ReloadScript(InputCommand command, Update update, TUser querier, Group group)
     {
         if (!querier.CheckPermission(Permission.Root))
         {
@@ -184,7 +186,7 @@ public partial class Generic : IExtension
         }
         ScriptManager.Reload(update);
     }
-    static void AddUser(InputCommand command, Update update, TUser querier, Group group = null)
+    void AddUser(InputCommand command, Update update, TUser querier, Group group = null)
     {
         var replyMessage = update.Message.ReplyToMessage;
         TUser target = null;
@@ -232,7 +234,7 @@ public partial class Generic : IExtension
             SendMessage($"欢迎新朋友~", update);
         }
     }
-    static void BanUser(InputCommand command, Update update, TUser querier, Group group = null)
+    void BanUser(InputCommand command, Update update, TUser querier, Group group = null)
     {
         var replyMessage = update.Message.ReplyToMessage;
         TUser target = null;
@@ -280,7 +282,7 @@ public partial class Generic : IExtension
             SendMessage($"已经将坏蛋踢出去了喵", update);
         }
     }
-    static void GetUserInfo(InputCommand command, Update update, TUser querier, Group group = null)
+    void GetUserInfo(InputCommand command, Update update, TUser querier, Group group = null)
     {
         var isGroup = update.Message.Chat.Type is (ChatType.Group or ChatType.Supergroup);
         var id = (update.Message.ReplyToMessage is not null ? (update.Message.ReplyToMessage.From ?? update.Message.From) : update.Message.From).Id;
@@ -331,7 +333,7 @@ public partial class Generic : IExtension
 
 
     }
-    static void SetUserPermission(InputCommand command, Update update, TUser querier, int diff, Group group = null)
+    void SetUserPermission(InputCommand command, Update update, TUser querier, int diff, Group group = null)
     {
         var replyMessage = update.Message.ReplyToMessage;
         Func<Permission, TUser, bool> canPromote = (s, user) =>
@@ -431,7 +433,7 @@ public partial class Generic : IExtension
         else
             SendMessage("喵?", update);
     }
-    static async void GetSystemInfo(InputCommand command, Update update)
+    async void GetSystemInfo(InputCommand command, Update update)
     {
         var uptime = DateTime.Now - Program.startTime;
         var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
@@ -454,7 +456,7 @@ public partial class Generic : IExtension
             $"已加载的Script:\n" +
             $"-{scripts}"), update, true, ParseMode.MarkdownV2);
     }
-    static async void GetBotLog(InputCommand command, Update update, TUser querier, Group group = null)
+    async void GetBotLog(InputCommand command, Update update, TUser querier, Group group = null)
     {
         var message = update.Message;
         var chat = update.Message.Chat;
@@ -575,7 +577,7 @@ public partial class Generic : IExtension
         }
         //await UploadFile(Config.LogFile,chat.Id);
     }
-    static void BotConfig(InputCommand command, Update update, TUser querier, Group group = null)
+    void BotConfig(InputCommand command, Update update, TUser querier, Group group = null)
     {
         if (group is null)
         {
@@ -609,7 +611,7 @@ public partial class Generic : IExtension
                 break;
         }
     }
-    static void GetHelpInfo(InputCommand command, Update update, TUser querier, Group group = null)
+    void GetHelpInfo(InputCommand command, Update update, TUser querier, Group group = null)
     {
         var isPrivate = update.Message.Chat.Type is ChatType.Private;
         string helpStr = "```python\n";

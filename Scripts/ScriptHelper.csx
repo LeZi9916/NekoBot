@@ -4,28 +4,23 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types;
 using TelegramBot;
 using TelegramBot.Interfaces;
-using System.Threading;
 using TelegramBot.Class;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using File = System.IO.File;
-using System.Security.Cryptography;
-using System.Runtime.Intrinsics.Arm;
 using System;
-using System.Reflection.Metadata;
 using CSScripting;
-using System.Net.Sockets;
-using System.Net;
-using System.Collections.Generic;
-using ZXing;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
+using System.Reflection;
 
 public partial class ScriptHelper : IExtension
 {
-    public string CertPath { get => Path.Combine(Config.DatabasePath,"Certs"); }
+    public string CertPath { get => Path.Combine(Config.DatabasePath, "Certs"); }
     X509Certificate2 cert = null;
+
+    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public Command[] Commands { get; } =
     {
         new Command()
@@ -42,12 +37,12 @@ public partial class ScriptHelper : IExtension
     public string Name { get; } = "ScriptHelper";
     public void Init()
     {
-        if(!Directory.Exists(CertPath))
+        if (!Directory.Exists(CertPath))
             Directory.CreateDirectory(CertPath);
 
         var personalCert = Path.Combine(CertPath, "LeZi9916.pem");
 
-        if (File.Exists(Path.Combine(CertPath,"LeZi9916.pem")))
+        if (File.Exists(Path.Combine(CertPath, "LeZi9916.pem")))
             cert = new X509Certificate2(personalCert);
     }
     public void Save()
@@ -58,9 +53,10 @@ public partial class ScriptHelper : IExtension
     {
 
     }
+    public MethodInfo GetMethod(string methodName, BindingFlags flag) => ExtAssembly.GetType().GetMethod(methodName, flag);
     public void Handle(InputCommand command, Update update, TUser querier, Group group)
     {
-        switch(command.Prefix)
+        switch (command.Prefix)
         {
             case "script":
                 ScriptHandle(command, update, querier, group);
@@ -73,7 +69,7 @@ public partial class ScriptHelper : IExtension
     public void EvalHandle(InputCommand command, Update update, TUser querier, Group group)
     {
         var message = update.Message;
-        if (!querier.CheckPermission(Permission.Admin, group))
+        if (!querier.CheckPermission(Permission.Advanced, group))
         {
             SendMessage("Permission Denied", update, true);
             return;
@@ -82,15 +78,17 @@ public partial class ScriptHelper : IExtension
             return;
         else
         {
-            string[] bannedNs = { "System.Net","System.IO" , "TelegramBot" };
-            string[] bannedTypes = { "Environment","RuntimeEnvironment" };
+            string[] bannedNs = { "System.Net", "System.IO", "System.Diagnostics", "System.Runtime", "TelegramBot", "AquaTools" };
+            string[] bannedTypes = { "Environment", "RuntimeEnvironment", "Process" };
             var code = string.Join("\n", command.Content);
-            if(CheckCode(code, bannedNs, bannedTypes) || querier.CheckPermission(Permission.Root, null))
+            var msg = SendMessage("Compiling code...", update).Result;
+            if (CheckCode(code, bannedNs, bannedTypes) || querier.CheckPermission(Permission.Root, null))
             {
                 var result = ScriptManager.EvalCode(code) ?? "null";
-                SendMessage("```csharp\n" +
-                           $"{Program.StringHandle(result)}\n" +
-                           $"```", update, true, ParseMode.MarkdownV2);
+                var _result = string.IsNullOrEmpty(result) ? "empty" : result;
+                EditMessage("```csharp\n" +
+                        $"{Program.StringHandle(result)}\n" +
+                        $"```", update,msg.MessageId, ParseMode.MarkdownV2);
             }
             else
                 SendMessage("Unsupport operate", update, true, ParseMode.MarkdownV2);
@@ -129,7 +127,7 @@ public partial class ScriptHelper : IExtension
 
         var suffix = command.Content[0];
         command.Content = command.Content.Skip(1).ToArray();
-        switch(suffix)
+        switch (suffix)
         {
             case "load":
                 LoadScript(command, update, querier, group);
@@ -138,9 +136,9 @@ public partial class ScriptHelper : IExtension
     }
     async void LoadScript(InputCommand command, Update update, TUser querier, Group group)
     {
-        var document =  update.Message.Document;
+        var document = update.Message.Document;
 
-        if(document is null)
+        if (document is null)
         {
             SendMessage("Please upload a C# Script file", update);
             return;
@@ -153,16 +151,16 @@ public partial class ScriptHelper : IExtension
         {
             EditMessage("Compiling script...(2/4)", update, msg.MessageId);
             var script = ScriptManager.CompileScript<IExtension>(filePath);
-            if(script.Instance is not null)
+            if (script.Instance is not null)
             {
                 var loadedScript = ScriptManager.GetExtension(script.Instance.Name);
-                if(loadedScript is not null)
+                if (loadedScript is not null)
                     EditMessage("Updating script...(3/4)", update, msg.MessageId);
                 else
                     EditMessage("Initializing script...(3/4)", update, msg.MessageId);
                 ScriptManager.UpdateScript(script.Instance);
                 EditMessage("Overwriting file...(4/4)", update, msg.MessageId);
-                File.Copy(filePath, $"{Path.Combine(ScriptManager.ScriptPath,$"{script.Instance.Name}.csx")}",true);
+                File.Copy(filePath, $"{Path.Combine(ScriptManager.ScriptPath, $"{script.Instance.Name}.csx")}", true);
                 EditMessage("Finished", update, msg.MessageId);
             }
             else
@@ -170,7 +168,7 @@ public partial class ScriptHelper : IExtension
                 EditMessage("Error: Compile script failure\n" +
                     "```csharp\n" +
                     $"{Program.StringHandle(script.Exception.ToString())}" +
-                    "\n```", update, msg.MessageId,ParseMode.MarkdownV2);
+                    "\n```", update, msg.MessageId, ParseMode.MarkdownV2);
                 return;
             }
         }

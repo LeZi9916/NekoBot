@@ -24,7 +24,6 @@ namespace TelegramBot
     }
     public static class ScriptManager
     {
-
         static List<IExtension> objs = new();
         static List<Command> commands = new();
         static Dictionary<string,IExtension> handlers = new();
@@ -76,6 +75,10 @@ namespace TelegramBot
             foreach (var obj in objs)
                 obj.Save();
         }
+        /// <summary>
+        /// 重新加载所有Script
+        /// </summary>
+        /// <param name="update"></param>
         public static async void Reload(Update update)
         {
             var msg = await Program.SendMessage("正在尝试重新加载Script...", update);
@@ -121,6 +124,7 @@ namespace TelegramBot
                 await Program.EditMessage(
                     "以下Script已加载:\n" +
                     $"-{string.Join("\n-", objs.Select(x => x.Name))}", update, msg.MessageId);
+                GC.Collect();
             }
             catch (Exception e)
             {
@@ -140,6 +144,11 @@ namespace TelegramBot
             else
                 return;
         }
+        /// <summary>
+        /// 根据Name获取Extension
+        /// </summary>
+        /// <param name="moduleName"></param>
+        /// <returns>IExtension的实例，不存在则返回null</returns>
         public static IExtension? GetExtension(string moduleName)
         {
             var result = objs.Where(x => x.Name == moduleName).ToArray();
@@ -148,6 +157,10 @@ namespace TelegramBot
             else
                 return null;
         }
+        /// <summary>
+        /// 更新指定Script
+        /// </summary>
+        /// <param name="ext"></param>
         public static void UpdateScript(IExtension ext)
         {
             var loadedExt = GetExtension(ext.Name);
@@ -158,7 +171,13 @@ namespace TelegramBot
             }
             objs.Add(ext);
             ext.Init();
+            GC.Collect();
         }
+        /// <summary>
+        /// 执行传入的C#代码，并返回String
+        /// </summary>
+        /// <param name="code"></param>
+        /// <returns></returns>
         public static string? EvalCode(string code)
         {
             try
@@ -171,6 +190,12 @@ namespace TelegramBot
                 return e.ToString();
             }
         }
+        /// <summary>
+        /// 编译指定的C#文件
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="filePath"></param>
+        /// <returns>第一个类的实例</returns>
         public static Script<T> CompileScript<T>(string filePath) where T:class
         {
             try
@@ -191,6 +216,9 @@ namespace TelegramBot
                 };
             }
         }
+        /// <summary>
+        /// 更新Bot的Command列表
+        /// </summary>
         public static async void UpdateCommand()
         {
             var result = commands.Select(x => 
@@ -203,6 +231,10 @@ namespace TelegramBot
             await Program.botClient.SetMyCommandsAsync(result);
             Program.Debug(DebugType.Info,"Bot commands has been updated");
         }
+        /// <summary>
+        /// 获取已加载Script的Name
+        /// </summary>
+        /// <returns></returns>
         public static string[] GetLoadedScript() => objs.Select(x => x.Name).ToArray();
         public static Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));

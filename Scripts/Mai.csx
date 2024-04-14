@@ -22,12 +22,11 @@ using Telegram.Bot.Types.Enums;
 using TelegramBot;
 using TelegramBot.Class;
 using TelegramBot.Interfaces;
-//using static MaiHandler.MaiScanner;
 using static TelegramBot.Config;
 using static TelegramBot.ChartHelper;
 using File = System.IO.File;
 using MaiAccount = TelegramBot.Class.MaiAccount;
-using System.Security.Principal;
+using System.Reflection;
 
 public partial class Mai : IExtension
 {
@@ -35,7 +34,7 @@ public partial class Mai : IExtension
     static MaiScanner scanner;
     static MaiDatabase database;
 
-
+    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public Command[] Commands { get; } =
     {
             new Command()
@@ -64,6 +63,7 @@ public partial class Mai : IExtension
         database.Init();
         scanner.Init();
         monitor.Init();
+
     }
     public void Save()
     {
@@ -75,6 +75,7 @@ public partial class Mai : IExtension
         database = null;
         monitor = null;
     }
+    public MethodInfo GetMethod(string methodName, BindingFlags flag) => ExtAssembly.GetType().GetMethod(methodName, flag);
     public void Handle(InputCommand command, Update update, TUser querier, Group group)
     {
         if (!querier.CheckPermission(Permission.Advanced, group))
@@ -89,7 +90,10 @@ public partial class Mai : IExtension
         }
         else if (command.Content.Length == 0)
         {
-            //GetHelpInfo(command, update, querier);
+            var main = ScriptManager.GetExtension("Generic");
+            if (main is null)
+                return;
+            main.GetMethod("GetHelpInfo", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(main,new object[] { command, update, querier });
             return;
         }
 

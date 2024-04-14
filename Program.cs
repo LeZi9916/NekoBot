@@ -70,6 +70,7 @@ namespace TelegramBot
                 UseProxy = true,
             });
             botClient = new TelegramBotClient(Token, httpClient);
+            Debug(DebugType.Info, "Connecting to telegram...");
             botClient.ReceiveAsync(
                 updateHandler: UpdateHandleAsync,
                 pollingErrorHandler: HandlePollingErrorAsync,
@@ -78,7 +79,7 @@ namespace TelegramBot
                     AllowedUpdates = Array.Empty<UpdateType>()
                 }
             );
-            Debug(DebugType.Info, "Connecting to telegram...");
+            
 
             while (BotUsername == "")
             {
