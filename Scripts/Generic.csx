@@ -143,7 +143,7 @@ public partial class Generic : IExtension
     {
 
     }
-    public MethodInfo GetMethod(string methodName, BindingFlags flag) => ExtAssembly.GetType().GetMethod(methodName,flag);
+    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
     bool MessageFilter(string content, Update update, TUser querier, Group group)
     {
         if (group is null)
@@ -611,7 +611,7 @@ public partial class Generic : IExtension
                 break;
         }
     }
-    void GetHelpInfo(InputCommand command, Update update, TUser querier, Group group = null)
+    public void GetHelpInfo(InputCommand command, Update update, TUser querier, Group group = null)
     {
         var isPrivate = update.Message.Chat.Type is ChatType.Private;
         string helpStr = "```python\n";

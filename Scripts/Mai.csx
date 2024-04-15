@@ -72,10 +72,13 @@ public partial class Mai : IExtension
     }
     public void Destroy()
     {
+        monitor.Destroy();
+        scanner.Destroy();
         database = null;
         monitor = null;
+        scanner = null;
     }
-    public MethodInfo GetMethod(string methodName, BindingFlags flag) => ExtAssembly.GetType().GetMethod(methodName, flag);
+    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
     public void Handle(InputCommand command, Update update, TUser querier, Group group)
     {
         if (!querier.CheckPermission(Permission.Advanced, group))
@@ -93,7 +96,7 @@ public partial class Mai : IExtension
             var main = ScriptManager.GetExtension("Generic");
             if (main is null)
                 return;
-            main.GetMethod("GetHelpInfo", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(main,new object[] { command, update, querier });
+            main.GetMethod("GetHelpInfo").Invoke(main,new object[] { command, update, querier });
             return;
         }
 
@@ -1038,6 +1041,8 @@ public partial class Mai
         const string MainServer = "ai.sys-all.cn";
 
         static Mutex mutex = new Mutex();
+        Task monitorTask;
+        bool isDestroying = false;
 
         public void Init()
         {
@@ -1051,16 +1056,24 @@ public partial class Mai
         }
         public void Save()
         {
-            Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs);
-            Config.Save(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"),FaultIntervalList);
-            Config.Save(Path.Combine(Config.DatabasePath, "LastFailureTime.data"), LastFailureTime);
+            //Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs);
+            //Config.Save(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"),FaultIntervalList);
+            //Config.Save(Path.Combine(Config.DatabasePath, "LastFailureTime.data"), LastFailureTime);
         }
-        async void Proc()
+        public void Destroy()
         {
-            await Task.Run(() =>
+            isDestroying = true;
+            if (monitorTask is not null)
+                monitorTask.Wait();
+        }
+        void Proc()
+        {
+            monitorTask = Task.Run(() =>
             {
-                for (; ; )
+                while(true)
                 {
+                    if (isDestroying)
+                        break;
                     if (DateTime.Today.AddHours(4) <= DateTime.Now && DateTime.Now <= DateTime.Today.AddHours(9))
                     {
                         TitleServerDelay = -1;
@@ -1130,6 +1143,7 @@ public partial class Mai
 
                     Config.Save(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"), FaultIntervalList, false);
                     Config.Save(Path.Combine(Config.DatabasePath, "LastFailureTime.data"), LastFailureTime, false);
+                    Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs,false);
 
 
                     Thread.Sleep(5000);
@@ -1320,23 +1334,19 @@ public partial class Mai
         Mutex mutex = new();
         Mutex mutex2 = new();
         Task QpsTimer = null;
+        bool isDestroying = false;
         public CancellationTokenSource cancelSource = new CancellationTokenSource();
-        public async void Init()
+        public void Init()
         {
-            if(QpsTimer is null)
-            {
-                QpsTimer = Task.Run(() =>
-                {
-                    while (true)
-                    {
-                        mutex.WaitOne();
-                        CurrentQps = 0;
-                        mutex.ReleaseMutex();
-                        Thread.Sleep(1000);
-                    }
-                });
-            }
-
+           
+        }
+        public void Destroy()
+        {
+            isRunning = false;
+            Thread.Sleep(2000);
+        }
+        public async void Start()
+        {
             if (isRunning)
                 return;
 
@@ -1356,7 +1366,6 @@ public partial class Mai
                 IsFinished();
                 Config.SaveData();
             });
-
         }
         public async void Update(int index = 0)
         {
@@ -1443,7 +1452,7 @@ public partial class Mai
 
                 var response = (await Aqua.PostAsync<UserPreviewRequest, UserPreviewResponse>(request)).Object;
 
-                if (response.StatusCode is not System.Net.HttpStatusCode.OK)
+                if (response.StatusCode is not HttpStatusCode.OK)
                 {
                     failureList.Add(targetUserId);
                     continue;

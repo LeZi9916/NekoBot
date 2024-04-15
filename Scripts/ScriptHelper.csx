@@ -53,7 +53,7 @@ public partial class ScriptHelper : IExtension
     {
 
     }
-    public MethodInfo GetMethod(string methodName, BindingFlags flag) => ExtAssembly.GetType().GetMethod(methodName, flag);
+    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
     public void Handle(InputCommand command, Update update, TUser querier, Group group)
     {
         switch (command.Prefix)
@@ -80,7 +80,7 @@ public partial class ScriptHelper : IExtension
         {
             string[] bannedNs = { "System.Net", "System.IO", "System.Diagnostics", "System.Runtime", "TelegramBot", "AquaTools" };
             string[] bannedTypes = { "Environment", "RuntimeEnvironment", "Process" };
-            var code = string.Join("\n", command.Content);
+            var code = string.Join(" ", command.Content);
             var msg = SendMessage("Compiling code...", update).Result;
             if (CheckCode(code, bannedNs, bannedTypes) || querier.CheckPermission(Permission.Root, null))
             {

@@ -1,4 +1,5 @@
-﻿using CSScriptLib;
+﻿using CSScripting;
+using CSScriptLib;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,7 +23,7 @@ namespace TelegramBot
         public T? Instance { get; init; }
         public Exception? Exception { get; init; }
     }
-    public static class ScriptManager
+    public static partial class ScriptManager
     {
         static List<IExtension> objs = new();
         static List<Command> commands = new();
@@ -47,23 +48,8 @@ namespace TelegramBot
                 var eva = CSScript.Evaluator;
                 var obj = eva.LoadFile<IExtension>(filePath);
                 var name = obj.Name;
-                var command = obj.Commands;
 
-                var prefixs = commands.Select(x => x.Prefix);
-                foreach (var c in command)
-                {
-                    if (prefixs.Contains(c.Prefix))
-                    {
-                        Program.Debug(DebugType.Warning, $"Command \"{c.Prefix}\" is already exist,at \"{filePath}\",");
-                        continue;
-                    }
-                    commands.Add(c);
-                    handlers.Add(c.Prefix, obj);
-
-                }
-                objs.Add(obj);
-                obj.Init();
-                Program.Debug(DebugType.Info, $"Loaded Script : {name} (\"{filePath}\")");
+                AddExtension(obj);                
             }
             catch (Exception e)
             {
@@ -81,59 +67,53 @@ namespace TelegramBot
         /// <param name="update"></param>
         public static async void Reload(Update update)
         {
-            var msg = await Program.SendMessage("正在尝试重新加载Script...", update);
-            List<IExtension> _objs = new();
-            List<Command> _commands = new();
-            Dictionary<string, IExtension> _handlers = new();
-            var scripts = new DirectoryInfo(ScriptPath).GetFiles()
-                                           .Where(x => x.Extension is ".csx" or ".cs")
-                                           .Select(x => x.FullName)
-                                           .ToArray();
-            string name = "";
+            var msg = await Program.SendMessage("Reloading Script...", update);
             try
-            {
+            {                
+                List<IExtension> newObjs = new();
+                var scripts = new DirectoryInfo(ScriptPath).GetFiles()
+                                               .Where(x => x.Extension is ".csx" or ".cs")
+                                               .Select(x => x.FullName);
                 foreach (var filePath in scripts)
                 {
-                    var obj = CompileScript<IExtension>(filePath).Instance;
-                    name = obj.Name;
-                    var command = obj.Commands;
-                    var prefixs = _commands.Select(x => x.Prefix);
-
-                    foreach (var c in command)
+                    var fileName = new FileInfo(filePath).Name;
+                    await Program.EditMessage($"Compiling \"{fileName}\"...", update, msg.MessageId);
+                    try
                     {
-                        if (prefixs.Contains(c.Prefix))
-                        {
-                            Program.Debug(DebugType.Warning, $"Command \"{c.Prefix}\" is already exist,at \"{filePath}\",");
-                            continue;
-                        }
-                        _commands.Add(c);
-                        _handlers.Add(c.Prefix, obj);
-
+                        var obj = CompileScript<IExtension>(filePath).Instance;
+                        newObjs.Add(obj);
                     }
-                    _objs.Add(obj);
+                    catch (Exception e)
+                    {
+                        await Program.EditMessage(
+                            $"Loading \"{fileName}\" failure:\n" +
+                            "```csharp\n" +
+                            Program.StringHandle(e.ToString()) +
+                            "\n```",
+                            update, msg.MessageId, ParseMode.MarkdownV2);
+                    }
                 }
-                objs.Clear();
-                commands.Clear();
-                handlers.Clear();
-                objs = _objs;
-                commands = _commands;
-                handlers = _handlers;
 
-                objs.ForEach(x => x.Init());
+                var _objs = objs.ToArray();
+                var needUpdate = _objs.Where(x => newObjs.Any(y => y.Name == x.Name))
+                                      .Select(x => x.Name);
+
+                foreach (var oldExt in _objs.Where(x => needUpdate.Any(y => x.Name == y)))
+                    RemoveExtension(oldExt);
+
+                foreach (var ext in newObjs.Where(x => needUpdate.Any(y => x.Name == y)))
+                    AddExtension(ext);
+
                 UpdateCommand();
                 await Program.EditMessage(
-                    "以下Script已加载:\n" +
+                    "Scripts have been loaded:\n" +
                     $"-{string.Join("\n-", objs.Select(x => x.Name))}", update, msg.MessageId);
                 GC.Collect();
             }
-            catch (Exception e)
+            catch(Exception e)
             {
-                await Program.EditMessage(
-                    $"重新加载\"{name}\"时发生错误:\n" +
-                    "```csharp\n" +
-                    Program.StringHandle(e.ToString()) +
-                    "\n```",
-                    update, msg.MessageId, ParseMode.MarkdownV2);
+                await Program.EditMessage("Reload script failure", update, msg.MessageId);
+                Program.Debug(DebugType.Error, $"Reload script failure:\n{e}");
             }
         }
         public static void CommandHandle(InputCommand command, Update update, TUser querier, Group group)
@@ -145,19 +125,6 @@ namespace TelegramBot
                 return;
         }
         /// <summary>
-        /// 根据Name获取Extension
-        /// </summary>
-        /// <param name="moduleName"></param>
-        /// <returns>IExtension的实例，不存在则返回null</returns>
-        public static IExtension? GetExtension(string moduleName)
-        {
-            var result = objs.Where(x => x.Name == moduleName).ToArray();
-            if (result.Length > 0)
-                return result.First();
-            else
-                return null;
-        }
-        /// <summary>
         /// 更新指定Script
         /// </summary>
         /// <param name="ext"></param>
@@ -165,12 +132,8 @@ namespace TelegramBot
         {
             var loadedExt = GetExtension(ext.Name);
             if(loadedExt is not null)
-            {
-                loadedExt.Destroy();
-                objs.Remove(loadedExt);
-            }
-            objs.Add(ext);
-            ext.Init();
+                RemoveExtension(loadedExt);
+            AddExtension(ext);            
             GC.Collect();
         }
         /// <summary>
@@ -231,11 +194,79 @@ namespace TelegramBot
             await Program.botClient.SetMyCommandsAsync(result);
             Program.Debug(DebugType.Info,"Bot commands has been updated");
         }
+        
+    }
+    public static partial class ScriptManager
+    {
+        /// <summary>
+        /// 根据Name获取Extension
+        /// </summary>
+        /// <param name="moduleName"></param>
+        /// <returns>IExtension的实例，不存在则返回null</returns>
+        public static IExtension? GetExtension(string extName)
+        {
+            var result = objs.Where(x => x.Name == extName).ToArray();
+            if (result.Length > 0)
+                return result.First();
+            else
+                return null;
+        }
+        /// <summary>
+        /// 加载并初始化该Extension
+        /// </summary>
+        /// <param name="extName"></param>
+        static void AddExtension(string extName) => AddExtension(GetExtension(extName));
+        /// <summary>
+        /// 加载并初始化该Extension
+        /// </summary>
+        /// <param name="ext"></param>
+        static void AddExtension(IExtension? ext)
+        {
+            if (ext is null) return;
+
+            foreach (var item in ext.Commands)
+            {
+                if (handlers.ContainsKey(item.Prefix))
+                    continue;
+                handlers.Add(item.Prefix, ext);
+                commands.Add(item);
+            }
+            objs.Add(ext);
+            ext.Init();
+            Program.Debug(DebugType.Info, $"Loaded script : {ext.Name}");
+        }
+        /// <summary>
+        /// 卸载该Extension
+        /// </summary>
+        /// <param name="ext"></param>
+        static void RemoveExtension(string extName) => RemoveExtension(GetExtension(extName));
+        /// <summary>
+        /// 卸载该Extension
+        /// </summary>
+        /// <param name="ext"></param>
+        static void RemoveExtension(IExtension? ext)
+        {
+            if (ext is null || !objs.Contains(ext)) return;
+
+            var oldKeys = handlers.Where(x => x.Value == ext).Select(x => x.Key);
+            foreach (var key in oldKeys)
+                handlers.Remove(key);
+            foreach(var cmd in ext.Commands)
+                commands.Remove(cmd);
+            objs.Remove(ext);
+            ext.Destroy();
+            Program.Debug(DebugType.Info, $"Unloaded script : {ext.Name}");
+        }
+
         /// <summary>
         /// 获取已加载Script的Name
         /// </summary>
         /// <returns></returns>
         public static string[] GetLoadedScript() => objs.Select(x => x.Name).ToArray();
+        /// <summary>
+        /// 获取主Assembly的版本号
+        /// </summary>
+        /// <returns></returns>
         public static Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
     }

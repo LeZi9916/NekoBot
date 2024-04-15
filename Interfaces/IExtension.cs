@@ -22,6 +22,6 @@ namespace TelegramBot.Interfaces
         void Init();
         void Save();
         void Destroy();
-        MethodInfo GetMethod(string methodName, BindingFlags flag);
+        MethodInfo GetMethod(string methodName);
     }
 }
