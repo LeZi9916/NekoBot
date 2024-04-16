@@ -25,6 +25,8 @@ namespace TelegramBot
     }
     public static partial class ScriptManager
     {
+        public static bool IsCompiling { get; private set; } = false;
+
         static List<IExtension> objs = new();
         static List<Command> commands = new();
         static Dictionary<string,IExtension> handlers = new();
@@ -67,6 +69,7 @@ namespace TelegramBot
         /// <param name="update"></param>
         public static async void Reload(Update update)
         {
+            IsCompiling = true;
             var msg = await Program.SendMessage("Reloading Script...", update);
             try
             {                
@@ -115,6 +118,7 @@ namespace TelegramBot
                 await Program.EditMessage("Reload script failure", update, msg.MessageId);
                 Program.Debug(DebugType.Error, $"Reload script failure:\n{e}");
             }
+            IsCompiling = false;
         }
         public static void CommandHandle(InputCommand command, Update update, TUser querier, Group group)
         {
@@ -130,11 +134,13 @@ namespace TelegramBot
         /// <param name="ext"></param>
         public static void UpdateScript(IExtension ext)
         {
+            IsCompiling = true;
             var loadedExt = GetExtension(ext.Name);
             if(loadedExt is not null)
                 RemoveExtension(loadedExt);
             AddExtension(ext);            
             GC.Collect();
+            IsCompiling = false;
         }
         /// <summary>
         /// 执行传入的C#代码，并返回String

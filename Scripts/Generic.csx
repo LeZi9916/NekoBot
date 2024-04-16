@@ -12,8 +12,7 @@ using TelegramBot;
 using Action = TelegramBot.Action;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-
+#pragma warning disable CS4014
 public partial class Generic : IExtension
 {
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
@@ -182,6 +181,11 @@ public partial class Generic : IExtension
         if (!querier.CheckPermission(Permission.Root))
         {
             SendMessage("Permission Denied", update);
+            return;
+        }
+        else if (ScriptManager.IsCompiling)
+        {
+            SendMessage("Script update task is running", update);
             return;
         }
         ScriptManager.Reload(update);

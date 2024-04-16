@@ -27,7 +27,8 @@ using static TelegramBot.ChartHelper;
 using File = System.IO.File;
 using MaiAccount = TelegramBot.Class.MaiAccount;
 using System.Reflection;
-
+using Microsoft.CodeAnalysis;
+#pragma warning disable CS4014
 public partial class Mai : IExtension
 {
     static MaiMonitor monitor;
@@ -1343,10 +1344,31 @@ public partial class Mai
         public void Destroy()
         {
             isRunning = false;
-            Thread.Sleep(2000);
+            isDestroying = true;
+
+            if(task.Count > 0)
+                Task.WaitAll(task.ToArray());
+            if(QpsTimer is not null)
+                QpsTimer.Wait();
         }
         public async void Start()
         {
+            if (QpsTimer is null)
+            {
+                QpsTimer = Task.Run(() =>
+                {
+                    while (true)
+                    {
+                        if (isDestroying)
+                            break;
+                        mutex.WaitOne();
+                        CurrentQps = 0;
+                        mutex.ReleaseMutex();
+                        Thread.Sleep(1000);
+                    }
+                });
+            }
+
             if (isRunning)
                 return;
 
@@ -1396,6 +1418,8 @@ public partial class Mai
             bool canUpdate = true;
             while (true)
             {
+                if (isDestroying)
+                    break;
                 if (DateTime.Today.AddHours(3) <= DateTime.Now && DateTime.Now <= DateTime.Today.AddHours(9))
                     canUpdate = false;
                 else
@@ -1441,6 +1465,8 @@ public partial class Mai
 
             for (; targetUserId <= endIndex; targetUserId++)
             {
+                if (isDestroying)
+                    break;
                 for (; CurrentQps > QpsLimit || monitor.CompressSkipRate >= 0.20;)
                 {
                     Thread.Sleep(100);
@@ -1479,6 +1505,8 @@ public partial class Mai
 
             for (; failureList.Count != 0;)
             {
+                if (isDestroying)
+                    break;
                 var _failureList = new List<int>(failureList);
                 foreach (var userid in _failureList)
                 {

@@ -6,7 +6,6 @@ using TelegramBot;
 using TelegramBot.Interfaces;
 using TelegramBot.Class;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using File = System.IO.File;
 using System;
 using CSScripting;
@@ -14,12 +13,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
 using System.Reflection;
-
+#pragma warning disable CS4014
 public partial class ScriptHelper : IExtension
 {
-    public string CertPath { get => Path.Combine(Config.DatabasePath, "Certs"); }
-    X509Certificate2 cert = null;
-
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public Command[] Commands { get; } =
     {
@@ -37,13 +33,7 @@ public partial class ScriptHelper : IExtension
     public string Name { get; } = "ScriptHelper";
     public void Init()
     {
-        if (!Directory.Exists(CertPath))
-            Directory.CreateDirectory(CertPath);
 
-        var personalCert = Path.Combine(CertPath, "LeZi9916.pem");
-
-        if (File.Exists(Path.Combine(CertPath, "LeZi9916.pem")))
-            cert = new X509Certificate2(personalCert);
     }
     public void Save()
     {
@@ -143,6 +133,11 @@ public partial class ScriptHelper : IExtension
             SendMessage("Please upload a C# Script file", update);
             return;
         }
+        else if(ScriptManager.IsCompiling)
+        {
+            SendMessage("Script update task is running", update);
+            return;
+        }
         var msg = await SendMessage("Downloading document...(1/4)", update);
         var fileName = $"{DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss")}_{document.FileName}";
         var filePath = Path.Combine(Config.TempPath, fileName);
@@ -159,7 +154,7 @@ public partial class ScriptHelper : IExtension
                 else
                     EditMessage("Initializing script...(3/4)", update, msg.MessageId);
                 ScriptManager.UpdateScript(script.Instance);
-                EditMessage("Overwriting file...(4/4)", update, msg.MessageId);
+                EditMessage("Overwriting script...(4/4)", update, msg.MessageId);
                 File.Copy(filePath, $"{Path.Combine(ScriptManager.ScriptPath, $"{script.Instance.Name}.csx")}", true);
                 EditMessage("Finished", update, msg.MessageId);
             }
