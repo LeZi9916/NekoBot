@@ -4,31 +4,11 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <StartupObject></StartupObject>
-    <AssemblyVersion>0.10.5</AssemblyVersion>
+    <AssemblyVersion>0.9.45</AssemblyVersion>
     <PublishAot>False</PublishAot>
     <PublishTrimmed>False</PublishTrimmed>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Scripts\Script.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="Scripts\Generic.csx" />
-    <None Remove="Scripts\Mai.csx" />
-    <None Remove="Scripts\ScriptHelper.csx" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="Scripts\Generic.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Mai.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\ScriptHelper.csx" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CS-Script" Version="4.8.14" />
@@ -41,6 +21,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AquaTools\AquaTools.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Scripts\GenericHandler.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Scripts\MaiHandler.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

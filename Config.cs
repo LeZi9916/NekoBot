@@ -8,75 +8,25 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Telegram.Bot.Types.Enums;
+using File = System.IO.File;
+using TelegramBot.Class;
+using Telegram.Bot;
+using Group = TelegramBot.Class.Group;
 
 namespace TelegramBot
 {
-    enum Permission
-    {
-        Unknow = -1,
-        Ban,
-        Common,
-        Advanced,
-        Admin,
-        Root
-    }
-    enum ActionType
-    {
-        Modify,
-        Reply,
-        Delete
-    }
-    class TUser
-    {
-        public long Id { get; set; }
-        public string Username { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Name
-        {
-            get => FirstName + " " + LastName;
-        }
-        public Permission Level { get; set; } = Permission.Common;
-        public int? MaiUserId { get; set; } = null;
-
-        public bool CheckPermission(Permission targetLevel) => Level >= targetLevel ? true : false;
-        public void SetPermission(Permission targetLevel)
-        {
-            Level = targetLevel;
-            Config.SaveData();
-        }
-    }
-    class Group
-    {
-        public long GroupId { get; set; }
-        public Setting Setting { get; set; } = new();
-        public List<Filter> Rule { get; set; } = new();
-    }
-    class Filter
-    {
-        public required TUser Target { get; set; }
-        public required ActionType ActionType { get; set; }
-        public required MessageType MessageType { get; set; }
-        public string MatchString { get; set; }
-        public string ActionString { get; set; }
-    }
-    class Setting
-    {
-        public bool ForceCheckReference = false;
-        public bool Listen = true;
-    }
-    internal static class Config
+    public static class Config
     {
         static DateTime Up = DateTime.Now;
-        static string AppPath = Environment.CurrentDirectory;
-        static string LogsPath = Path.Combine(AppPath, "logs");
-        static string DatabasePath = Path.Combine(AppPath, "Database");
+        public static string AppPath = Environment.CurrentDirectory;
+        public static string LogsPath = Path.Combine(AppPath, "logs");
+        public static string DatabasePath = Path.Combine(AppPath, "Database");
         public static string TempPath = Path.Combine(AppPath, "Temp");
-        static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
+        public static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
+        public static HotpAuthenticator Authenticator = new HotpAuthenticator();
 
         public static bool EnableAutoSave = true;
-        public static int AutoSaveInterval = 300000;
+        public static int AutoSaveInterval = 900000;
 
         public static long TotalHandleCount = 0;
         public static List<long> TimeSpentList = new();
@@ -84,7 +34,6 @@ namespace TelegramBot
         public static List<long> GroupIdList = new();
         public static List<Group> GroupList = new();
 
-        static Mutex mutex = new();
 
         public static List<long> UserIdList = new() { 1136680302 };
         public static List<TUser> TUserList = new()
@@ -96,7 +45,7 @@ namespace TelegramBot
                 LastName = null,
                 Level = Permission.Root
             }
-        };
+        };        
 
         public static List<KeyChip> keyChips = new() 
         {
@@ -133,20 +82,36 @@ namespace TelegramBot
                 GroupList = Load<List<Group>>(Path.Combine(DatabasePath, "GroupList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "GroupIdList.data")))
                 GroupIdList = Load<List<long>>(Path.Combine(DatabasePath, "GroupIdList.data"));
+            if (File.Exists(Path.Combine(DatabasePath, "HotpAuthenticator.data")))
+                Authenticator = Load<HotpAuthenticator>(Path.Combine(DatabasePath, "HotpAuthenticator.data"));  
+            if (File.Exists(Path.Combine(DatabasePath, "token.config")))
+                Program.Token = File.ReadAllText(Path.Combine(DatabasePath, "token.config"));
+            else
+            {
+                Program.Debug(DebugType.Error, "Config file isn't exist");
+                Environment.Exit(-1);
+            }
             AutoSave();
         }
-        public static Group SearchGroup(long groupId)
+#nullable enable
+        public static Group? SearchGroup(long groupId)
         {
-            var result = GroupList.Where(u => u.GroupId == groupId).ToArray();
+            if (!GroupIdList.Contains(groupId))
+                return null;
+            var result = GroupList.Where(u => u.Id == groupId).ToArray();
 
-            return result.Length == 0 ? null : result[0];
+            return result[0];
         }
-        public static TUser SearchUser(long userId)
+        public static TUser? SearchUser(long userId)
         {
+            if (!UserIdList.Contains(userId))
+                return null;
+
             var result = TUserList.Where(u => u.Id == userId).ToArray();
 
-            return result.Length == 0 ? null: result[0];
+            return result[0];
         }
+#nullable disable
         public static void AddUser(TUser user)
         {
             TUserList.Add(user);
@@ -163,12 +128,12 @@ namespace TelegramBot
                     Thread.Sleep(AutoSaveInterval);
                     if (!EnableAutoSave)
                         break;
-                    Program.Debug(DebugType.Info, "Auto save data start");
+                    Program.Debug(DebugType.Debug, "Auto save data start");
                     SaveData();
                 }
             });
         }
-        public static void SaveData()
+        public static async void SaveData()
         {
             Save(Path.Combine(DatabasePath, "UserList.data"), TUserList);
             Save(Path.Combine(DatabasePath, "UserIdList.data"), UserIdList);
@@ -176,12 +141,9 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "TimeSpentList.data"), TimeSpentList);
             Save(Path.Combine(DatabasePath, "GroupList.data"), GroupList);
             Save(Path.Combine(DatabasePath, "GroupIdList.data"), GroupIdList);
-        }
-        public static void WriteLog(string s)
-        {
-            mutex.WaitOne();
-            File.AppendAllText(LogFile,$"{s}\n",Encoding.UTF8);
-            mutex.ReleaseMutex();
+            Save(Path.Combine(DatabasePath, "HotpAuthenticator.data"), Authenticator);
+            ScriptManager.Save();
+            Program.BotCommands = await Program.botClient.GetMyCommandsAsync();
         }
         static void Check()
         {
@@ -191,18 +153,22 @@ namespace TelegramBot
                 Directory.CreateDirectory(DatabasePath);
             if (!Directory.Exists(TempPath))
                 Directory.CreateDirectory(TempPath);
-        }
-        public static void Save<T>(string path,T target)
+        }        
+
+
+        public static async void Save<T>(string path,T target,bool debugMessage = true)
         {
             try
             {
                 var fileStream = File.Open(path, FileMode.Create);
-                fileStream.Write(Encoding.UTF8.GetBytes(ToJsonString(target)));
+                await fileStream.WriteAsync(Encoding.UTF8.GetBytes(ToJsonString(target)));
                 fileStream.Close();
-                Program.Debug(DebugType.Info, $"Saved File {path}");
+                if (debugMessage)
+                    Program.Debug(DebugType.Info, $"Saved File {path}");
             }
             catch(Exception e)
             {
+                
                 Program.Debug(DebugType.Error, $"Saving File \"{path}\" Failure:\n{e.Message}");
             }
         }
@@ -213,13 +179,29 @@ namespace TelegramBot
                 var json = File.ReadAllText(path);
                 var result = FromJsonString<T>(json);
 
-                Program.Debug(DebugType.Info, $"Loaded File: {path}\n");
+                Program.Debug(DebugType.Info, $"Loaded File: {path}");
                 return result;
             }
             catch (Exception e) 
             {
-                Program.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}\n");
+                Program.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
                 return new T();
+            }
+        }
+        public static void Load<T>(string path,out T obj)
+        {
+            try
+            {
+                var json = File.ReadAllText(path);
+                obj = FromJsonString<T>(json);
+
+                Program.Debug(DebugType.Info, $"Loaded File: {path}");
+                
+            }
+            catch (Exception e)
+            {
+                Program.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
+                obj = default(T);
             }
         }
         public static string ToJsonString<T>(T target) => JsonSerializer.Serialize(target);

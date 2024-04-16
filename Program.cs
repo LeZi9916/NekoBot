@@ -6,31 +6,72 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using System.Diagnostics;
+using System.Net.Http;
+using System.Net;
+using TelegramBot.Class;
+using System.IO;
+using static TelegramBot.Image;
+using System.Collections.Generic;
+using static TelegramBot.ChartHelper;
 
 namespace TelegramBot
 {
-    enum DebugType
+    public enum DebugType
     {
-        Info,
-        Warning,
         Debug,
+        Info,
+        Warning,        
         Error
     }
-    internal partial class Program
+    public partial class Program
     {
-        static TelegramBotClient botClient;
-        static string Token = "6872337338:AAEylSFo-QmT0B49_q_oF3Cy6ah6PbxkCxI";
-        static string BotUsername = "ZzyFuckComputerbot";
-        static DateTime startTime;
-        static Stopwatch stopwatch = new Stopwatch();
+        public static TelegramBotClient botClient;
+        public static string Token = "";
+        static string BotUsername = "";
+        public static DateTime startTime;
+        public static Telegram.Bot.Types.BotCommand[] BotCommands;
+        static void Test()
+        {
+            List<KNode> data = new List<KNode>
+            {
+                new KNode { Date = DateTime.Now.AddDays(-4), Open = 100, High = 110, Low = 90, Close = 105 },
+                new KNode { Date = DateTime.Now.AddDays(-3), Open = 105, High = 115, Low = 95, Close = 110 },
+                new KNode { Date = DateTime.Now.AddDays(-2), Open = 110, High = 120, Low = 100, Close = 115 },
+                new KNode { Date = DateTime.Now.AddDays(-1), Open = 115, High = 125, Low = 105, Close = 120 },
+                new KNode { Date = DateTime.Now, Open = 120, High = 130, Low = 110, Close = 125 },
+                new KNode { Date = DateTime.Now, Open = 120, High = 130, Low = 110, Close = 125 },
+            };
+            List<int> XSamples = new List<int>()
+            {
+                1210,1220,1230,1240,1250,1260
+            };
+            List<int> YSamples = new List<int>()
+            {
+                130,115,100,85,70
+            };
+            var helper = new CandlestickChartHelper<int,int>(data, XSamples, YSamples);
+            helper.Draw("KLineChart.png");
+        }
         static void Main(string[] args)
         {
+            //Test();
+            ScriptManager.Init();
             Monitor.Init();
             Config.Init();
             startTime = DateTime.Now;
-            botClient = new TelegramBotClient(Token);
-
-            botClient.StartReceiving(
+            Config.Load(Path.Combine(Config.DatabasePath, "Proxy.config"),out string proxyStr);
+            HttpClient httpClient = new(new SocketsHttpHandler
+            {
+                //Proxy = Config.Load<WebProxy>(Path.Combine(Config.DatabasePath, "Proxy.config")),
+                Proxy = new WebProxy(proxyStr)
+                {
+                    Credentials = new NetworkCredential("", "")
+                },
+                UseProxy = true,
+            });
+            botClient = new TelegramBotClient(Token, httpClient);
+            Debug(DebugType.Info, "Connecting to telegram...");
+            botClient.ReceiveAsync(
                 updateHandler: UpdateHandleAsync,
                 pollingErrorHandler: HandlePollingErrorAsync,
                 receiverOptions: new ReceiverOptions()
@@ -38,24 +79,49 @@ namespace TelegramBot
                     AllowedUpdates = Array.Empty<UpdateType>()
                 }
             );
-            Debug(DebugType.Info,"Connect Successful\n");
+            
+
+            while (BotUsername == "")
+            {
+                
+                try
+                {
+                    BotUsername = botClient.GetMeAsync().Result.Username;
+                    //BotCommands = botClient.GetMyCommandsAsync().Result;
+                    if (string.IsNullOrEmpty(BotUsername))
+                        Debug(DebugType.Info, "Connect failure,retrying...");
+                    else
+                    {
+                        Debug(DebugType.Info, "Connect Successful");
+                        break;
+                    }
+                }
+                catch
+                {
+                    Debug(DebugType.Info, "Connect failure,retrying...");
+                }
+            }
+            ScriptManager.UpdateCommand();
             while(true)
                 Console.ReadKey();
         }
-        static async Task MessageHandleAsync(ITelegramBotClient botClient, Update update)
+        static async void MessageHandleAsync(ITelegramBotClient botClient, Update update)
         {
             await Task.Run(() =>
             {
+                Stopwatch stopwatch = new();
+                stopwatch.Reset();
+                stopwatch.Start();
                 try
-                {
+                {                    
                     var message = update.Message;
                     var chat = message.From;
                     var userId = message.From.Id;
 
                     var text = message.Text is null ? message.Caption ?? "" : message.Text;
-                    CommandPreHandle(text.Split(" "), update);
+                    CommandPreHandle(text.Split(" ",StringSplitOptions.RemoveEmptyEntries), update);
 
-                    Debug(DebugType.Info, $"Received message:\n" +
+                    Debug(DebugType.Debug, $"Received message:\n" +
                         $"Chat Type: {message.Chat.Type}\n" +
                         $"Message Type: {message.Type}\n" +
                         $"Form User: {chat.FirstName} {chat.LastName}[@{chat.Username}]({userId})\n" +
@@ -65,12 +131,13 @@ namespace TelegramBot
                 {
                     Debug(DebugType.Error, $"Failure to receive message : \n{e.Message}\n{e.StackTrace}");
                 }
+                stopwatch.Stop();
+                Config.TotalHandleCount++;
+                Config.TimeSpentList.Add((int)stopwatch.ElapsedMilliseconds);
             });
         }
         static async Task UpdateHandleAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
-        {
-            stopwatch.Reset();
-            stopwatch.Start();
+        {            
             try
             {
                 FindUser(update);
@@ -79,7 +146,7 @@ namespace TelegramBot
                 switch (update.Type)
                 {
                     case UpdateType.Message:
-                        await MessageHandleAsync(botClient, update);
+                        MessageHandleAsync(botClient, update);
                         break;
                     case UpdateType.InlineQuery:
                         break;
@@ -118,9 +185,8 @@ namespace TelegramBot
                 Debug(DebugType.Error, $"Failure to handle message : \n{e.Message}\n{e.StackTrace}");
                 return;
             }            
-            stopwatch.Stop();
-            Config.TotalHandleCount++;
-            Config.TimeSpentList.Add((int)stopwatch.ElapsedMilliseconds);
+            
+            await Task.Delay(0);
         }
         static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception e, CancellationToken cancellationToken)
         {
@@ -131,40 +197,40 @@ namespace TelegramBot
         {
             await Task.Run(() => 
             {
-                var message = update.Message ?? update.EditedMessage ?? update.ChannelPost;
-                if (message is null)
-                    return;
+                //var message = update.Message ?? update.EditedMessage ?? update.ChannelPost;
+                //if (message is null)
+                //    return;
 
-                User[] userList = new User[4];
-                userList[0] = message.From;
-                userList[1] = message.ForwardFrom;
-                if (message.ReplyToMessage is not null)
-                {
-                    userList[2] = message.ReplyToMessage.From;
-                    userList[3] = message.ReplyToMessage.ForwardFrom;
-                }
-                
+                //User[] userList = new User[4];
+                User[] userList = TUser.GetUsers(update);
+                //userList[0] = message.From;
+                //userList[1] = message.ForwardFrom;
+                //if (message.ReplyToMessage is not null)
+                //{
+                //    userList[2] = message.ReplyToMessage.From;
+                //    userList[3] = message.ReplyToMessage.ForwardFrom;
+                //}
+
+                if (userList is null)
+                    return;
 
                 foreach (var user in userList)
                 {
                     if (user is null)
                         continue;
                     if (Config.UserIdList.Contains(user.Id))
-                        continue;
-
-                    Config.AddUser(new TUser()
                     {
-                        Id = user.Id,
-                        Username = user.Username,
-                        FirstName = user.FirstName,
-                        LastName = user.LastName
-                    });
+                        TUser.Update(update);
+                        continue;
+                    }
+
+                    Config.AddUser(TUser.FromUser(user));
 
                     Debug(DebugType.Info, $"Find New User:\n" +
                     $"Name: {user.FirstName} {user.LastName}\n" +
                     $"isBot: {user.IsBot}\n" +
                     $"Username: {user.Username}\n" +
-                    $"isPremium: {user.IsPremium}\n");
+                    $"isPremium: {user.IsPremium}");
                 }
             });
         }
@@ -188,14 +254,17 @@ namespace TelegramBot
 
                     var group = new Group()
                     {
-                        GroupId = groupId
+                        Id = groupId,
+                        Name = chat.Title,
+                        Username = chat.Username,                        
                     };
                     Config.GroupList.Add(group);
                     Config.GroupIdList.Add(groupId);
                     Config.SaveData();
-                    Debug(DebugType.Info, $"Find New Group:\n" +
-                        $"Name: {chat.FirstName} {chat.LastName}\n" +
-                        $"Id: {groupId}\n");
+                    Debug(DebugType.Debug, $"Find New Group:\n" +
+                        $"Name: {group.Name}\n" +
+                        $"Id: {groupId}\n" +
+                        $"Username：{group.Username}\n");
                 }
                 catch(Exception e)
                 {
@@ -205,24 +274,21 @@ namespace TelegramBot
         }
         public static async void Debug(DebugType type, string message)
         {
-            await Task.Run(() =>
+            var time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            var _type = type switch
             {
-                var time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                var _type = type switch
-                {
-                    DebugType.Info => "Info",
-                    DebugType.Warning => "Warning",
-                    DebugType.Debug => "Debug",
-                    DebugType.Error => "Error",
-                    _ => "Unknow"
-                };
+                DebugType.Info => "Info",
+                DebugType.Warning => "Warning",
+                DebugType.Debug => "Debug",
+                DebugType.Error => "Error",
+                _ => "Unknow"
+            };
 
-                if (_type == "Unknow")
-                    return;
+            if (_type == "Unknow")
+                return;
 
-                Console.WriteLine($"[{time}][{_type}] {message}");
-                Config.WriteLog($"[{time}][{_type}] {message}");
-            });
+            await Console.Out.WriteLineAsync($"[{time}][{_type}] {message}");
+            LogManager.WriteLog($"[{time}][{_type}] {message}");
         }
     }
 }
