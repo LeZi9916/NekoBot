@@ -83,6 +83,7 @@ namespace TelegramBot
 
             while (BotUsername == "")
             {
+                
                 try
                 {
                     BotUsername = botClient.GetMeAsync().Result.Username;
