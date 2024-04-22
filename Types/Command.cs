@@ -1,0 +1,24 @@
+﻿using System;
+using System.Linq;
+
+namespace TelegramBot.Types;
+
+public struct Command
+{
+    public string Prefix;
+    public string[] Params;
+    public static Command? Parse(string s)
+    {
+        if (s.Length == 0 || s.Substring(0, 1) != "/") return null;
+
+        var cmd = s.Split(" ", StringSplitOptions.RemoveEmptyEntries);
+        var prefix = cmd[0];
+        var param = cmd.Skip(1).ToArray();
+
+        return new Command()
+        {
+            Prefix = prefix,
+            Params = param
+        };
+    }
+}

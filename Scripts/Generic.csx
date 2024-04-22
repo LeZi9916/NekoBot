@@ -6,85 +6,80 @@ using System.Reflection;
 using System.Security.Cryptography;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot.Class;
 using TelegramBot.Interfaces;
 using TelegramBot;
 using Action = TelegramBot.Action;
 using System.IO;
 using System.Threading.Tasks;
+using TelegramBot.Types;
 #pragma warning disable CS4014
-public partial class Generic : IExtension
+public partial class Generic : ScriptCommon,IExtension
 {
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public Command[] Commands { get; } =
-    {
-            new Command()
-            {
-                Prefix = "start",
-                Description = "简介"
-            },
-            new Command()
-            {
-                Prefix = "add",
-                Description = "允许指定用户访问bot"
-            },
-            new Command()
-            {
-                Prefix = "ban",
-                Description = "禁止指定用户访问bot"
-            },
-            new Command()
-            {
-                Prefix = "info",
-                Description = "获取指定用户信息"
-            },
-            new Command()
-            {
-                Prefix = "promote",
-                Description = "提升指定用户权限"
-            },
-            new Command()
-            {
-                Prefix = "demote",
-                Description = "降低指定用户权限"
-            },
-            new Command()
-            {
-                Prefix = "status",
-                Description = "显示bot服务器状态"
-            },
-            new Command()
-            {
-                Prefix = "logs",
-                Description = "获取本次运行日志"
-            },
-            new Command()
-            {
-                Prefix = "config",
-                Description = "修改bot在Group的设置"
-            },
-            new Command()
-            {
-                Prefix = "set",
-                Description = "权限狗专用"
-            },
-            new Command()
-            {
-                Prefix = "reload",
-                Description = "重新加载Script"
-            },
-            new Command()
-            {
-                Prefix = "help",
-                Description = "显示帮助信息"
-            }
-        };
+    public BotCommand[] Commands { get; } =
+{
+        new BotCommand()
+        {
+            Command = "start",
+            Description = "简介"
+        },
+        new BotCommand()
+        {
+            Command = "add",
+            Description = "允许指定用户访问bot"
+        },
+        new BotCommand()
+        {
+            Command = "ban",
+            Description = "禁止指定用户访问bot"
+        },
+        new BotCommand()
+        {
+            Command = "info",
+            Description = "获取指定用户信息"
+        },
+        new BotCommand()
+        {
+            Command = "promote",
+            Description = "提升指定用户权限"
+        },
+        new BotCommand()
+        {
+            Command = "demote",
+            Description = "降低指定用户权限"
+        },
+        new BotCommand()
+        {
+            Command = "status",
+            Description = "显示bot服务器状态"
+        },
+        new BotCommand()
+        {
+            Command = "logs",
+            Description = "获取本次运行日志"
+        },
+        new BotCommand()
+        {
+            Command = "config",
+            Description = "修改bot在Group的设置"
+        },
+        new BotCommand()
+        {
+            Command = "set",
+            Description = "权限狗专用"
+        },
+        new BotCommand()
+        {
+            Command = "help",
+            Description = "显示帮助信息"
+        }
+};
     public string Name { get; } = "Generic";
-    public void Handle(InputCommand command, Update update, TUser querier, Group group)
+    public void Handle(Message msg)
     {
         var message = update.Message;
         var isPrivate = update.Message.Chat.Type is ChatType.Private;
-        if (command.Content.Length > 0 && command.Content[0] is "help")
+        if (command.Params.Length > 0 && command.Params[0] is "help")
         {
             GetHelpInfo(command, update, querier, group);
             return;
@@ -125,9 +120,6 @@ public partial class Generic : IExtension
             case "set":
                 AdvancedCommandHandle(command, update, querier, group);
                 break;
-            case "reload":
-                ReloadScript(command, update, querier, group);
-                break;
         }
     }
     public void Init()
@@ -143,7 +135,7 @@ public partial class Generic : IExtension
 
     }
     public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
-    bool MessageFilter(string content, Update update, TUser querier, Group group)
+    bool MessageFilter(string content, Update update, TelegramBot.Types.User querier, Group group)
     {
         if (group is null)
             return false;
@@ -176,26 +168,12 @@ public partial class Generic : IExtension
         }
         return isMatch;
     }
-    void ReloadScript(InputCommand command, Update update, TUser querier, Group group)
-    {
-        if (!querier.CheckPermission(Permission.Root))
-        {
-            SendMessage("Permission Denied", update);
-            return;
-        }
-        else if (ScriptManager.IsCompiling)
-        {
-            SendMessage("Script update task is running", update);
-            return;
-        }
-        ScriptManager.Reload(update);
-    }
-    void AddUser(InputCommand command, Update update, TUser querier, Group group = null)
+    void AddUser(Message msg = null)
     {
         var replyMessage = update.Message.ReplyToMessage;
-        TUser target = null;
+        TelegramBot.Types.User target = null;
 
-        if (command.Content.Length == 0)
+        if (command.Params.Length == 0)
         {
             if (replyMessage is null)
             {
@@ -208,7 +186,7 @@ public partial class Generic : IExtension
         {
             long id = -1;
 
-            if (long.TryParse(command.Content[0], out id))
+            if (long.TryParse(command.Params[0], out id))
                 target = Config.SearchUser(id);
             else
             {
@@ -238,12 +216,12 @@ public partial class Generic : IExtension
             SendMessage($"欢迎新朋友~", update);
         }
     }
-    void BanUser(InputCommand command, Update update, TUser querier, Group group = null)
+    void BanUser(Message msg = null)
     {
         var replyMessage = update.Message.ReplyToMessage;
-        TUser target = null;
+        TelegramBot.Types.User target = null;
 
-        if (command.Content.Length == 0)
+        if (command.Params.Length == 0)
         {
             if (replyMessage is null)
             {
@@ -256,7 +234,7 @@ public partial class Generic : IExtension
         {
             long id = -1;
 
-            if (long.TryParse(command.Content[0], out id))
+            if (long.TryParse(command.Params[0], out id))
                 target = Config.SearchUser(id);
             else
             {
@@ -286,7 +264,7 @@ public partial class Generic : IExtension
             SendMessage($"已经将坏蛋踢出去了喵", update);
         }
     }
-    void GetUserInfo(InputCommand command, Update update, TUser querier, Group group = null)
+    void GetUserInfo(Message msg = null)
     {
         var isGroup = update.Message.Chat.Type is (ChatType.Group or ChatType.Supergroup);
         var id = (update.Message.ReplyToMessage is not null ? (update.Message.ReplyToMessage.From ?? update.Message.From) : update.Message.From).Id;
@@ -297,9 +275,9 @@ public partial class Generic : IExtension
             SendMessage("Permission denied.", update);
             return;
         }
-        else if (command.Content.Length > 0)
+        else if (command.Params.Length > 0)
         {
-            if (command.Content[0] is "group")
+            if (command.Params[0] is "group")
             {
                 if (group is null)
                     SendMessage("获取群组信息时发生错误QAQ:\n此功能只能在群组内使用", update);
@@ -312,7 +290,7 @@ public partial class Generic : IExtension
                         $"Permission: {group.Level}", update);
                 }
             }
-            else if (!long.TryParse(command.Content[0], out id))
+            else if (!long.TryParse(command.Params[0], out id))
             {
                 GetHelpInfo(command, update, querier);
                 return;
@@ -337,10 +315,10 @@ public partial class Generic : IExtension
 
 
     }
-    void SetUserPermission(InputCommand command, Update update, TUser querier, int diff, Group group = null)
+    void SetUserPermission(Command command, Update update, TelegramBot.Types.User querier, int diff, Group group = null)
     {
         var replyMessage = update.Message.ReplyToMessage;
-        Func<Permission, TUser, bool> canPromote = (s, user) =>
+        Func<Permission, TelegramBot.Types.User, bool> canPromote = (s, user) =>
         {
             switch (s)
             {
@@ -383,7 +361,7 @@ public partial class Generic : IExtension
                 SendMessage($"喵不认识这个人xAx", update);
                 return;
             }
-            if (target.isUnknow)
+            if (target.IsUnknown)
             {
                 SendMessage($"无效操作喵", update);
                 return;
@@ -416,7 +394,7 @@ public partial class Generic : IExtension
             }
         };
 
-        if (command.Content.Length == 0)
+        if (command.Params.Length == 0)
         {
             if (replyMessage is null)
             {
@@ -425,11 +403,11 @@ public partial class Generic : IExtension
             }
             setPermission(replyMessage.From.Id);
         }
-        else if (command.Content.Length == 1)
+        else if (command.Params.Length == 1)
         {
             long id = -1;
 
-            if (long.TryParse(command.Content[0], out id))
+            if (long.TryParse(command.Params[0], out id))
                 setPermission(id);
             else
                 SendMessage("userId错误，请仔细检查喵~", update);
@@ -437,7 +415,7 @@ public partial class Generic : IExtension
         else
             SendMessage("喵?", update);
     }
-    async void GetSystemInfo(InputCommand command, Update update)
+    async void GetSystemInfo(Command command, Update update)
     {
         var uptime = DateTime.Now - Program.startTime;
         var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
@@ -460,7 +438,7 @@ public partial class Generic : IExtension
             $"已加载的Script:\n" +
             $"-{scripts}"), update, true, ParseMode.MarkdownV2);
     }
-    async void GetBotLog(InputCommand command, Update update, TUser querier, Group group = null)
+    async void GetBotLog(Message msg = null)
     {
         var message = update.Message;
         var chat = update.Message.Chat;
@@ -478,12 +456,12 @@ public partial class Generic : IExtension
             SendMessage("喵?", update, true);
             return;
         }
-        switch (command.Content.Length)
+        switch (command.Params.Length)
         {
             case 0:
                 break;
             case 1:
-                level = command.Content[0] switch
+                level = command.Params[0] switch
                 {
                     "debug" => DebugType.Debug,
                     "info" => DebugType.Info,
@@ -493,16 +471,16 @@ public partial class Generic : IExtension
                 };
                 if (level is null)
                 {
-                    if (!int.TryParse(command.Content[0], out count))
+                    if (!int.TryParse(command.Params[0], out count))
                     {
-                        SendMessage($"\"{command.Content[0]}\"不是有效参数喵x", update);
+                        SendMessage($"\"{command.Params[0]}\"不是有效参数喵x", update);
                         return;
                     }
                     level = DebugType.Error;
                 }
                 break;
             case 2:
-                level = command.Content[0] switch
+                level = command.Params[0] switch
                 {
                     "debug" => DebugType.Debug,
                     "info" => DebugType.Info,
@@ -512,12 +490,12 @@ public partial class Generic : IExtension
                 };
                 if (level is null)
                 {
-                    SendMessage($"\"{command.Content[0]}\"不是有效参数喵x", update);
+                    SendMessage($"\"{command.Params[0]}\"不是有效参数喵x", update);
                     return;
                 }
-                else if (!int.TryParse(command.Content[1], out count))
+                else if (!int.TryParse(command.Params[1], out count))
                 {
-                    SendMessage($"\"{command.Content[1]}\"不是有效参数喵x", update);
+                    SendMessage($"\"{command.Params[1]}\"不是有效参数喵x", update);
                     return;
                 }
                 break;
@@ -581,7 +559,7 @@ public partial class Generic : IExtension
         }
         //await UploadFile(Config.LogFile,chat.Id);
     }
-    void BotConfig(InputCommand command, Update update, TUser querier, Group group = null)
+    void BotConfig(Message msg = null)
     {
         if (group is null)
         {
@@ -593,18 +571,18 @@ public partial class Generic : IExtension
             SendMessage($"很抱歉，您不能修改bot的设置喵", update);
             return;
         }
-        if (command.Content.Length < 2)
+        if (command.Params.Length < 2)
         {
             GetHelpInfo(command, update, querier);
             return;
         }
 
-        string prefix = command.Content[0].ToLower();
+        string prefix = command.Params[0].ToLower();
         bool boolValue;
         switch (prefix)
         {
             case "forcecheckreference":
-                if (bool.TryParse(command.Content[1], out boolValue))
+                if (bool.TryParse(command.Params[1], out boolValue))
                 {
                     group.Setting.ForceCheckReference = boolValue;
                     SendMessage($"已将ForceCheckReference属性修改为*{boolValue}*", update, true, ParseMode.MarkdownV2);
@@ -615,7 +593,7 @@ public partial class Generic : IExtension
                 break;
         }
     }
-    public void GetHelpInfo(InputCommand command, Update update, TUser querier, Group group = null)
+    void GetHelpInfo(Message msg = null)
     {
         var isPrivate = update.Message.Chat.Type is ChatType.Private;
         string helpStr = "```python\n";
@@ -666,32 +644,6 @@ public partial class Generic : IExtension
                     "\n/help       显示帮助信息\n" +
                     "\n更详细的信息请输入\"/{command} help\"");
                 break;
-            case "mai":
-                helpStr += Program.StringHandle(
-                        "命令用法：\n" +
-                        "\n/mai bind image    上传二维码并进行绑定" +
-                        "\n/mai bind [str]    使用SDWC标识符进行绑定" +
-                        "\n/mai region        获取登录地区信息" +
-                        "\n/mai rank          获取国服排行榜" +
-                        "\n/mai rank refresh  重新加载排行榜" +
-                        "\n/mai status        查看DX服务器状态" +
-                        "\n/mai backup [str]  使用密码备份账号数据" +
-                        "\n/mai info          获取账号信息" +
-                        "\n/mai info [int]    获取指定账号信息" +
-                        "\n/mai ticket [int]  获取一张指定类型的票" +
-                        "\n/mai sync          强制刷新账号信息" +
-                        "\n/mai sync [int]    强制刷新指定账号信息" +
-                        "\n/mai logout        登出");
-                break;
-            case "maiscanner":
-                helpStr += Program.StringHandle(
-                        "命令用法：\n" +
-                        "\n/maiscanner status       获取扫描器状态" +
-                        "\n/maiscanner update [int] 从指定位置更新数据库" +
-                        "\n/maiscanner update       更新数据库" +
-                        "\n/maiscanner stop         终止当前任务" +
-                        "\n/maiscanner set [int]    设置QPS限制");
-                break;
             case "logs":
                 helpStr += Program.StringHandle(
                         "命令用法：\n" +
@@ -715,7 +667,7 @@ public partial class Generic : IExtension
 }
 public partial class Generic
 {
-    static void AdvancedCommandHandle(InputCommand command, Update update, TUser querier, Group group = null)
+    static void AdvancedCommandHandle(Message msg = null)
     {
         if (!querier.CheckPermission(Permission.Root))
         {
@@ -723,8 +675,8 @@ public partial class Generic
             return;
         }
 
-        var suffix = command.Content[0];
-        command.Content = command.Content.Skip(1).ToArray();
+        var suffix = command.Params[0];
+        command.Params = command.Params.Skip(1).ToArray();
         switch (suffix)
         {
             case "permission":
@@ -735,7 +687,7 @@ public partial class Generic
                 //    break;
         }
     }
-    static void UserPermissionModify(InputCommand command, Update update, TUser querier)
+    static void UserPermissionModify(Command command, Update update, TelegramBot.Types.User querier)
     {
         var chat = update.Message.Chat;
         var chatType = chat.Type;
@@ -743,14 +695,14 @@ public partial class Generic
 
         long userId = 0;
         int targetLevel = 0;
-        if (command.Content.Length < 2)
+        if (command.Params.Length < 2)
         {
             SendMessage("缺少参数喵x", update);
             return;
         }
-        if (!long.TryParse(command.Content[0], out userId))
+        if (!long.TryParse(command.Params[0], out userId))
         {
-            if (command.Content[0] == "group")
+            if (command.Params[0] == "group")
             {
                 userId = -1;
                 if (!isGroup)
@@ -761,13 +713,13 @@ public partial class Generic
             }
             else
             {
-                SendMessage($"\"{command.Content[0]}\"不是有效的参数x", update);
+                SendMessage($"\"{command.Params[0]}\"不是有效的参数x", update);
                 return;
             }
         }
-        if (!int.TryParse(command.Content[1], out targetLevel))
+        if (!int.TryParse(command.Params[1], out targetLevel))
         {
-            SendMessage($"\"{command.Content[1]}\"不是有效的参数x", update);
+            SendMessage($"\"{command.Params[1]}\"不是有效的参数x", update);
             return;
         }
         else if (targetLevel > (int)Permission.Root || targetLevel < (int)Permission.Unknow)
@@ -809,13 +761,4 @@ public partial class Generic
         }
 
     }
-}
-public partial class Generic
-{
-    static async Task<Message> SendMessage(string text, Update update, bool isReply = true, ParseMode? parseMode = null) => await Program.SendMessage(text, update, isReply, parseMode);
-    static async void DeleteMessage(Update update) => await Program.DeleteMessage(update);
-    static async Task<bool> UploadFile(string filePath, long chatId) => await Program.UploadFile(filePath, chatId);
-    static async Task<bool> UploadFile(Stream stream, string fileName, long chatId) => await Program.UploadFile(stream, fileName, chatId);
-    static async Task<bool> DownloadFile(string dPath, string fileId) => await Program.DownloadFile(dPath, fileId);
-    static async Task<Message> EditMessage(string text, Update update, int messageId, ParseMode? parseMode = null) => await Program.EditMessage(text, update, messageId, parseMode);
 }

@@ -9,9 +9,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using File = System.IO.File;
-using TelegramBot.Class;
 using Telegram.Bot;
-using Group = TelegramBot.Class.Group;
+using Group = TelegramBot.Types.Group;
+using TelegramBot.Types;
 
 namespace TelegramBot
 {
@@ -36,9 +36,9 @@ namespace TelegramBot
 
 
         public static List<long> UserIdList = new() { 1136680302 };
-        public static List<TUser> TUserList = new()
+        public static List<User> TUserList = new()
         {
-            new TUser()
+            new User()
             {
                 Id = 1136680302,
                 FirstName = "Tanuoxi",
@@ -71,7 +71,7 @@ namespace TelegramBot
         {
             Check();
             if (File.Exists(Path.Combine(DatabasePath, "UserList.data")))
-                TUserList = Load<List<TUser>>(Path.Combine(DatabasePath, "UserList.data"));
+                TUserList = Load<List<User>>(Path.Combine(DatabasePath, "UserList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "UserIdList.data")))
                 UserIdList = Load<List<long>>(Path.Combine(DatabasePath, "UserIdList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "TotalHandleCount.data")))
@@ -102,7 +102,7 @@ namespace TelegramBot
 
             return result[0];
         }
-        public static TUser? SearchUser(long userId)
+        public static User? SearchUser(long userId)
         {
             if (!UserIdList.Contains(userId))
                 return null;
@@ -112,7 +112,7 @@ namespace TelegramBot
             return result[0];
         }
 #nullable disable
-        public static void AddUser(TUser user)
+        public static void AddUser(User user)
         {
             TUserList.Add(user);
             UserIdList.Add(user.Id);
