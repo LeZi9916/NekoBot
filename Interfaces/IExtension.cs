@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Telegram.Bot.Types;
-using TelegramBot.Class;
+using TelegramBot.Types;
+using Message = TelegramBot.Types.Message;
 
 namespace TelegramBot.Interfaces
 {
@@ -13,12 +14,12 @@ namespace TelegramBot.Interfaces
         /// <summary>
         /// Command list which extension can support
         /// </summary>
-        Command[] Commands { get; }
+        BotCommand[] Commands { get; }
         /// <summary>
         /// Extension Name
         /// </summary>
         string Name { get; }
-        void Handle(InputCommand command, Update update, TUser querier, Group group);
+        void Handle(Message msg);
         void Init();
         void Save();
         void Destroy();

@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot.Class;
+using TelegramBot.Types;
+using Message = TelegramBot.Types.Message;
 
 namespace TelegramBot
 {
@@ -20,95 +21,136 @@ namespace TelegramBot
                 s = s.Replace(c, $"\\{c}");
             return s;
 
-        };        
-        
-        static void CommandPreHandle(string[] param, Update update)
+        };
+
+        static void CommandPreHandle(Message msg)
         {
-            if (param.Length == 0 || string.IsNullOrEmpty(param[0]))
+            if (msg.Command is null)
                 return;
 
-            var message = update.Message;
-            var chat = message.Chat;
-            var userId = message.From.Id;
-            var user = Config.SearchUser(userId);
-            Group group = null;
-            var isGroup = chat.Type is (ChatType.Group or ChatType.Supergroup);
+            var group = msg.IsGroup ? Config.SearchGroup(msg.Chat.Id) : null;
+            var user = msg.From;
+            var cmd = (Command)msg.Command;
 
-            //分割 /status@botusername
-            var _param = param[0].Split("@");
-            var prefix = _param[0].Replace("/", "");
-
-            
-            if (param[0].Substring(0, 1) != "/" || BotCommands.Where(x => x.Command == prefix).IsEmpty())
+            // Reference check
+            if (cmd.Prefix.Contains("@"))
             {
-                Debug(DebugType.Debug, $"\"{param[0]}\" is not valid command,skipped");
-                return;
-            }
-            if (user is null)
-                return;
-            else if (isGroup)
-                group = Config.SearchGroup(chat.Id);
+                var prefix = cmd.Prefix;
+                var s = prefix.Split("@", 2, StringSplitOptions.RemoveEmptyEntries);
 
-            param = param.Skip(1).ToArray();
-
-
-            if (group is not null && group.Setting.ForceCheckReference)
-                if (!(_param.Length == 2 && _param[1] == BotUsername))
+                if ((s.Length != 2 || s[1] != BotUsername) && 
+                    (group is not null && group.Setting.ForceCheckReference))
                     return;
-            
-            if (!user.isNormal)
+
+                cmd.Prefix = s.First();
+                msg.Command = cmd;
+            }
+            // Sender check
+            if (!user.IsNormal)
             {
-                var sArray = string.Join(" ", param).Split("-token");
-                if (sArray.Length < 2)
+                var sArray = string.Join(" ", cmd.Params).Split("-token", StringSplitOptions.RemoveEmptyEntries);
+                if (sArray.Length != 2)
                 {
-                    SendMessage("Authentication failed:\nGroup or channel anonymous access is not allowed", update);
+                    //SendMessage("Authentication failed:\nGroup or channel anonymous access is not allowed", update);
                     Debug(DebugType.Info, "Channel access,rejected");
                     return;
                 }
-
-                //var sArray = param[1].Split("--token");
                 var token = sArray[1];
+
                 if (!Config.Authenticator.Compare(token.Trim()))
                 {
-                    SendMessage("Authentication failed:\nInvalid HOTP code", update);
+                    //SendMessage("Authentication failed:\nInvalid HOTP code", update);
                     Debug(DebugType.Info, "HOTP code is invalid,rejected");
                     return;
                 }
                 else
-                    param = sArray[0].Split(" ",StringSplitOptions.RemoveEmptyEntries);
-
+                    cmd.Params = sArray[0].Split(" ", StringSplitOptions.RemoveEmptyEntries);
             }
-
-            if (!user.CheckPermission(Permission.Root))
-                if (!user.CheckPermission(Permission.Common,group))
-                {
-                    SendMessage("Access Denied", update);
-                    Debug(DebugType.Info, "Banned user access,rejected");
-                    return;
-                }
-
-            InputCommand command = new();
-
-            command.Prefix = prefix;
-            command.Content = param;
-            ScriptManager.CommandHandle(command, update,user,group);
-            
-        }
-        public static async Task<Message> SendMessage(string text,Update update,bool isReply = true, ParseMode? parseMode = null)
-        {
-            try
+            // Banned user check
+            if (!user.CheckPermission(Permission.Root) &&
+                !user.CheckPermission(Permission.Common, group))
             {
-                return await botClient.SendTextMessageAsync(
-                        chatId: update.Message.Chat.Id,
-                        text: text,
-                        replyToMessageId: isReply ? update.Message.MessageId : null,
-                        parseMode: parseMode);
+                //SendMessage("Access Denied", update);
+                Debug(DebugType.Info, "Banned user access,rejected");
+                return;
             }
-            catch(Exception e)
-            {
-                Debug(DebugType.Error, $"Failure to send message : \n{e.Message}\n{e.StackTrace}");
-                return null;
-            }
+            Debug(DebugType.Debug,"User Request:\n" +
+                $"From: {msg.From.Name}({msg.From.Id})\n" +
+                $"Chat: {msg.Chat.Id}\n" +
+                $"Permission: {msg.From.Level.ToString()}\n" +
+                $"Prefix: /{cmd.Prefix}\n" +
+                $"Params: {string.Join(" ", cmd.Params)}");
+            ScriptManager.CommandHandle(msg);
+
+            //if (param.Length == 0 || string.IsNullOrEmpty(param[0]))
+            //    return;
+
+            //var message = update.Message;
+            //var chat = message.Chat;
+            //var userId = message.From.Id;
+            //var user = Config.SearchUser(userId);
+            //Group group = null;
+            //var isGroup = chat.Type is (ChatType.Group or ChatType.Supergroup);
+
+            ////分割 /status@botusername
+            //var _param = param[0].Split("@");
+            //var prefix = _param[0].Replace("/", "");
+
+
+            //if (param[0].Substring(0, 1) != "/" || BotCommands.Where(x => x.Command == prefix).IsEmpty())
+            //{
+            //    Debug(DebugType.Debug, $"\"{param[0]}\" is not valid command,skipped");
+            //    return;
+            //}
+            //if (user is null)
+            //    return;
+            //else if (isGroup)
+            //    group = Config.SearchGroup(chat.Id);
+
+            //param = param.Skip(1).ToArray();
+
+
+            //if (group is not null && group.Setting.ForceCheckReference)
+            //    if (!(_param.Length == 2 && _param[1] == BotUsername))
+            //        return;
+
+            //if (!user.IsNormal)
+            //{
+            //    var sArray = string.Join(" ", param).Split("-token");
+            //    if (sArray.Length < 2)
+            //    {
+            //        SendMessage("Authentication failed:\nGroup or channel anonymous access is not allowed", update);
+            //        Debug(DebugType.Info, "Channel access,rejected");
+            //        return;
+            //    }
+
+            //    //var sArray = param[1].Split("--token");
+            //    var token = sArray[1];
+            //    if (!Config.Authenticator.Compare(token.Trim()))
+            //    {
+            //        SendMessage("Authentication failed:\nInvalid HOTP code", update);
+            //        Debug(DebugType.Info, "HOTP code is invalid,rejected");
+            //        return;
+            //    }
+            //    else
+            //        param = sArray[0].Split(" ",StringSplitOptions.RemoveEmptyEntries);
+
+            //}
+
+            //if (!user.CheckPermission(Permission.Root))
+            //    if (!user.CheckPermission(Permission.Common,group))
+            //    {
+            //        SendMessage("Access Denied", update);
+            //        Debug(DebugType.Info, "Banned user access,rejected");
+            //        return;
+            //    }
+
+            //Command command = new();
+
+            //command.Prefix = prefix;
+            //command.Params = param;
+            //ScriptManager.CommandHandle(command, update,user,group);
+
         }
         public static async Task DeleteMessage(Update update)
         {
@@ -121,35 +163,18 @@ namespace TelegramBot
             }
             catch (Exception e)
             {
-                SendMessage("请为Bot授予删除消息权限喵", update,false);
                 Debug(DebugType.Error, $"Cannot delete message : \n{e.Message}\n{e.StackTrace}");
             }
         }
-        public static async Task<bool> UploadFile(string filePath,long chatId)
+        public static async Task<bool> UploadFile(string filePath, long chatId)
         {
             try
             {
-                var stream = System.IO.File.Open(filePath,FileMode.Open,FileAccess.Read,FileShare.ReadWrite);
+                var stream = System.IO.File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                 var filename = new FileInfo(filePath).Name;
                 await botClient.SendDocumentAsync(
                         chatId: chatId,
                         document: InputFile.FromStream(stream: stream, fileName: filename));
-                stream.Close();
-                return true;
-            }
-            catch(Exception e)
-            {
-                Debug(DebugType.Error, $"Failure to upload file : \n{e.Message}\n{e.StackTrace}");
-                return false;
-            }
-        }
-        public static async Task<bool> UploadFile(Stream stream,string fileName, long chatId)
-        {
-            try
-            {
-                await botClient.SendDocumentAsync(
-                        chatId: chatId,
-                        document: InputFile.FromStream(stream: stream,fileName : fileName));
                 stream.Close();
                 return true;
             }
@@ -159,35 +184,20 @@ namespace TelegramBot
                 return false;
             }
         }
-        public static async Task<bool> DownloadFile(string dPath,string fileId)
+        public static async Task<bool> UploadFile(Stream stream, string fileName, long chatId)
         {
             try
             {
-                await using Stream fileStream = System.IO.File.Create(dPath);
-                var file = await botClient.GetInfoAndDownloadFileAsync(
-                    fileId: fileId,
-                    destination: fileStream);
+                await botClient.SendDocumentAsync(
+                        chatId: chatId,
+                        document: InputFile.FromStream(stream: stream, fileName: fileName));
+                stream.Close();
                 return true;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                Debug(DebugType.Error, $"Failure to download file : \n{e.Message}\n{e.StackTrace}");
-                return false;                
-            }
-        }
-        public static async Task<Message> EditMessage(string text,Update update, int messageId,ParseMode? parseMode = null)
-        {
-            try
-            {
-                return await botClient.EditMessageTextAsync(
-                    chatId: update.Message.Chat.Id,
-                    messageId: messageId,
-                    text: text, parseMode: parseMode);
-            }
-            catch(Exception e)
-            {
-                Debug(DebugType.Error, $"Failure to edit message : \n{e.Message}\n{e.StackTrace}");
-                return null;
+                Debug(DebugType.Error, $"Failure to upload file : \n{e.Message}\n{e.StackTrace}");
+                return false;
             }
         }
     }

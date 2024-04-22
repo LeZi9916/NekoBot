@@ -1,7 +1,6 @@
 ﻿using AquaTools.Exception;
 using AquaTools.Requests;
 using AquaTools.Responses;
-using AquaTools.Users;
 using AquaTools;
 using System;
 using System.Collections.Generic;
@@ -20,37 +19,39 @@ using System.Text.Unicode;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using TelegramBot;
-using TelegramBot.Class;
 using TelegramBot.Interfaces;
-using static TelegramBot.Config;
-using static TelegramBot.ChartHelper;
-using File = System.IO.File;
-using MaiAccount = TelegramBot.Class.MaiAccount;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
+using TelegramBot.Types;
+using CSScripting;
+using static TelegramBot.Config;
+using static TelegramBot.ChartHelper;
+using Message = TelegramBot.Types.Message;
+using File = System.IO.File;
+using MaiAccount = TelegramBot.Types.MaiAccount;
 #pragma warning disable CS4014
-public partial class Mai : IExtension
+public partial class Mai : ScriptCommon, IExtension
 {
     static MaiMonitor monitor;
     static MaiScanner scanner;
     static MaiDatabase database;
 
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public Command[] Commands { get; } =
+    public BotCommand[] Commands { get; } =
     {
-            new Command()
+            new BotCommand()
             {
-                Prefix = "mai",
+                Command = "mai",
                 Description = "是什么呢？"
             },
-            new Command()
+            new BotCommand()
             {
-                Prefix = "maiscanner",
+                Command = "maiscanner",
                 Description = "是什么呢？"
             },
-            new Command()
+            new BotCommand()
             {
-                Prefix = "maistatus",
+                Command = "maistatus",
                 Description = "查看土豆服务器状态"
             }
         };
@@ -80,69 +81,69 @@ public partial class Mai : IExtension
         scanner = null;
     }
     public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
-    public void Handle(InputCommand command, Update update, TUser querier, Group group)
+    public void Handle(Message userMsg)
     {
-        if (!querier.CheckPermission(Permission.Advanced, group))
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var group = userMsg.GetGroup();
+
+        if (cmd.Prefix == "maistatus")
         {
-            SendMessage("Permission Denied", update, true);
+            GetServerStatus(userMsg);
             return;
         }
-        else if(command.Prefix == "maistatus")
+        else if (!querier.CheckPermission(Permission.Advanced, group))
         {
-            GetServerStatus(command, update, querier);
+            userMsg.Send("Permission Denied");
             return;
         }
-        else if (command.Content.Length == 0)
+        else if (cmd.Params.IsEmpty())
         {
-            var main = ScriptManager.GetExtension("Generic");
-            if (main is null)
-                return;
-            main.GetMethod("GetHelpInfo").Invoke(main,new object[] { command, update, querier });
+            GetHelpInfo(cmd,userMsg);
             return;
         }
 
-        var suffix = command.Content[0];
-        command.Content = command.Content.Skip(1).ToArray();
+        var suffix = cmd.Params.First();
         if (suffix is not ("bind" or "status" or "rank") && querier.MaiUserId is null)
         {
-            SendMessage("你还没有绑定账号喵x", update);
+            userMsg.Send("你还没有绑定账号喵x");
             return;
         }
         switch (suffix)
         {
             case "status":
-                GetServerStatus(command, update, querier);
+                GetServerStatus(userMsg);
                 break;
             case "region":
-                GetUserRegion(command, update, querier);
+                GetUserRegion(userMsg);
                 break;
             case "info":
-                GetUserInfo(command, update, querier);
+                GetUserInfo(userMsg);
                 break;
             case "bind":
-                BindUser(command, update, querier);
+                BindUser(userMsg);
                 break;
             case "rank":
-                GetTopRank(command, update, querier);
+                GetTopRank(userMsg);
                 break;
             case "logout":
-                Logout(command, update, querier);
+                Logout(userMsg);
                 break;
             case "backup":
-                DataBackup(command, update, querier);
+                DataBackup(userMsg);
                 break;
             case "sync":
-                UpdateUserData(command, update, querier);
+                UpdateUserData(userMsg);
                 break;
             case "ticket":
-                GetTicket(command, update, querier);
+                //GetTicket(userMsg);
                 break;
                 //case "upsert":
-                //    MaiUpsert(command, update, querier);
+                //    MaiUpsert(userMsg);
                 //    break;
         }
     }
-    internal static void GetMaiUserId(InputCommand command, Update update, TUser querier)
+    internal static void GetMaiUserId(Message userMsg)
     {
 
     }
@@ -152,10 +153,11 @@ public partial class Mai : IExtension
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static async void GetUserInfo(InputCommand command, Update update, TUser querier)
+    internal static async void GetUserInfo(Message userMsg)
     {
-        //var maiUserId = querier.MaiUserId;
-        //var response = GetUserPreview((int)maiUserId).Result.Object;
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
         try
         {
             querier.Account ??= database.Search((int)querier.Id);
@@ -182,22 +184,22 @@ public partial class Mai : IExtension
                 }
                 else
                 {
-                    SendMessage("获取数据失败QAQ", update);
+                    userMsg.Send("获取数据失败QAQ");
                     return null;
                 }
             }
 
-            if (command.Content.Length == 1)
+            if (!param.IsEmpty())
             {
                 int id;
                 if (!querier.CheckPermission(Permission.Admin))
                 {
-                    SendMessage("Access denied", update);
+                    userMsg.Send("Access denied");
                     return;
                 }
-                else if (!int.TryParse(command.Content[0], out id))
+                else if (!int.TryParse(param.First(), out id))
                 {
-                    SendMessage("请确认参数是Int32~", update);
+                    userMsg.Send("请确认参数是Int32~");
                     return;
                 }
 
@@ -206,9 +208,9 @@ public partial class Mai : IExtension
                 if (account is null)
                     account = await getAccount(id);
             }
-            else if (command.Content.Length > 1)
+            else if (cmd.Params.Length > 1)
             {
-                SendMessage("参数错误QAQ", update);
+                userMsg.Send("参数错误QAQ");
                 return;
             }
             else
@@ -220,7 +222,7 @@ public partial class Mai : IExtension
                 }
             }
 
-            var message = await SendMessage(
+            var msg = await userMsg.Send(
                 "用户信息:\n" +
                 $"名称: {account.userName}\n" +
                 $"Rating: {account.playerRating}\n" +
@@ -228,11 +230,11 @@ public partial class Mai : IExtension
                 $"Rom版本: {account.lastRomVersion}\n" +
                 $"Data版本: {account.lastDataVersion}\n" +
                 $"DX主要版本: {account.lastGameId}\n" +
-                $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}", update);
+                $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}");
 
             var ranking = await database.GetUserRank(account.playerRating);
 
-            EditMessage(
+            msg.Edit(
                 "用户信息:\n" +
                 $"名称: {account.userName}\n" +
                 $"Rating: {account.playerRating}\n" +
@@ -240,9 +242,9 @@ public partial class Mai : IExtension
                 $"Rom版本: {account.lastRomVersion}\n" +
                 $"Data版本: {account.lastDataVersion}\n" +
                 $"DX主要版本: {account.lastGameId}\n" +
-                $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}", update, message.MessageId);
+                $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}");
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             Program.Debug(DebugType.Error, e.ToString());
         }
@@ -255,25 +257,29 @@ public partial class Mai : IExtension
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static void GetUserRegion(InputCommand command, Update update, TUser querier)
+    internal static void GetUserRegion(Message userMsg)
     {
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+
         var request = new Request<UserRegionRequest>();
         int userId;
-        if(command.Content.Length == 1)
-            if(!querier.CheckPermission(Permission.Admin))
+        if (!param.IsEmpty())
+            if (!querier.CheckPermission(Permission.Admin))
             {
-                SendMessage("Permission Denied", update);
+                userMsg.Send("Permission Denied");
                 return;
             }
-            else if(int.TryParse(command.Content[0],out userId))
+            else if (int.TryParse(param.First(), out userId))
                 request.Object.userId = userId;
             else
             {
-                SendMessage("参数无效喵x", update);
+                userMsg.Send("参数无效喵x");
                 return;
             }
         else
-            request.Object.userId = (int)querier.MaiUserId;       
+            request.Object.userId = (int)querier.MaiUserId;
 
         var response = Aqua.Post<UserRegionRequest, UserRegionResponse>(request).Object;
         string regionStr = "";
@@ -282,13 +288,13 @@ public partial class Mai : IExtension
 
         if (response.StatusCode is not HttpStatusCode.OK)
         {
-            SendMessage("获取出勤地区数据失败QAQ\n" +
-                       $"对端响应: {response.StatusCode}", update);
+            userMsg.Send("获取出勤地区数据失败QAQ\n" +
+                       $"对端响应: {response.StatusCode}");
             return;
         }
         if (response.userRegionList.Length == 0)
         {
-            SendMessage("你看起来从未出过勤呢~", update);
+            userMsg.Send("你看起来从未出过勤呢~");
             return;
         }
         foreach (var region in response.userRegionList)
@@ -301,8 +307,8 @@ public partial class Mai : IExtension
             if (region.CreateDate.Ticks < firstRegionDate.Ticks)
                 firstRegionDate = region.CreateDate;
         }
-        SendMessage("你的出勤数据如下:\n" + regionStr +
-                    $"\n你最早在{firstRegionDate.ToString("yyyy/MM/dd")}出勤；在过去的{(DateTime.Now - firstRegionDate).Days}天里，你一共出勤了{totalPlayCount}次", update, true, ParseMode.MarkdownV2);
+        userMsg.Send("你的出勤数据如下:\n" + regionStr +
+                    $"\n你最早在{firstRegionDate.ToString("yyyy/MM/dd")}出勤；在过去的{(DateTime.Now - firstRegionDate).Days}天里，你一共出勤了{totalPlayCount}次", ParseMode.MarkdownV2);
     }
     /// <summary>
     /// 绑定maimai账号
@@ -310,48 +316,52 @@ public partial class Mai : IExtension
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static void BindUser(InputCommand command, Update update, TUser querier)
+    internal async void BindUser(Message userMsg)
     {
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+
         try
         {
-            var message = update.Message;
-            var chat = update.Message.Chat;
-            var param = command.Content[0];
             int? maiUserId = null;
             var filePath = Path.Combine(Config.TempPath, $"{GetRandomStr()}".Replace("\\", "").Replace("/", ""));
-            var isPrivate = chat.Type is ChatType.Private;
-            if (!isPrivate)
+
+            if (userMsg.IsGroup)
             {
-                SendMessage("喵呜呜", update, false);
+                userMsg.Send("请PM我~");
                 return;
             }
-            var selfMessage = SendMessage("已收到请求，请耐心等待处理~", update, false).Result;
+            var msg = await userMsg.Send("已收到请求，请耐心等待处理~");
 
-            Thread.Sleep(500);
-
-            if (querier.MaiUserId is not null)
+            await Task.Delay(500);
+            if (param.IsEmpty())
             {
-                EditMessage("不能重复绑定账号喵x", update, selfMessage.MessageId);
+                await msg.Edit("Invaild params");
+                return;
+            }
+            else if (querier.MaiUserId is not null)
+            {
+                await msg.Edit("不能重复绑定账号喵x");
                 return;
             }
 
-            if (param.ToLower() == "image")
+            if (param.First().ToLower() == "image")
             {
-                if (message.Photo is null)
+                if (userMsg.Photo is null)
                 {
-                    EditMessage("图片喵?", update, selfMessage.MessageId);
+                    await msg.Edit("图片喵?");
                     return;
                 }
-                var photoSize = message.Photo.Last();
 
-                selfMessage = EditMessage("正在下载图片...", update, selfMessage.MessageId).Result;
+                await msg.Edit("正在下载图片...");
 
-                if (DownloadFile(filePath, photoSize.FileId).Result)
+                if (await userMsg.GetPhoto(filePath))
                 {
-                    selfMessage = EditMessage("图片下载完成", update, selfMessage.MessageId).Result;
-                    Thread.Sleep(500);
-                    selfMessage = EditMessage("正在解析二维码...", update, selfMessage.MessageId).Result;
-                    Thread.Sleep(500);
+                    await msg.Edit("图片下载完成");
+                    await Task.Delay(500);
+                    await msg.Edit("正在解析二维码...");
+                    await Task.Delay(500);
 
                     var request = new QRCodeRequest()
                     {
@@ -363,118 +373,128 @@ public partial class Mai : IExtension
                 }
                 else
                 {
-                    EditMessage("绑定失败，图片下载失败QAQ", update, selfMessage.MessageId);
+                    await msg.Edit("绑定失败，图片下载失败QAQ");
                     return;
                 }
             }
-            else if (QRCode.IsWeChatId(param))
+            else if (QRCode.IsWeChatId(param.First()))
             {
                 var request = new QRCodeRequest()
                 {
                     KeyChip = Config.keyChips[0],
-                    QrCode = param
+                    QrCode = param.First()
                 };
                 maiUserId = QRCode.ToUserId(request).Object.userID;
             }
             else
             {
-                SendMessage("获取UserId时发送错误QAQ:\nWeChatID无效", update, true);
+                await userMsg.Edit("获取UserId时发送错误QAQ:\nWeChatID无效");
                 return;
             }
 
             if (maiUserId == -1)
             {
-                EditMessage("你的二维码看上去已经过期了呢，请重新获取喵x", update, selfMessage.MessageId);
+                await userMsg.Edit("你的二维码看上去已经过期了呢，请重新获取喵x");
                 return;
             }
 
-            selfMessage = EditMessage("正在获取用户信息...", update, selfMessage.MessageId).Result;
+            await userMsg.Edit("正在获取用户信息...");
+
             var response = GetUserPreview((int)maiUserId).Result.Object;
             querier.MaiUserId = maiUserId;
             database.GetMaiAccount(querier);
             if (response.StatusCode is not HttpStatusCode.OK)
             {
-                EditMessage("绑定成功，但无法获取用户信息QAQ", update, selfMessage.MessageId);
+                await userMsg.Edit("绑定成功，但无法获取用户信息QAQ");
                 return;
             }
 
-            selfMessage = EditMessage(
+            await userMsg.Edit(
                 "绑定成功\\!\n\n" +
                 "用户信息:\n" + StringHandle(
                 $"名称: {response.userName}\n" +
                 $"Rating: {response.playerRating}\n" +
-                $"最后游玩日期: {response.lastPlayDate}"), update, selfMessage.MessageId, parseMode: ParseMode.MarkdownV2).Result;
+                $"最后游玩日期: {response.lastPlayDate}"), ParseMode.MarkdownV2);
 
             Config.SaveData();
-            System.IO.File.Delete(filePath);
+            File.Delete(filePath);
         }
         catch
         {
-            SendMessage("参数错误喵x", update);
+            userMsg.Send("Internal error");
         }
     }
-    internal static async void UserLogin(InputCommand command, Update update, TUser querier)
+    /* internal static async void UserLogin(Message userMsg)
     {
-        var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], a => { });
+        //var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], a => { });
         return;
-    }
+    } */
     /// <summary>
     /// 备份用户数据
     /// </summary>
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static async void DataBackup(InputCommand command, Update update, TUser querier)
+    internal static async void DataBackup(Message userMsg)
     {
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+
         int userid = (int)querier.MaiUserId;
         string password = "";
 
-        if (command.Content.Length < 1)
+        if (param.Length < 1)
         {
-            SendMessage("缺少参数喵x", update);
+            await userMsg.Reply("Invaild params");
             return;
         }
-        if (command.Content.Length == 2)
+        if (param.Length == 2)
         {
-            if (!int.TryParse(command.Content[0], out userid))
+            if (!querier.CheckPermission(Permission.Admin))
             {
-                SendMessage("缺少参数喵x", update);
+                await userMsg.Reply("Permission denied");
                 return;
             }
-            password = command.Content[1];
+            if (!int.TryParse(param.First(), out userid))
+            {
+                await userMsg.Reply("缺少参数喵x");
+                return;
+            }
+            password = param[1];
         }
         else
-            password = command.Content[0];
+            password = param[0];
 
 
-        var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
+        var msg = await userMsg.Reply("已收到请求，请耐心等待处理~");
 
-        EditMessage("正在尝试登录... (0/15)", update, selfMessage.MessageId);
+        await msg.Edit("正在尝试登录... (0/15)");
         try
         {
-            var user = await AquaTools.Users.User.Login(userid, Config.keyChips[0], async a => await EditMessage($"正在获取数据... ({a}/15)", update, selfMessage.MessageId));
-            await EditMessage("获取数据成功,正在上传备份文件...", update, selfMessage.MessageId);
+            var user = await AquaTools.Users.User.Login(userid, Config.keyChips[0], async a => await msg.Edit($"正在获取数据... ({a}/15)"));
+            await msg.Edit("获取数据成功,正在上传备份文件...");
             var userdata = user.Export(password);
             var stream = new MemoryStream(userdata);
-            await UploadFile(stream, $"UserDataBackup{DateTime.Now.ToString("yyyyMMddhhmm")}.data", update.Message.Chat.Id);
-            EditMessage("数据备份完成喵x", update, selfMessage.MessageId);
+            //await UploadFile(stream, $"UserDataBackup{DateTime.Now.ToString("yyyyMMddhhmm")}.data", update.Message.Chat.Id);
+            await msg.Edit("数据备份完成喵x");
             user.Logout();
         }
         catch (LoginFailureException e)
         {
 
-            EditMessage("登录失败,请检查二维码是否过期QAQ\n" +
+            msg.Edit("登录失败,请检查二维码是否过期QAQ\n" +
                 $"```csharp\n" +
                 $"{StringHandle($"{e.Message}")}\n" +
-                $"```", update, selfMessage.MessageId, ParseMode.MarkdownV2);
+                $"```", ParseMode.MarkdownV2);
 
         }
         catch (Exception e)
         {
-            EditMessage($"出现未知错误QAQ\n" +
+            msg.Edit($"出现未知错误QAQ\n" +
                 $"```csharp\n" +
                 $"{StringHandle($"{e.Message}")}\n" +
-                $"```", update, selfMessage.MessageId, ParseMode.MarkdownV2);
+                $"```", ParseMode.MarkdownV2);
         }
         finally
         {
@@ -487,26 +507,30 @@ public partial class Mai : IExtension
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static async void UpdateUserData(InputCommand command, Update update, TUser querier)
+    internal async void UpdateUserData(Message userMsg)
     {
-        var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+
+        var msg = await userMsg.Reply("已收到请求，请耐心等待处理~");
         int userId;
-        if (command.Content.Length == 1)
+        if (!param.IsEmpty())
         {
             if (!querier.CheckPermission(Permission.Admin))
             {
-                EditMessage("Access denied", update, selfMessage.MessageId);
+                await msg.Edit("Access denied");
                 return;
             }
-            else if (!int.TryParse(command.Content[0], out userId))
+            else if (!int.TryParse(param.First(), out userId))
             {
-                EditMessage("请确认参数是Int32~", update, selfMessage.MessageId);
+                await msg.Edit("Invaild params");
                 return;
             }
         }
-        else if (command.Content.Length > 1)
+        else if (param.Length > 1)
         {
-            EditMessage("参数错误QAQ", update, selfMessage.MessageId);
+            await msg.Edit("Invaild params");
             return;
         }
         else
@@ -534,30 +558,30 @@ public partial class Mai : IExtension
                     database.MaiAccountList.Add(maiUser);
                 Config.SaveData();
 
-                EditMessage("更新完成喵wAw", update, selfMessage.MessageId);
+                await msg.Edit("更新完成喵wAw");
             }
             else
                 throw new Exception("");
         }
         catch (Exception e)
         {
-            EditMessage("发生了未知错误QAQ\n" +
+            await msg.Edit("发生了未知错误QAQ\n" +
                 "```csharp\n" +
                 $"{e.Message}\n" +
-                $"```", update, selfMessage.MessageId, ParseMode.MarkdownV2);
+                $"```", ParseMode.MarkdownV2);
         }
     }
-    internal static async void GetTicket(InputCommand command, Update update, TUser querier)
+    /* internal static async void GetTicket(Message userMsg)
     {
         int count = 1;
         int ticketType = 0;
-        if (command.Content.Length == 0)
+        if (command.Params.Length == 0)
         {
-            //GetHelpInfo(command, update, querier);
+            //GetHelpInfo(userMsg);
             return;
         }
 
-        var selfMessage = await SendMessage("已收到请求，请耐心等待处理~", update);
+        var selfMessage = await userMsg.Send("已收到请求，请耐心等待处理~", update);
         Dictionary<string, int> vaildTicketType = new()
     {
         { "2",2 } ,
@@ -567,19 +591,19 @@ public partial class Mai : IExtension
     };
 
 
-        if (command.Content.Length < 3)
+        if (command.Params.Length < 3)
         {
-            if (!vaildTicketType.ContainsKey(command.Content[0]))
+            if (!vaildTicketType.ContainsKey(command.Params[0]))
             {
                 EditMessage("参数错误喵x", update, selfMessage.MessageId);
                 return;
             }
-            else if (command.Content.Length == 2 && !int.TryParse(command.Content[1], out count))
+            else if (command.Params.Length == 2 && !int.TryParse(command.Params[1], out count))
             {
                 EditMessage("参数错误喵x", update, selfMessage.MessageId);
                 return;
             }
-            ticketType = vaildTicketType[command.Content[0]];
+            ticketType = vaildTicketType[command.Params[0]];
         }
         else
         {
@@ -611,8 +635,8 @@ public partial class Mai : IExtension
         {
             AquaTools.Users.User.Logout((int)querier.MaiUserId);
         }
-    }
-    internal static async void Upsert(InputCommand command, Update update, TUser querier)
+    } */
+    /* internal static async void Upsert(Message userMsg)
     {
         var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], a => { });
         var playlogs = new List<UserPlaylog>();
@@ -704,34 +728,42 @@ public partial class Mai : IExtension
         var result = user.UpsertAll(playlogs.ToArray(), (long)user.LoginId);
         user.Logout();
         return;
-    }
+    } */
     /// <summary>
     /// 逃离小黑屋
     /// </summary>
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static void Logout(InputCommand command, Update update, TUser querier, Group group = null)
+    internal async void Logout(Message userMsg)
     {
-        if (command.Content.Length != 0)
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+        var group = userMsg.GetGroup();
+
+        var userId = (int)querier.MaiUserId;
+        if (!param.IsEmpty())
         {
             if (!querier.CheckPermission(Permission.Admin, group))
             {
-                //GetHelpInfo(command, update, querier);
+                //GetHelpInfo(userMsg);
                 return;
             }
+            else
+                int.TryParse(param.First(),out userId);
         }
 
-        var request = new Request<UserLogoutRequest>(new UserLogoutRequest() { userId = (int)querier.MaiUserId });
+        var request = new Request<UserLogoutRequest>(new UserLogoutRequest() { userId = userId });
 
-        var result = Aqua.PostAsync<UserLogoutRequest, UserLogoutResponse>(request).Result;
+        var result = await Aqua.PostAsync<UserLogoutRequest, UserLogoutResponse>(request);
 
         if (result is not null)
-            SendMessage("已发信，请检查是否生效~\n" +
-                       $"对端响应: {result.Object.StatusCode}", update);
+            await userMsg.Reply("已发信，请检查是否生效~\n" +
+                       $"对端响应: {result.Object.StatusCode}");
         else
-            SendMessage("发信失败QAQ\n" +
-                       $"对端响应: {result.Object.StatusCode}", update);
+            await userMsg.Reply("发信失败QAQ\n" +
+                       $"对端响应: {result.Object.StatusCode}");
 
     }
     /// <summary>
@@ -740,19 +772,23 @@ public partial class Mai : IExtension
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static void GetTopRank(InputCommand command, Update update, TUser querier)
+    internal static void GetTopRank(Message userMsg)
     {
-        if (command.Content.Length != 0)
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+
+        if (!param.IsEmpty())
         {
-            if (command.Content[0] == "refresh")
+            if (param.First() == "refresh")
             {
                 database.CalRating();
-                SendMessage("排行榜已刷新~", update);
+                userMsg.Reply("Mai rank have been updated ~");
                 return;
             }
             else
             {
-                //GetHelpInfo(command, update, querier);
+                //GetHelpInfo(userMsg);
                 return;
             }
         }
@@ -774,7 +810,7 @@ public partial class Mai : IExtension
                 count++;
                 if (count == 50)
                 {
-                    SendMessage(strHeader + playerInfoStr + strFooter + $"\n\\({index}\\/6\\)", update, true, ParseMode.MarkdownV2);
+                    userMsg.Reply(strHeader + playerInfoStr + strFooter + $"\n\\({index}\\/6\\)", ParseMode.MarkdownV2);
                     index++;
                     count = 0;
                     playerInfoStr = "";
@@ -790,15 +826,19 @@ public partial class Mai : IExtension
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static void GetServerStatus(InputCommand command, Update update, TUser querier)
+    internal async void GetServerStatus(Message userMsg)
     {
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+
         var titlePingInfo = monitor.GetAvgPing(ServerType.Title);
         var oauthPingInfo = monitor.GetAvgPing(ServerType.OAuth);
         var netPingInfo = monitor.GetAvgPing(ServerType.Net);
         var mainPingInfo = monitor.GetAvgPing(ServerType.Main);
         var skipRateInfo = monitor.GetAvgSkipRate();
         string text = "";
-        if (command.Content.Length == 0)
+        if (param.IsEmpty())
         {
             text = "maimai服务器状态:\n" +
                       "```python" +
@@ -817,7 +857,7 @@ public partial class Mai : IExtension
                      $"\n") +
                       "```";
         }
-        else if (command.Content.Length == 1 && command.Content[0] is "full")
+        else if (param.First() is "full")
         {
             text = "maimai服务器状态:\n" +
                       "```python" +
@@ -858,9 +898,9 @@ public partial class Mai : IExtension
                       "```";
         }
         else
-            text = $"\"{string.Join(" ", command.Content)}\"为无效参数喵x";
+            text = $"\"{string.Join(" ", param)}\"为无效参数喵x";
 
-        SendMessage(text, update, true, ParseMode.MarkdownV2);
+        await userMsg.Reply(text,ParseMode.MarkdownV2);
     }
     /// <summary>
     /// 获取RegionId对应的地区名
@@ -914,6 +954,45 @@ public partial class Mai : IExtension
         return await Aqua.PostAsync<UserPreviewRequest, UserPreviewResponse>(request);
     }
     static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
+    async void GetHelpInfo(Command cmd,Message userMsg)
+    {
+
+        string helpStr = "```python\n";
+        switch (cmd.Prefix)
+        {
+            case "mai":
+                helpStr += Program.StringHandle(
+                        "命令用法：\n" +
+                        "\n/mai bind image    上传二维码并进行绑定" +
+                        "\n/mai bind [str]    使用SDWC标识符进行绑定" +
+                        "\n/mai region        获取登录地区信息" +
+                        "\n/mai rank          获取国服排行榜" +
+                        "\n/mai rank refresh  重新加载排行榜" +
+                        "\n/mai status        查看DX服务器状态" +
+                        "\n/mai backup [str]  使用密码备份账号数据" +
+                        "\n/mai info          获取账号信息" +
+                        "\n/mai info [int]    获取指定账号信息" +
+                        "\n/mai ticket [int]  获取一张指定类型的票" +
+                        "\n/mai sync          强制刷新账号信息" +
+                        "\n/mai sync [int]    强制刷新指定账号信息" +
+                        "\n/mai logout        登出");
+                break;
+            case "maiscanner":
+                helpStr += Program.StringHandle(
+                        "命令用法：\n" +
+                        "\n/maiscanner status       获取扫描器状态" +
+                        "\n/maiscanner update [int] 从指定位置更新数据库" +
+                        "\n/maiscanner update       更新数据库" +
+                        "\n/maiscanner stop         终止当前任务" +
+                        "\n/maiscanner set [int]    设置QPS限制");
+                break;
+            default:
+                userMsg.Reply("该命令暂未添加说明信息喵x");
+                return;
+        }
+        helpStr += "\n```";
+        await userMsg.Reply(helpStr,ParseMode.MarkdownV2);
+    }
 }
 public partial class Mai
 {
@@ -972,7 +1051,7 @@ public partial class Mai
                 GetMaiAccount(user);
             CalRating();
         }
-        public async void GetMaiAccount(TUser user)
+        public async void GetMaiAccount(TelegramBot.Types.User user)
         {
             await Task.Run(() =>
             {
@@ -1026,10 +1105,10 @@ public partial class Mai
             else
                 return result[0];
         }
-    }    
+    }
     public partial class MaiMonitor
     {
-        
+
         public bool ServiceAvailability = true;
 
         public long FaultInterval = -1;//平均故障间隔
@@ -1081,7 +1160,7 @@ public partial class Mai
         {
             monitorTask = Task.Run(() =>
             {
-                while(true)
+                while (true)
                 {
                     if (isDestroying)
                         break;
@@ -1101,7 +1180,10 @@ public partial class Mai
                         continue;
                     }
 
-                    var response = Aqua.TestPostAsync(Config.keyChips[0]).Result;
+                    //var response = Aqua.TestPostAsync(Config.keyChips[0]).Result;
+                    var req = new Request<UserRegionRequest>();
+                    req.Object.userId = 11015484;
+                    var response = Aqua.Post<UserRegionRequest, BaseResponse>(req);
                     LastResponseStatusCode = response.Object.StatusCode;
                     TotalRequestCount++;
                     Task.Run(() =>
@@ -1154,7 +1236,7 @@ public partial class Mai
 
                     Config.Save(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"), FaultIntervalList, false);
                     Config.Save(Path.Combine(Config.DatabasePath, "LastFailureTime.data"), LastFailureTime, false);
-                    Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs,false);
+                    Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs, false);
 
 
                     Thread.Sleep(5000);
@@ -1181,23 +1263,23 @@ public partial class Mai
         }
         public double[] GetAvgSkipRate()
         {
-            double _5min = double.NaN;
-            double _10min = double.NaN;
-            double _15min = double.NaN;
+            double _30min = double.NaN;
+            double _60min = double.NaN;
+            double _90min = double.NaN;
             var count = CompressSkipLogs.Count;
             var now = DateTime.Now;
 
-            var _5minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 5);
-            var _10minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 10);
-            var _15minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 15);
+            var _30minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 30);
+            var _60minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 60);
+            var _90minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 90);
 
-            var _5minSkip = _5minLogs.Where(x => x.IsSkip);
-            var _10minSkip = _10minLogs.Where(x => x.IsSkip);
-            var _15minSkip = _15minLogs.Where(x => x.IsSkip);
+            var _30minSkip = _30minLogs.Where(x => x.IsSkip);
+            var _60minSkip = _60minLogs.Where(x => x.IsSkip);
+            var _90minSkip = _90minLogs.Where(x => x.IsSkip);
 
-            _5min = _5minSkip.Count() / (double)_5minLogs.Count();
-            _10min = _10minSkip.Count() / (double)_10minLogs.Count();
-            _15min = _15minSkip.Count() / (double)_15minLogs.Count();
+            _30min = _30minSkip.Count() / (double)_30minLogs.Count();
+            _60min = _60minSkip.Count() / (double)_60minLogs.Count();
+            _90min = _90minSkip.Count() / (double)_90minLogs.Count();
 
             //if (count >= 60)
             //{
@@ -1221,7 +1303,7 @@ public partial class Mai
             //    _15min = skipCount / 180;
             //}
 
-            return new double[] { _5min, _10min, _15min };
+            return new double[] { _30min, _60min, _90min };
         }
         static long TCPing(string host, int port)
         {
@@ -1349,16 +1431,16 @@ public partial class Mai
         public CancellationTokenSource cancelSource = new CancellationTokenSource();
         public void Init()
         {
-           
+
         }
         public void Destroy()
         {
             isRunning = false;
             isDestroying = true;
 
-            if(task.Count > 0)
+            if (task.Count > 0)
                 Task.WaitAll(task.ToArray());
-            if(QpsTimer is not null)
+            if (QpsTimer is not null)
                 QpsTimer.Wait();
         }
         public async void Start()
@@ -1565,7 +1647,7 @@ public partial class Mai
                                  .Where(x => x.userName is not null);
 
             database.MaiAccountList.AddRange(result);
-        }    
+        }
     }
     public partial class MaiScanner
     {
@@ -1642,13 +1724,4 @@ public partial class Mai
         }
         return sb.ToString();
     }
-}
-public partial class Mai
-{
-    static async Task<Message> SendMessage(string text, Update update, bool isReply = true, ParseMode? parseMode = null) => await Program.SendMessage(text, update, isReply, parseMode);
-    static async void DeleteMessage(Update update) => await Program.DeleteMessage(update);
-    static async Task<bool> UploadFile(string filePath, long chatId) => await Program.UploadFile(filePath, chatId);
-    static async Task<bool> UploadFile(Stream stream, string fileName, long chatId) => await Program.UploadFile(stream, fileName, chatId);
-    static async Task<bool> DownloadFile(string dPath, string fileId) => await Program.DownloadFile(dPath, fileId);
-    static async Task<Message> EditMessage(string text, Update update, int messageId, ParseMode? parseMode = null) => await Program.EditMessage(text, update, messageId, parseMode);
 }

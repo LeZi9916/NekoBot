@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TelegramBot.Class;
+namespace TelegramBot.Types;
 
 public class MaiAccount
 {

@@ -8,12 +8,14 @@ using System.Reflection;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Permissions;
+using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot.Class;
 using TelegramBot.Interfaces;
+using TelegramBot.Types;
 using File = System.IO.File;
+using Message = TelegramBot.Types.Message;
 
 #nullable enable
 namespace TelegramBot
@@ -28,7 +30,7 @@ namespace TelegramBot
         public static bool IsCompiling { get; private set; } = false;
 
         static List<IExtension> objs = new();
-        static List<Command> commands = new();
+        static List<BotCommand> commands = new();
         static Dictionary<string,IExtension> handlers = new();
         public static string ScriptPath { get => Path.Combine(Config.AppPath, "Scripts"); }
         public static void Init()
@@ -67,10 +69,10 @@ namespace TelegramBot
         /// 重新加载所有Script
         /// </summary>
         /// <param name="update"></param>
-        public static async void Reload(Update update)
+        public static async void Reload(Message userMsg)
         {
             IsCompiling = true;
-            var msg = await Program.SendMessage("Reloading Script...", update);
+            var msg = (await userMsg.Reply("Reloading Script..."))!;
             try
             {                
                 List<IExtension> newObjs = new();
@@ -80,20 +82,22 @@ namespace TelegramBot
                 foreach (var filePath in scripts)
                 {
                     var fileName = new FileInfo(filePath).Name;
-                    await Program.EditMessage($"Compiling \"{fileName}\"...", update, msg.MessageId);
+                    await msg.Edit($"Compiling \"{fileName}\"...");
                     try
                     {
-                        var obj = CompileScript<IExtension>(filePath).Instance;
-                        newObjs.Add(obj);
+                        var ext = CompileScript<IExtension>(filePath);
+                        if (ext.Instance is null)
+                            throw new Exception();
+                        newObjs.Add(ext.Instance);
                     }
                     catch (Exception e)
                     {
-                        await Program.EditMessage(
+                        await msg.Edit(
                             $"Loading \"{fileName}\" failure:\n" +
                             "```csharp\n" +
                             Program.StringHandle(e.ToString()) +
                             "\n```",
-                            update, msg.MessageId, ParseMode.MarkdownV2);
+                            ParseMode.MarkdownV2);
                     }
                 }
 
@@ -108,23 +112,23 @@ namespace TelegramBot
                     AddExtension(ext);
 
                 UpdateCommand();
-                await Program.EditMessage(
+                await msg.Edit(
                     "Scripts have been loaded:\n" +
-                    $"-{string.Join("\n-", objs.Select(x => x.Name))}", update, msg.MessageId);
+                    $"-{string.Join("\n-", objs.Select(x => x.Name))}");
                 GC.Collect();
             }
             catch(Exception e)
             {
-                await Program.EditMessage("Reload script failure", update, msg.MessageId);
+                await msg.Edit("Reload script failure");
                 Program.Debug(DebugType.Error, $"Reload script failure:\n{e}");
             }
             IsCompiling = false;
         }
-        public static void CommandHandle(InputCommand command, Update update, TUser querier, Group group)
+        public static void CommandHandle(Message msg)
         {
-            var prefix = command.Prefix;
+            var prefix = ((Command)msg.Command!).Prefix;
             if (handlers.ContainsKey(prefix))
-                handlers[prefix].Handle(command, update, querier, group);
+                handlers[prefix].Handle(msg);
             else
                 return;
         }
@@ -193,7 +197,7 @@ namespace TelegramBot
             var result = commands.Select(x => 
             new BotCommand 
             { 
-                Command = x.Prefix,
+                Command = x.Command,
                 Description = x.Description,                
             });
             Program.BotCommands = result.ToArray();
@@ -221,20 +225,20 @@ namespace TelegramBot
         /// 加载并初始化该Extension
         /// </summary>
         /// <param name="extName"></param>
-        static void AddExtension(string extName) => AddExtension(GetExtension(extName));
+        public static void AddExtension(string extName) => AddExtension(GetExtension(extName));
         /// <summary>
         /// 加载并初始化该Extension
         /// </summary>
         /// <param name="ext"></param>
-        static void AddExtension(IExtension? ext)
+        public static void AddExtension(IExtension? ext)
         {
             if (ext is null) return;
 
             foreach (var item in ext.Commands)
             {
-                if (handlers.ContainsKey(item.Prefix))
+                if (handlers.ContainsKey(item.Command))
                     continue;
-                handlers.Add(item.Prefix, ext);
+                handlers.Add(item.Command, ext);
                 commands.Add(item);
             }
             objs.Add(ext);
@@ -245,12 +249,12 @@ namespace TelegramBot
         /// 卸载该Extension
         /// </summary>
         /// <param name="ext"></param>
-        static void RemoveExtension(string extName) => RemoveExtension(GetExtension(extName));
+        public static void RemoveExtension(string extName) => RemoveExtension(GetExtension(extName));
         /// <summary>
         /// 卸载该Extension
         /// </summary>
         /// <param name="ext"></param>
-        static void RemoveExtension(IExtension? ext)
+        public static void RemoveExtension(IExtension? ext)
         {
             if (ext is null || !objs.Contains(ext)) return;
 
@@ -275,5 +279,9 @@ namespace TelegramBot
         /// <returns></returns>
         public static Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
+    }
+    public class ScriptCommon
+    {
+
     }
 }

@@ -3,16 +3,17 @@ using System.Threading.Tasks;
 using System.Threading;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
-using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Net;
-using TelegramBot.Class;
 using System.IO;
-using static TelegramBot.Image;
 using System.Collections.Generic;
 using static TelegramBot.ChartHelper;
+using TelegramBot.Types;
+using Telegram.Bot.Types;
+using User = TelegramBot.Types.User;
+using Message = TelegramBot.Types.Message;
 
 namespace TelegramBot
 {
@@ -29,7 +30,7 @@ namespace TelegramBot
         public static string Token = "";
         static string BotUsername = "";
         public static DateTime startTime;
-        public static Telegram.Bot.Types.BotCommand[] BotCommands;
+        public static BotCommand[] BotCommands;
         static void Test()
         {
             List<KNode> data = new List<KNode>
@@ -114,18 +115,15 @@ namespace TelegramBot
                 stopwatch.Start();
                 try
                 {                    
-                    var message = update.Message;
-                    var chat = message.From;
-                    var userId = message.From.Id;
-
-                    var text = message.Text is null ? message.Caption ?? "" : message.Text;
-                    CommandPreHandle(text.Split(" ",StringSplitOptions.RemoveEmptyEntries), update);
-
+                    var msg = Message.Parse(botClient,update.Message);
+                    
                     Debug(DebugType.Debug, $"Received message:\n" +
-                        $"Chat Type: {message.Chat.Type}\n" +
-                        $"Message Type: {message.Type}\n" +
-                        $"Form User: {chat.FirstName} {chat.LastName}[@{chat.Username}]({userId})\n" +
-                        $"Content: {message.Text ?? ""}\n");
+                        $"Sender : {msg.From.Name}[@{msg.From.Username}]({msg.From.Id})\n" +
+                        $"From   : {msg.Chat.FirstName} {msg.Chat.LastName}({msg.Chat.Id}) |{(msg.IsGroup ? "Group" : "Private")}\n" +
+                        $"Type   : {msg.Type}\n" +      
+                        $"Content: {(string.IsNullOrEmpty(msg.Content) ? string.Empty : msg.Content)}\n");
+
+                    CommandPreHandle(msg);
                 }
                 catch(Exception e)
                 {
@@ -197,19 +195,7 @@ namespace TelegramBot
         {
             await Task.Run(() => 
             {
-                //var message = update.Message ?? update.EditedMessage ?? update.ChannelPost;
-                //if (message is null)
-                //    return;
-
-                //User[] userList = new User[4];
-                User[] userList = TUser.GetUsers(update);
-                //userList[0] = message.From;
-                //userList[1] = message.ForwardFrom;
-                //if (message.ReplyToMessage is not null)
-                //{
-                //    userList[2] = message.ReplyToMessage.From;
-                //    userList[3] = message.ReplyToMessage.ForwardFrom;
-                //}
+                var userList = User.GetUsers(update);
 
                 if (userList is null)
                     return;
@@ -220,11 +206,11 @@ namespace TelegramBot
                         continue;
                     if (Config.UserIdList.Contains(user.Id))
                     {
-                        TUser.Update(update);
+                        User.Update(update);
                         continue;
                     }
 
-                    Config.AddUser(TUser.FromUser(user));
+                    Config.AddUser(user);
 
                     Debug(DebugType.Info, $"Find New User:\n" +
                     $"Name: {user.FirstName} {user.LastName}\n" +

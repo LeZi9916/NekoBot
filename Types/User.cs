@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Telegram.Bot.Types;
+﻿using Telegram.Bot.Types;
 using System.Text.Json.Serialization;
 
-namespace TelegramBot.Class
+namespace TelegramBot.Types
 {
-    public class TUser: IAccount
+    public class User : IAccount
     {
         public long Id { get; set; }
         public string Username { get; set; }
@@ -20,28 +15,13 @@ namespace TelegramBot.Class
         }
         public Permission Level { get; set; } = Permission.Common;
         public int? MaiUserId { get; set; } = null;
-        public bool isBanned => Level <= Permission.Ban;
-        public bool isUnknow => Level == Permission.Unknow;
-        public bool isNormal => !(Id is 136817688 or 1087968824);
+        public bool IsBanned => Level <= Permission.Ban;
+        public bool IsUnknown => Level == Permission.Unknown;
+        public bool IsNormal => !(Id is 136817688 or 1087968824);
+        public bool IsBot { get; private set; } = false;
+        public bool? IsPremium { get; set; }
         [JsonIgnore]
         public MaiAccount Account { get; set; }
-        //public async Task<bool> GetMaiAccountInfo()
-        //{
-        //    return await Task.Run(() =>
-        //    {
-        //        if (MaiUserId is null)
-        //            return false;
-
-        //        var userid = (int)MaiUserId;
-        //        var result = MaiAccountList.Where(x => x.userId == userid);
-
-        //        if (result.Count() == 0)
-        //            return false;
-
-        //        Account = result.ToArray()[0];
-        //        return true;
-        //    });
-        //}
         public bool CheckPermission(Permission targetLevel) => Level >= targetLevel;
         public bool CheckPermission(Permission targetLevel, Group group)
         {
@@ -54,6 +34,27 @@ namespace TelegramBot.Class
             Level = targetLevel;
             Config.SaveData();
         }
+        /// <summary>
+        /// Use new infomation to update this instance
+        /// </summary>
+        /// <param name="newUser"></param>
+        /// <returns>if updated,return true</returns>
+        public bool Update(User newUser)
+        {
+            if (Equals(newUser))
+                return false;
+
+            Username = newUser.Username;
+            FirstName = newUser.FirstName;
+            LastName = newUser.LastName;
+            IsPremium = newUser.IsPremium;
+
+            return true;
+        }
+        /// <summary>
+        /// Update all user in <paramref name="update"/> instance
+        /// </summary>
+        /// <param name="update">The update instance</param>
         public static void Update(Update update)
         {
             var users = GetUsers(update);
@@ -64,18 +65,13 @@ namespace TelegramBot.Class
                     continue;
 
                 var target = Config.SearchUser(user.Id);
-                var _user = TUser.FromUser(user);
 
                 if (target is null)
                     continue;
-                else if (target.Equals(_user))
+                else if (!target.Update(user))
                     continue;
                 else
                 {
-                    target.Username = _user.Username;
-                    target.FirstName = _user.FirstName;
-                    target.LastName = _user.LastName;
-
                     Program.Debug(DebugType.Info, $"User info had been updated:\n" +
                     $"Name: {user.FirstName} {user.LastName}\n" +
                     $"isBot: {user.IsBot}\n" +
@@ -84,6 +80,11 @@ namespace TelegramBot.Class
                 }
             }
         }
+        /// <summary>
+        /// Get all user in <paramref name="update"/> instance
+        /// </summary>
+        /// <param name="update"></param>
+        /// <returns>Users in <paramref name="update"/></returns>
         public static User[] GetUsers(Update update)
         {
             var message = update.Message ?? update.EditedMessage ?? update.ChannelPost ?? update.EditedChannelPost;
@@ -106,13 +107,29 @@ namespace TelegramBot.Class
 
             return userList;
         }
-        public bool Equals(TUser user) => user.Username == Username && user.FirstName == FirstName && user.LastName == LastName;
-        public static TUser FromUser(User user) => new TUser()
+        /// <summary>
+        /// Compare this instance to <paramref name="user"/>
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns>if equals,return true</returns>
+        public bool Equals(User user) => user.Username == Username && 
+                                         user.FirstName == FirstName && 
+                                         user.LastName == LastName && 
+                                         user.IsPremium == IsPremium &&
+                                         user.Id == Id;
+
+        public static implicit operator User(Telegram.Bot.Types.User u)
         {
-            Id = user.Id,
-            Username = user.Username,
-            FirstName = user.FirstName,
-            LastName = user.LastName
-        };
+            if (u is null) return null;
+            return new User()
+            {
+                Id = u.Id,
+                Username = u.Username,
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                IsBot = u.IsBot,
+                IsPremium = u.IsPremium
+            };
+        }
     }
 }

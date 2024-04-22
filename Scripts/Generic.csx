@@ -6,127 +6,123 @@ using System.Reflection;
 using System.Security.Cryptography;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot.Class;
 using TelegramBot.Interfaces;
 using TelegramBot;
-using Action = TelegramBot.Action;
 using System.IO;
 using System.Threading.Tasks;
+using TelegramBot.Types;
+using Action = TelegramBot.Action;
+using Message = TelegramBot.Types.Message;
+using User = TelegramBot.Types.User;
+using System.Text.RegularExpressions;
+using Group = TelegramBot.Types.Group;
+using AquaTools.Users;
 #pragma warning disable CS4014
-public partial class Generic : IExtension
+public partial class Generic : ScriptCommon,IExtension
 {
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public Command[] Commands { get; } =
-    {
-            new Command()
-            {
-                Prefix = "start",
-                Description = "简介"
-            },
-            new Command()
-            {
-                Prefix = "add",
-                Description = "允许指定用户访问bot"
-            },
-            new Command()
-            {
-                Prefix = "ban",
-                Description = "禁止指定用户访问bot"
-            },
-            new Command()
-            {
-                Prefix = "info",
-                Description = "获取指定用户信息"
-            },
-            new Command()
-            {
-                Prefix = "promote",
-                Description = "提升指定用户权限"
-            },
-            new Command()
-            {
-                Prefix = "demote",
-                Description = "降低指定用户权限"
-            },
-            new Command()
-            {
-                Prefix = "status",
-                Description = "显示bot服务器状态"
-            },
-            new Command()
-            {
-                Prefix = "logs",
-                Description = "获取本次运行日志"
-            },
-            new Command()
-            {
-                Prefix = "config",
-                Description = "修改bot在Group的设置"
-            },
-            new Command()
-            {
-                Prefix = "set",
-                Description = "权限狗专用"
-            },
-            new Command()
-            {
-                Prefix = "reload",
-                Description = "重新加载Script"
-            },
-            new Command()
-            {
-                Prefix = "help",
-                Description = "显示帮助信息"
-            }
-        };
-    public string Name { get; } = "Generic";
-    public void Handle(InputCommand command, Update update, TUser querier, Group group)
-    {
-        var message = update.Message;
-        var isPrivate = update.Message.Chat.Type is ChatType.Private;
-        if (command.Content.Length > 0 && command.Content[0] is "help")
+    public BotCommand[] Commands { get; } =
+{
+        new BotCommand()
         {
-            GetHelpInfo(command, update, querier, group);
+            Command = "start",
+            Description = "简介"
+        },
+        new BotCommand()
+        {
+            Command = "add",
+            Description = "允许指定用户访问bot"
+        },
+        new BotCommand()
+        {
+            Command = "ban",
+            Description = "禁止指定用户访问bot"
+        },
+        new BotCommand()
+        {
+            Command = "info",
+            Description = "获取指定用户信息"
+        },
+        new BotCommand()
+        {
+            Command = "promote",
+            Description = "提升指定用户权限"
+        },
+        new BotCommand()
+        {
+            Command = "demote",
+            Description = "降低指定用户权限"
+        },
+        new BotCommand()
+        {
+            Command = "status",
+            Description = "显示bot服务器状态"
+        },
+        new BotCommand()
+        {
+            Command = "logs",
+            Description = "获取本次运行日志"
+        },
+        new BotCommand()
+        {
+            Command = "config",
+            Description = "修改bot在Group的设置"
+        },
+        new BotCommand()
+        {
+            Command = "set",
+            Description = "权限狗专用"
+        },
+        new BotCommand()
+        {
+            Command = "help",
+            Description = "显示帮助信息"
+        }
+};
+    public string Name { get; } = "Generic";
+    public void Handle(Message userMsg)
+    {
+        var cmd = (Command)userMsg.Command;
+        if (cmd.Prefix is "help")
+        {
+            GetHelpInfo((Command)userMsg.Command,userMsg);
             return;
         }
-        switch (command.Prefix)
+        switch (cmd.Prefix)
         {
             case "start":
-                SendMessage("你好，我是钟致远，我出生于广西壮族自治区南宁市，从小就擅长滥用，有关我的滥用事迹请移步 @hax_server\n" +
-                    "\n请输入 /help 以获得更多信息", update, true);
+                userMsg.Reply("你好，我是钟致远，我出生于广西壮族自治区南宁市，从小就擅长滥用，有关我的滥用事迹请移步 @hax_server\n" +
+                    "\n请输入 /help 以获得更多信息");
                 break;
             case "add":
-                AddUser(command, update, querier, group);
+                AddUser(userMsg);
                 break;
             case "ban":
-                BanUser(command, update, querier, group);
+                BanUser(userMsg);
                 break;
             case "status":
-                GetSystemInfo(command, update);
+                GetSystemInfo(userMsg);
                 break;
             case "info":
-                GetUserInfo(command, update, querier, group);
+                GetUserInfo(userMsg);
                 break;
             case "promote":
-                SetUserPermission(command, update, querier, 1, group);
+                SetUserPermission(userMsg, 1);
                 break;
             case "demote":
-                SetUserPermission(command, update, querier, -1, group);
+                SetUserPermission(userMsg, -1);
                 break;
             case "config":
-                BotConfig(command, update, querier, group);
+                BotConfig(userMsg);
                 break;
             case "help":
-                GetHelpInfo(command, update, querier, group);
+                GetHelpInfo((Command)userMsg.Command,userMsg);
                 break;
             case "logs":
-                GetBotLog(command, update, querier, group);
+                GetBotLog(userMsg);
                 break;
             case "set":
-                AdvancedCommandHandle(command, update, querier, group);
-                break;
-            case "reload":
-                ReloadScript(command, update, querier, group);
+                AdvancedCommandHandle(userMsg);
                 break;
         }
     }
@@ -143,208 +139,202 @@ public partial class Generic : IExtension
 
     }
     public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
-    bool MessageFilter(string content, Update update, TUser querier, Group group)
+    //bool MessageFilter(string content, Update update, TelegramBot.Types.User querier, Group group)
+    //{
+    //    if (group is null)
+    //        return false;
+    //    else if (group.Rules.IsEmpty())
+    //        return false;
+
+    //    bool isMatch = false;
+    //    var genericRules = group.Rules.Where(x => x.Target is null).ToArray();
+    //    var matchedRules = group.Rules.Where(x => x is not null && x.Target.Id == querier.Id).ToArray();
+    //    FilterRule[] rules = new FilterRule[genericRules.Length + matchedRules.Length];
+    //    Array.Copy(genericRules, rules, genericRules.Length);
+    //    Array.Copy(matchedRules, 0, rules, genericRules.Length, matchedRules.Length);
+
+    //    foreach (var rule in rules)
+    //    {
+    //        if (rule.Action is Action.Ban)
+    //            continue;
+    //        else if (rule.MessageType is MessageType.Unknown || rule.MessageType == update.Message.Type)
+    //        {
+    //            switch (rule.Action)
+    //            {
+    //                case Action.Reply:
+    //                    break;
+    //                case Action.Delete:
+    //                    break;
+    //            }
+    //        }
+    //        else
+    //            continue;
+    //    }
+    //    return isMatch;
+    //}
+    void AddUser(Message userMsg)
     {
-        if (group is null)
-            return false;
-        else if (group.Rules.IsEmpty())
-            return false;
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
 
-        bool isMatch = false;
-        var genericRules = group.Rules.Where(x => x.Target is null).ToArray();
-        var matchedRules = group.Rules.Where(x => x is not null && x.Target.Id == querier.Id).ToArray();
-        FilterRule[] rules = new FilterRule[genericRules.Length + matchedRules.Length];
-        Array.Copy(genericRules, rules, genericRules.Length);
-        Array.Copy(matchedRules, 0, rules, genericRules.Length, matchedRules.Length);
+        var replyTo = userMsg.ReplyTo;
+        User target = null;
 
-        foreach (var rule in rules)
+        if (param.IsEmpty())
         {
-            if (rule.Action is Action.Ban)
-                continue;
-            else if (rule.MessageType is MessageType.Unknown || rule.MessageType == update.Message.Type)
+            if (replyTo is null)
             {
-                switch (rule.Action)
-                {
-                    case Action.Reply:
-                        break;
-                    case Action.Delete:
-                        break;
-                }
-            }
-            else
-                continue;
-        }
-        return isMatch;
-    }
-    void ReloadScript(InputCommand command, Update update, TUser querier, Group group)
-    {
-        if (!querier.CheckPermission(Permission.Root))
-        {
-            SendMessage("Permission Denied", update);
-            return;
-        }
-        else if (ScriptManager.IsCompiling)
-        {
-            SendMessage("Script update task is running", update);
-            return;
-        }
-        ScriptManager.Reload(update);
-    }
-    void AddUser(InputCommand command, Update update, TUser querier, Group group = null)
-    {
-        var replyMessage = update.Message.ReplyToMessage;
-        TUser target = null;
-
-        if (command.Content.Length == 0)
-        {
-            if (replyMessage is null)
-            {
-                GetHelpInfo(command, update, querier);
+                GetHelpInfo(cmd,userMsg);
                 return;
             }
-            target = Config.SearchUser(replyMessage.From.Id);
+            target = Config.SearchUser(replyTo.From.Id);
         }
         else
         {
             long id = -1;
 
-            if (long.TryParse(command.Content[0], out id))
+            if (long.TryParse(param.First(), out id))
                 target = Config.SearchUser(id);
             else
             {
-                SendMessage("userId错误，请仔细检查喵~", update);
+                userMsg.Reply("Invild userId");
                 return;
             }
         }
 
         if (target is null)
         {
-            SendMessage($"喵不认识这个人xAx", update);
+            userMsg.Reply($"This user is not found at database");
             return;
         }
         else if (target.Id == querier.Id)
         {
-            SendMessage($"喵喵喵？QAQ", update);
+            userMsg.Reply($"Not allow operation");
             return;
         }
         else if (target.Level >= Permission.Common)
         {
-            SendMessage($"这位朋友咱已经认识啦~", update);
+            userMsg.Reply($"This user had been allowed to access the bot");
             return;
         }
         else
         {
             target.SetPermission(Permission.Common);
-            SendMessage($"欢迎新朋友~", update);
+            userMsg.Reply($"This user can access the bot now");
+            return;
         }
     }
-    void BanUser(InputCommand command, Update update, TUser querier, Group group = null)
+    void BanUser(Message userMsg)
     {
-        var replyMessage = update.Message.ReplyToMessage;
-        TUser target = null;
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
 
-        if (command.Content.Length == 0)
+        var replyTo = userMsg.ReplyTo;
+        User target = null;
+
+        if (param.IsEmpty())
         {
-            if (replyMessage is null)
+            if (replyTo is null)
             {
-                GetHelpInfo(command, update, querier);
+                GetHelpInfo(cmd,userMsg);
                 return;
             }
-            target = Config.SearchUser(replyMessage.From.Id);
+            target = Config.SearchUser(replyTo.From.Id);
         }
         else
         {
             long id = -1;
 
-            if (long.TryParse(command.Content[0], out id))
+            if (long.TryParse(param.First(), out id))
                 target = Config.SearchUser(id);
             else
             {
-                SendMessage("userId错误，请仔细检查喵~", update);
+                userMsg.Reply("Invild userId");
                 return;
             }
         }
 
         if (target is null)
         {
-            SendMessage($"喵不认识这个人xAx", update);
+            userMsg.Reply($"This user is not found at database");
             return;
         }
-        else if (target.Id == querier.Id)
+        else if (target.Id == querier.Id || target.Level >= querier.Level)
         {
-            SendMessage($"喵喵喵？QAQ", update);
-            return;
-        }
-        else if (target.Level >= querier.Level)
-        {
-            SendMessage($"你想篡权喵?", update);
+            userMsg.Reply($"Not allow operation");
             return;
         }
         else
         {
             target.SetPermission(Permission.Ban);
-            SendMessage($"已经将坏蛋踢出去了喵", update);
+            userMsg.Reply($"This user cannot access the bot now");
         }
     }
-    void GetUserInfo(InputCommand command, Update update, TUser querier, Group group = null)
+    void GetUserInfo(Message userMsg)
     {
-        var isGroup = update.Message.Chat.Type is (ChatType.Group or ChatType.Supergroup);
-        var id = (update.Message.ReplyToMessage is not null ? (update.Message.ReplyToMessage.From ?? update.Message.From) : update.Message.From).Id;
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
 
+        var replyTo = userMsg.ReplyTo;
+        User target = null;
 
-        if (id != querier.Id && !querier.CheckPermission(Permission.Admin))
+        if (!param.IsEmpty())
         {
-            SendMessage("Permission denied.", update);
-            return;
-        }
-        else if (command.Content.Length > 0)
-        {
-            if (command.Content[0] is "group")
+            if (long.TryParse(param.First(), out long i))
             {
-                if (group is null)
-                    SendMessage("获取群组信息时发生错误QAQ:\n此功能只能在群组内使用", update);
-                else
+                if (!querier.CheckPermission(Permission.Admin))
                 {
-                    SendMessage(
-                        $"群组信息:\n" +
-                        $"Name: {group.Name}\n" +
-                        $"Id: {group.Id}\n" +
-                        $"Permission: {group.Level}", update);
+                    userMsg.Reply("Permission denied.");
+                    return;
                 }
+                else
+                    target = Config.SearchUser(i);
             }
-            else if (!long.TryParse(command.Content[0], out id))
+            else if (param.First().ToLower() == "group")
             {
-                GetHelpInfo(command, update, querier);
+                // GetGroupInfo();
+            }
+            else
+            {
+                GetHelpInfo(cmd,userMsg);
                 return;
             }
         }
+        else if(replyTo is not null)
+            target = replyTo.From;
         else
-        {
-            var target = Config.SearchUser(id);
+            target = userMsg.From;
 
-            if (target is null)
-                SendMessage("查无此人喵", update);
-            else
-                SendMessage(
-                    $"用户信息:\n" +
-                    $"Name: {target.Name}\n" +
-                    $"Id: {target.Id}\n" +
-                    $"Permission: {target.Level}\n" +
-                    $"MaiUserId: {(isGroup ? target.MaiUserId is null ? "未绑定" : "喵" : target.MaiUserId is null ? "未绑定" : target.MaiUserId)}", update);
-        }
+        if (target is null)
+            userMsg.Reply("User not found at database");
+        else
+            userMsg.Reply($"User Infomation:\n```copy\n" + Program.StringHandle(
+                $"Name      : {target.Name}\n" +
+                $"Id        : {target.Id}\n" +
+                $"Permission: {target.Level}\n" +
+                $"MaiUserId : {(userMsg.IsGroup ? 
+                              (target.MaiUserId is null ? "未绑定" : "喵") : 
+                              (target.MaiUserId is null ? "未绑定" : target.MaiUserId))}\n")+"```", ParseMode.MarkdownV2);
 
 
 
 
     }
-    void SetUserPermission(InputCommand command, Update update, TUser querier, int diff, Group group = null)
+    void SetUserPermission(Message userMsg, int diff)
     {
-        var replyMessage = update.Message.ReplyToMessage;
-        Func<Permission, TUser, bool> canPromote = (s, user) =>
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+
+        var replyTo = userMsg.ReplyTo;
+        Func<Permission, User, bool> canPromote = (s, user) =>
         {
             switch (s)
             {
-                case Permission.Unknow:
+                case Permission.Unknown:
                 case Permission.Ban:
                 case Permission.Common:
                 case Permission.Advanced:
@@ -356,22 +346,11 @@ public partial class Generic : IExtension
                     return false;
             }
         };
-        Func<string, Permission> getLevel = s =>
-        {
-            return s.ToLower() switch
-            {
-                "ban" => Permission.Ban,
-                "common" => Permission.Common,
-                "admin" => Permission.Admin,
-                "root" => Permission.Root,
-                _ => Permission.Unknow
-            };
-        };
         Action<long> setPermission = id =>
         {
             if (id == querier.Id)
             {
-                SendMessage("不可以修改自己的权限喵", update);
+                userMsg.Reply("Cannot change permission for yourself");
                 return;
             }
 
@@ -380,70 +359,64 @@ public partial class Generic : IExtension
 
             if (target is null)
             {
-                SendMessage($"喵不认识这个人xAx", update);
+                userMsg.Reply($"This user is not found at database");
                 return;
             }
-            if (target.isUnknow)
+            if (target.IsUnknown)
             {
-                SendMessage($"无效操作喵", update);
+                userMsg.Reply($"Cannot change permission for this user");
                 return;
             }
             if (canPromote(targetLevel, querier))
             {
                 if (targetLevel < Permission.Ban)
                 {
-                    SendMessage($"权限已经不能再降低了QAQ", update);
+                    userMsg.Reply($"This user permission is already the lowest");
                     return;
                 }
                 else if (targetLevel > Permission.Admin)
                 {
-                    SendMessage($"权限已经不能再提高了QAQ", update);
+                    userMsg.Reply($"This user permission is already the highest");
                     return;
                 }
 
                 if (target.Level >= querier.Level)
                 {
-                    SendMessage($"你不可以修改 *{Program.StringHandle(target.Name)}*的权限喵xAx", update, parseMode: ParseMode.MarkdownV2);
+                    userMsg.Reply($"Permission Denied");
                     return;
                 }
                 target.SetPermission(targetLevel);
-                SendMessage($"成功将*{Program.StringHandle(target.Name)}*\\({target.Id}\\)的权限修改为*{targetLevel}*", update, parseMode: ParseMode.MarkdownV2);
+                userMsg.Reply($"Success change*{Program.StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2);
             }
             else
             {
-                SendMessage("很抱歉，您的权限不足喵", update);
+                userMsg.Reply("Permission Denied");
                 return;
             }
         };
 
-        if (command.Content.Length == 0)
-        {
-            if (replyMessage is null)
-            {
-                SendMessage("请指明需要修改的用户喵", update);
-                return;
-            }
-            setPermission(replyMessage.From.Id);
-        }
-        else if (command.Content.Length == 1)
+        if (replyTo is not null)
+            setPermission(replyTo.From.Id);
+        else if(!param.IsEmpty())
         {
             long id = -1;
 
-            if (long.TryParse(command.Content[0], out id))
+            if (long.TryParse(param.First(), out id))
                 setPermission(id);
             else
-                SendMessage("userId错误，请仔细检查喵~", update);
+                userMsg.Reply("Invaild userId");
         }
         else
-            SendMessage("喵?", update);
+            userMsg.Reply("Require user");
     }
-    async void GetSystemInfo(InputCommand command, Update update)
+    async void GetSystemInfo(Message userMsg)
     {
         var uptime = DateTime.Now - Program.startTime;
         var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
-        await SendMessage(Program.StringHandle(
+
+        await userMsg.Reply(Program.StringHandle(
             $"当前版本: v{ScriptManager.GetVersion()}\n\n" +
-            "硬件信息:\n" +
+             "硬件信息:\n" +
             $"-核心数: {Monitor.ProcessorCount}\n" +
             $"-使用率: {Monitor.CPULoad}%\n" +
             $"-进程占用: {GC.GetTotalMemory(false) / (1024 * 1024)} MiB\n" +
@@ -458,32 +431,27 @@ public partial class Generic : IExtension
             $"-10分钟平均CPU占用率: {Monitor._10CPULoad}%\n" +
             $"-15分钟平均CPU占用率: {Monitor._15CPULoad}%\n\n" +
             $"已加载的Script:\n" +
-            $"-{scripts}"), update, true, ParseMode.MarkdownV2);
+            $"-{scripts}"),ParseMode.MarkdownV2);
     }
-    async void GetBotLog(InputCommand command, Update update, TUser querier, Group group = null)
+    async void GetBotLog(Message userMsg)
     {
-        var message = update.Message;
-        var chat = update.Message.Chat;
-        var isPrivate = chat.Type is ChatType.Private;
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
         int count = 15;
         DebugType? level = DebugType.Error;
 
-        //if(!isPrivate)
-        //{
-        //    SendMessage("喵呜呜", update, true);
-        //    return;
-        //}
         if (!querier.CheckPermission(Permission.Root))
         {
-            SendMessage("喵?", update, true);
+            userMsg.Reply("Permission Denied");
             return;
         }
-        switch (command.Content.Length)
+        switch (param.Length)
         {
             case 0:
                 break;
             case 1:
-                level = command.Content[0] switch
+                level = param.First() switch
                 {
                     "debug" => DebugType.Debug,
                     "info" => DebugType.Info,
@@ -493,16 +461,16 @@ public partial class Generic : IExtension
                 };
                 if (level is null)
                 {
-                    if (!int.TryParse(command.Content[0], out count))
+                    if (!int.TryParse(param.First(), out count))
                     {
-                        SendMessage($"\"{command.Content[0]}\"不是有效参数喵x", update);
+                        userMsg.Reply($"Invaild param: \"{param.First()}\"");
                         return;
                     }
                     level = DebugType.Error;
                 }
                 break;
             case 2:
-                level = command.Content[0] switch
+                level = param.First() switch
                 {
                     "debug" => DebugType.Debug,
                     "info" => DebugType.Info,
@@ -512,12 +480,12 @@ public partial class Generic : IExtension
                 };
                 if (level is null)
                 {
-                    SendMessage($"\"{command.Content[0]}\"不是有效参数喵x", update);
+                    userMsg.Reply($"Invaild param: \"{param[0]}\"");
                     return;
                 }
-                else if (!int.TryParse(command.Content[1], out count))
+                else if (!int.TryParse(param[1], out count))
                 {
-                    SendMessage($"\"{command.Content[1]}\"不是有效参数喵x", update);
+                    userMsg.Reply($"Invaild param: \"{param[1]}\"");
                     return;
                 }
                 break;
@@ -528,7 +496,7 @@ public partial class Generic : IExtension
         {
             if (!querier.CheckPermission(Permission.Admin))
             {
-                SendMessage("Permission Denied", update, true);
+                userMsg.Reply("Permission Denied");
                 return;
             }
         }
@@ -536,7 +504,7 @@ public partial class Generic : IExtension
         var logs = LogManager.GetLog(count, (DebugType)level);
 
         if (logs.IsEmpty())
-            SendMessage("暂无可用日志喵", update);
+            userMsg.Reply("No logs");
         else
         {
             var logText = string.Join("", logs).Replace("\\", "\\\\");
@@ -570,56 +538,60 @@ public partial class Generic : IExtension
                 }
                 msgGroup.Add(msg);
                 foreach (var s in msgGroup)
-                    await SendMessage("```csharp\n" +
+                    await userMsg.Reply("```csharp\n" +
                          $"{Program.StringHandle(s)}\n" +
-                         $"```", update, true, ParseMode.MarkdownV2);
+                         $"```",ParseMode.MarkdownV2);
             }
             else
-                await SendMessage("```csharp\n" +
+                await userMsg.Reply("```csharp\n" +
                          $"{Program.StringHandle(logText)}\n" +
-                         $"```", update, true, ParseMode.MarkdownV2);
+                         $"```",ParseMode.MarkdownV2);
         }
         //await UploadFile(Config.LogFile,chat.Id);
     }
-    void BotConfig(InputCommand command, Update update, TUser querier, Group group = null)
+    void BotConfig(Message userMsg)
     {
-        if (group is null)
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+        var group = userMsg.GetGroup();
+
+        if (!userMsg.IsGroup)
         {
-            SendMessage("此功能只能在Group里面使用喵x", update);
+            userMsg.Reply("Only can use in group");
             return;
         }
         if (!querier.CheckPermission(Permission.Admin, group))
         {
-            SendMessage($"很抱歉，您不能修改bot的设置喵", update);
+            userMsg.Reply($"Permission Denied");
             return;
         }
-        if (command.Content.Length < 2)
+        if (param.Length < 2)
         {
-            GetHelpInfo(command, update, querier);
+            GetHelpInfo(cmd,userMsg);
             return;
         }
 
-        string prefix = command.Content[0].ToLower();
+        string prefix = param.First();
         bool boolValue;
         switch (prefix)
         {
             case "forcecheckreference":
-                if (bool.TryParse(command.Content[1], out boolValue))
+                if (bool.TryParse(param[1], out boolValue))
                 {
                     group.Setting.ForceCheckReference = boolValue;
-                    SendMessage($"已将ForceCheckReference属性修改为*{boolValue}*", update, true, ParseMode.MarkdownV2);
+                    userMsg.Reply($"ForceCheckReference: *{boolValue}*",ParseMode.MarkdownV2);
                     Config.SaveData();
                 }
                 else
-                    GetHelpInfo(command, update, querier);
+                    GetHelpInfo(cmd,userMsg);
                 break;
         }
     }
-    public void GetHelpInfo(InputCommand command, Update update, TUser querier, Group group = null)
+    internal void GetHelpInfo(Command cmd,Message userMsg)
     {
-        var isPrivate = update.Message.Chat.Type is ChatType.Private;
         string helpStr = "```python\n";
-        switch (command.Prefix)
+        switch (cmd.Prefix)
         {
             case "add":
                 helpStr += Program.StringHandle(
@@ -666,32 +638,6 @@ public partial class Generic : IExtension
                     "\n/help       显示帮助信息\n" +
                     "\n更详细的信息请输入\"/{command} help\"");
                 break;
-            case "mai":
-                helpStr += Program.StringHandle(
-                        "命令用法：\n" +
-                        "\n/mai bind image    上传二维码并进行绑定" +
-                        "\n/mai bind [str]    使用SDWC标识符进行绑定" +
-                        "\n/mai region        获取登录地区信息" +
-                        "\n/mai rank          获取国服排行榜" +
-                        "\n/mai rank refresh  重新加载排行榜" +
-                        "\n/mai status        查看DX服务器状态" +
-                        "\n/mai backup [str]  使用密码备份账号数据" +
-                        "\n/mai info          获取账号信息" +
-                        "\n/mai info [int]    获取指定账号信息" +
-                        "\n/mai ticket [int]  获取一张指定类型的票" +
-                        "\n/mai sync          强制刷新账号信息" +
-                        "\n/mai sync [int]    强制刷新指定账号信息" +
-                        "\n/mai logout        登出");
-                break;
-            case "maiscanner":
-                helpStr += Program.StringHandle(
-                        "命令用法：\n" +
-                        "\n/maiscanner status       获取扫描器状态" +
-                        "\n/maiscanner update [int] 从指定位置更新数据库" +
-                        "\n/maiscanner update       更新数据库" +
-                        "\n/maiscanner stop         终止当前任务" +
-                        "\n/maiscanner set [int]    设置QPS限制");
-                break;
             case "logs":
                 helpStr += Program.StringHandle(
                         "命令用法：\n" +
@@ -705,117 +651,122 @@ public partial class Generic : IExtension
                         "err");
                 break;
             default:
-                SendMessage("该命令暂未添加说明信息喵x", update);
+                userMsg.Reply("No helper");
                 return;
         }
         helpStr += "\n```";
-        SendMessage(helpStr, update, true, ParseMode.MarkdownV2);
+        userMsg.Reply(helpStr,ParseMode.MarkdownV2);
     }
     static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
+    static Permission GetPermission(string s) => 
+        s.ToLower() switch
+        {
+            "ban" => Permission.Ban,
+            "common" => Permission.Common,
+            "advanced" => Permission.Advanced,
+            "admin" => Permission.Admin,
+            "root" => Permission.Root,
+            _ => Permission.Unknown
+        };
 }
 public partial class Generic
 {
-    static void AdvancedCommandHandle(InputCommand command, Update update, TUser querier, Group group = null)
+    void AdvancedCommandHandle(Message userMsg)
     {
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var suffix = cmd.Params.First();
+        var param = cmd.Params.Skip(1).ToArray();
+
         if (!querier.CheckPermission(Permission.Root))
         {
-            SendMessage("喵?", update);
+            userMsg.Reply("Permission Denied");
             return;
         }
 
-        var suffix = command.Content[0];
-        command.Content = command.Content.Skip(1).ToArray();
+        
         switch (suffix)
         {
             case "permission":
-                UserPermissionModify(command, update, querier);
+                UserPermissionModify(userMsg);
                 break;
                 //case "maiuserid":
                 //    SetScannerUpdate(command, update, querier);
                 //    break;
         }
     }
-    static void UserPermissionModify(InputCommand command, Update update, TUser querier)
+    void UserPermissionModify(Message userMsg)
     {
-        var chat = update.Message.Chat;
-        var chatType = chat.Type;
-        var isGroup = chatType is (ChatType.Group or ChatType.Supergroup);
+        // /set permission [Group] [id] [level] 
+        // /set permission [id] [level] 
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var suffix = cmd.Params.First();
+        var param = cmd.Params.Skip(1).ToArray();
+        string[] permission = { "unknown","ban","common","advanced","admin","root" };
 
-        long userId = 0;
-        int targetLevel = 0;
-        if (command.Content.Length < 2)
-        {
-            SendMessage("缺少参数喵x", update);
-            return;
-        }
-        if (!long.TryParse(command.Content[0], out userId))
-        {
-            if (command.Content[0] == "group")
-            {
-                userId = -1;
-                if (!isGroup)
-                {
-                    SendMessage($"此参数仅对Group有效x", update);
-                    return;
-                }
-            }
-            else
-            {
-                SendMessage($"\"{command.Content[0]}\"不是有效的参数x", update);
-                return;
-            }
-        }
-        if (!int.TryParse(command.Content[1], out targetLevel))
-        {
-            SendMessage($"\"{command.Content[1]}\"不是有效的参数x", update);
-            return;
-        }
-        else if (targetLevel > (int)Permission.Root || targetLevel < (int)Permission.Unknow)
-        {
-            SendMessage($"没有这个权限喵QAQ", update);
-            return;
-        }
+        Permission targetLevel;
 
-        if (userId == -1)
+        if (param[0].ToLower() is "group" && param.Length == 3)
         {
-            var group = Config.SearchGroup(chat.Id);
-            Program.Debug(DebugType.Warning, $"Group not found,Group Id is \"{chat.Id}\"");
-
-            if (group is null)
+            long id;
+            if (!long.TryParse(param[1], out id))
             {
-                SendMessage("发生内部错误QAQ", update);
-                Program.Debug(DebugType.Warning, $"Group not found,Group Id is \"{chat.Id}\"");
+                userMsg.Reply("Invaild groupId");
                 return;
             }
 
-            group.SetPermission((Permission)targetLevel);
-            SendMessage($"已将该群组的权限修改为*{(Permission)targetLevel}*喵", update, true, ParseMode.MarkdownV2);
-            Config.SaveData();
-        }
-        else
-        {
-            var user = Config.SearchUser(userId);
+            Group group = Config.SearchGroup(id);
+            if(group is null)
+            {
+                userMsg.Reply("Group not found at database");
+                return;
+            }
+            targetLevel = GetPermission(param[2]);
 
+            if (!permission.Contains(param[2]))
+            {
+                userMsg.Reply($"Unknown permission: \"{param[2]}\"");
+                return;
+            }
+            group.SetPermission(targetLevel);
+            userMsg.Reply($"Success change*{Program.StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
+        }
+        else if(param.Length == 2)
+        {
+            long id;
+            if (!long.TryParse(param[0],out id))
+            {
+                userMsg.Reply("Invaild userId");
+                return;
+            }
+
+            User user = Config.SearchUser(id);
             if (user is null)
             {
-                SendMessage("发生内部错误QAQ", update);
-                Program.Debug(DebugType.Warning, $"TUser not found,User Id is \"{userId}\"");
+                userMsg.Reply("User not found at database");
+                return;
+            }
+            targetLevel = GetPermission(param[1]);
+
+            if(!permission.Contains(param[1]))
+            {
+                userMsg.Reply($"Unknown permission: \"{param[1]}\"");
+                return;
+            }
+            else if(userMsg.From.Id == id)
+            {
+                userMsg.Reply($"Cannot use for yourself");
                 return;
             }
 
-            user.SetPermission((Permission)targetLevel);
-            SendMessage($"已将*{Program.StringHandle(user.Name)}*的权限修改为*{(Permission)targetLevel}*喵", update, true, ParseMode.MarkdownV2);
-            Config.SaveData();
+            user.SetPermission(targetLevel);
+            userMsg.Reply($"Success change*{Program.StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
         }
+        else
+            GetHelpInfo(cmd, userMsg);
+
+
 
     }
-}
-public partial class Generic
-{
-    static async Task<Message> SendMessage(string text, Update update, bool isReply = true, ParseMode? parseMode = null) => await Program.SendMessage(text, update, isReply, parseMode);
-    static async void DeleteMessage(Update update) => await Program.DeleteMessage(update);
-    static async Task<bool> UploadFile(string filePath, long chatId) => await Program.UploadFile(filePath, chatId);
-    static async Task<bool> UploadFile(Stream stream, string fileName, long chatId) => await Program.UploadFile(stream, fileName, chatId);
-    static async Task<bool> DownloadFile(string dPath, string fileId) => await Program.DownloadFile(dPath, fileId);
-    static async Task<Message> EditMessage(string text, Update update, int messageId, ParseMode? parseMode = null) => await Program.EditMessage(text, update, messageId, parseMode);
 }

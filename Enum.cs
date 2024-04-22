@@ -8,7 +8,7 @@ namespace TelegramBot
 {
     public enum Permission
     {
-        Unknow = -1,
+        Unknown = -1,
         Ban,
         Common,
         Advanced,
