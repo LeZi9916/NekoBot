@@ -33,13 +33,17 @@ namespace TelegramBot
             var cmd = (Command)msg.Command;
 
             // Reference check
-            if (group is not null && group.Setting.ForceCheckReference)
+            if (cmd.Prefix.Contains("@"))
             {
                 var prefix = cmd.Prefix;
                 var s = prefix.Split("@", 2, StringSplitOptions.RemoveEmptyEntries);
 
-                if (s.Length != 2 || s[1] != BotUsername)
+                if ((s.Length != 2 || s[1] != BotUsername) && 
+                    (group is not null && group.Setting.ForceCheckReference))
                     return;
+
+                cmd.Prefix = s.First();
+                msg.Command = cmd;
             }
             // Sender check
             if (!user.IsNormal)
@@ -70,6 +74,13 @@ namespace TelegramBot
                 Debug(DebugType.Info, "Banned user access,rejected");
                 return;
             }
+            Debug(DebugType.Debug,"User Request:\n" +
+                $"From: {msg.From.Name}({msg.From.Id})\n" +
+                $"Chat: {msg.Chat.Id}\n" +
+                $"Permission: {msg.From.Level.ToString()}\n" +
+                $"Prefix: /{cmd.Prefix}\n" +
+                $"Params: {string.Join(" ", cmd.Params)}");
+            ScriptManager.CommandHandle(msg);
 
             //if (param.Length == 0 || string.IsNullOrEmpty(param[0]))
             //    return;

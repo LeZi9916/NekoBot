@@ -16,7 +16,7 @@ namespace TelegramBot.Types
         public Permission Level { get; set; } = Permission.Common;
         public int? MaiUserId { get; set; } = null;
         public bool IsBanned => Level <= Permission.Ban;
-        public bool IsUnknown => Level == Permission.Unknow;
+        public bool IsUnknown => Level == Permission.Unknown;
         public bool IsNormal => !(Id is 136817688 or 1087968824);
         public bool IsBot { get; private set; } = false;
         public bool? IsPremium { get; set; }
@@ -120,6 +120,7 @@ namespace TelegramBot.Types
 
         public static implicit operator User(Telegram.Bot.Types.User u)
         {
+            if (u is null) return null;
             return new User()
             {
                 Id = u.Id,

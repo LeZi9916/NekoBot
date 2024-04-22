@@ -121,7 +121,7 @@ namespace TelegramBot
                         $"Sender : {msg.From.Name}[@{msg.From.Username}]({msg.From.Id})\n" +
                         $"From   : {msg.Chat.FirstName} {msg.Chat.LastName}({msg.Chat.Id}) |{(msg.IsGroup ? "Group" : "Private")}\n" +
                         $"Type   : {msg.Type}\n" +      
-                        $"Content: {msg.Text ?? "EMPTY"}\n");
+                        $"Content: {(string.IsNullOrEmpty(msg.Content) ? string.Empty : msg.Content)}\n");
 
                     CommandPreHandle(msg);
                 }

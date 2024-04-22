@@ -72,7 +72,7 @@ namespace TelegramBot
         public static async void Reload(Message userMsg)
         {
             IsCompiling = true;
-            var msg = (await userMsg.Send("Reloading Script..."))!;
+            var msg = (await userMsg.Reply("Reloading Script..."))!;
             try
             {                
                 List<IExtension> newObjs = new();

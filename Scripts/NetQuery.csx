@@ -10,6 +10,7 @@ using Telegram.Bot.Types;
 using TelegramBot;
 using TelegramBot.Interfaces;
 using TelegramBot.Types;
+using Message = TelegramBot.Types.Message;
 
 public class NetQuery: ScriptCommon,IExtension
 {
@@ -38,13 +39,7 @@ public class NetQuery: ScriptCommon,IExtension
     }
     public void Handle(Message msg)
     {
-        var suffix = command.Params[0];
-        command.Params = command.Params.Skip(1).ToArray();
-        switch (suffix)
-        {
-            case "nslookup":
-                break;
-        }
+
     }
     async void DnsQuery(Message msg)
     {

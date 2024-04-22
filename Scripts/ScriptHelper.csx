@@ -61,6 +61,9 @@ public partial class ScriptHelper : ScriptCommon, IExtension
             case "eval":
                 EvalHandle(userMsg);
                 break;
+            case "reload":
+                ReloadScript(userMsg);
+                break;
         }
     }
     public async void EvalHandle(Message userMsg)
@@ -167,7 +170,7 @@ public partial class ScriptHelper : ScriptCommon, IExtension
         var ext = ScriptManager.GetExtension(extName);
         if(ext is null)
         {
-            userMsg.Send($"Error: Extension \"{extName}\" not found");
+            userMsg.Reply($"Error: Extension \"{extName}\" not found");
             return;
         }
         else if(extName == Name)

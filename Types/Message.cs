@@ -15,7 +15,8 @@ public class Message
     public required User From { get; init; }
     public required Chat Chat { get; init; }
     public required MessageType Type { get; init; }
-    public string Text { get => (text ?? caption) ?? ""; }
+    public Message? ReplyTo { get; init; } = null;
+    public string? Content { get; set; }
     public bool IsPrivate { get => Chat.Type == ChatType.Private; }
     public bool IsGroup { get => Chat.Type is ChatType.Group or ChatType.Supergroup; }
     public Audio? Audio { get; set; }
@@ -23,9 +24,6 @@ public class Message
     public PhotoSize[]? Photo {  get; set; }
     public Command? Command { get; set; }
     public required ITelegramBotClient Client { get; init; }
-
-    string? text = null;
-    string? caption = null;
     public Group? GetGroup() => IsGroup ? Config.SearchGroup(Chat.Id) : null;
     public async Task<bool> GetDocument(string dPath)
     {
@@ -148,9 +146,10 @@ public class Message
             return null;
         }
     }
-    public static Message? Parse(ITelegramBotClient client, Telegram.Bot.Types.Message msg)
+
+    public static Message? Parse(ITelegramBotClient client, Telegram.Bot.Types.Message? msg)
     {
-        if (msg.From is null) return null;
+        if (msg is null || msg.From is null) return null;
 
         var id = msg.MessageId;
         var from = Config.SearchUser(msg.From!.Id);
@@ -166,11 +165,13 @@ public class Message
             From = from,
             Chat = msg.Chat,
             Type = msg.Type,
+            ReplyTo = Parse(client,msg.ReplyToMessage),
             Audio = msg.Audio,
             Document = msg.Document,
             Photo = msg.Photo,
             Command = cmd,
-            Client = client
+            Client = client,
+            Content = content,
         };
         
     }

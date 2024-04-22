@@ -1,7 +1,6 @@
 ﻿using AquaTools.Exception;
 using AquaTools.Requests;
 using AquaTools.Responses;
-using AquaTools.Users;
 using AquaTools;
 using System;
 using System.Collections.Generic;
@@ -21,15 +20,15 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using TelegramBot;
 using TelegramBot.Interfaces;
-using static TelegramBot.Config;
-using static TelegramBot.ChartHelper;
-using File = System.IO.File;
-using MaiAccount = TelegramBot.Types.MaiAccount;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using TelegramBot.Types;
-using Message = TelegramBot.Types.Message;
 using CSScripting;
+using static TelegramBot.Config;
+using static TelegramBot.ChartHelper;
+using Message = TelegramBot.Types.Message;
+using File = System.IO.File;
+using MaiAccount = TelegramBot.Types.MaiAccount;
 #pragma warning disable CS4014
 public partial class Mai : ScriptCommon, IExtension
 {
