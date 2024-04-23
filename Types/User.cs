@@ -1,5 +1,6 @@
 ﻿using Telegram.Bot.Types;
 using System.Text.Json.Serialization;
+using TelegramBot.Interfaces;
 
 namespace TelegramBot.Types
 {

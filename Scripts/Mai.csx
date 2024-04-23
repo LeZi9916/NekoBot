@@ -30,7 +30,7 @@ using Message = TelegramBot.Types.Message;
 using File = System.IO.File;
 using MaiAccount = TelegramBot.Types.MaiAccount;
 #pragma warning disable CS4014
-public partial class Mai : ScriptCommon, IExtension
+public partial class Mai : IExtension
 {
     static MaiMonitor monitor;
     static MaiScanner scanner;

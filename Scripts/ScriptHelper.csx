@@ -15,7 +15,7 @@ using System.Reflection;
 using TelegramBot.Types;
 using Message = TelegramBot.Types.Message;
 #pragma warning disable CS4014
-public partial class ScriptHelper : ScriptCommon, IExtension
+public partial class ScriptHelper : IExtension
 {
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public BotCommand[] Commands { get; } =

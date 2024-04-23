@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Telegram.Bot.Types;
+using TelegramBot.Interfaces;
 
 namespace TelegramBot.Types;
 public class Group : IAccount

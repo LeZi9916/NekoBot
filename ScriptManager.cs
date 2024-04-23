@@ -280,8 +280,4 @@ namespace TelegramBot
         public static Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
     }
-    public class ScriptCommon
-    {
-
-    }
 }

@@ -18,7 +18,7 @@ using System.Text.RegularExpressions;
 using Group = TelegramBot.Types.Group;
 using AquaTools.Users;
 #pragma warning disable CS4014
-public partial class Generic : ScriptCommon,IExtension
+public partial class Generic : IExtension
 {
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public BotCommand[] Commands { get; } =
