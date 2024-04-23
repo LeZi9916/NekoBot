@@ -127,6 +127,8 @@ namespace TelegramBot
         public static void CommandHandle(Message msg)
         {
             var prefix = ((Command)msg.Command!).Prefix;
+            if(prefix == "nslookup")
+                new NetQuery().Handle(msg);
             if (handlers.ContainsKey(prefix))
                 handlers[prefix].Handle(msg);
             else

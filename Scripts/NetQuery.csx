@@ -1,28 +1,30 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Collections.Generic;
+using CSScripting;
 using DnsClient;
-using System.Threading.Tasks;
+using DnsClient.Protocol;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using TelegramBot;
 using TelegramBot.Interfaces;
 using TelegramBot.Types;
 using Message = TelegramBot.Types.Message;
 
-public class NetQuery: ScriptCommon,IExtension
+public class NetQuery: IExtension
 {
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public BotCommand[] Commands { get; } =
     {
-            new BotCommand()
-            {
-                Command = "nslookup",
-                Description = "域名解析"
-            }
-        };
+        new BotCommand()
+        {
+             Command = "nslookup",
+             Description = "域名解析"
+        }
+    };
     public string Name { get; } = "NetQuery";
     public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
     public void Init()
@@ -37,39 +39,155 @@ public class NetQuery: ScriptCommon,IExtension
     {
 
     }
-    public void Handle(Message msg)
+    public void Handle(Message userMsg)
     {
-
+        var cmd = (Command)userMsg.Command;
+        switch(cmd.Prefix)
+        {
+            case "nslookup":
+                DnsQuery(userMsg);
+            return;
+        }
     }
-    async void DnsQuery(Message msg)
+    async void DnsQuery(Message userMsg)
     {
+        // /nslookup [host]
+        // /nslookup [protocol] [host] [NS]
+        // /nslookup [protocol] [host] [NS] [queryType]
+        var param = ((Command)userMsg.Command).Params;
         var lookuper = new LookupClient(new IPEndPoint[] { DefaultNS1, DefaultNS2 });
+        string host = "";
+        QueryType qType = QueryType.A;
+        DnsProtocol protocol = DnsProtocol.Udp;
 
+        if (param.IsEmpty())
+        {
+            //GetHelpInfo
+        }
+        else if (param.Length == 1)
+            host = param[0];
+        else if (param.Length >= 3)
+        {
+            protocol = param[0].ToLower() switch
+            {
+                "udp" => DnsProtocol.Udp,
+                "tcp" => DnsProtocol.Tcp,
+                "tls" => DnsProtocol.Tls,
+                "quic" => DnsProtocol.Quic,
+                "https" => DnsProtocol.Https,
+                _ => DnsProtocol.Unknown
+            };
+            host = param[1];
+            var ns = GetDNS(param[2],",");
+            if(ns is null)
+            {
+                await userMsg.Reply($"Invaild NameServer: \"{param[2]}\"");
+                return;
+            }
+            lookuper = new LookupClient(ns);
+        }
+        if (param.Length == 4)
+            qType = param[3].ToLower() switch
+            {
+                "a" => QueryType.A,
+                "aaaa" => QueryType.AAAA,
+                "ptr" => QueryType.PTR,
+                "cname" => QueryType.CNAME,
+                "any" => QueryType.ANY,
+                _ => QueryType.A,
+            };
+        try
+        {
+            var question = new DnsQuestion(host, qType);
+            var result = await lookuper.QueryAsync(question);
 
-        
+            string nsInfo = $"NameServer: {result.NameServer}\n" +
+                            $"Protocol  : {protocol}\n";
+            string rspHeader = "```bash\n";
+            string rspTailer = "\n```";
+            string rsp = "";
+
+            if (result.HasError)
+            {
+                rsp = $"{rspHeader}" + Program.StringHandle(
+                      $"{nsInfo}\n" +
+                      $"From \"{result.NameServer}\" message: {result.ErrorMessage}") +
+                      $"{rspTailer}";
+                await userMsg.Reply(rsp, ParseMode.MarkdownV2);
+                return;
+            }
+
+            var g = result.Answers.GroupBy(x => x.DomainName);
+            foreach (var record in g)
+            {
+
+                rsp += $"Domain: {record.Key}\n";
+                record.ForEach(r =>
+                {
+                    if (r is AddressRecord address)
+                        rsp += $"{GetRecTypeStr(r.RecordType)}: {address.Address}\n" +
+                               $"Ttl: {r.TimeToLive}\n\n";
+                    else if (r is CNameRecord cname)
+                        rsp += $"{GetRecTypeStr(r.RecordType)}: {cname.CanonicalName}\n" +
+                               $"Ttl: {r.TimeToLive}\n\n";
+                });
+            }
+            await userMsg.Reply($"{rspHeader}" + Program.StringHandle(
+                                $"{nsInfo}\n" +
+                                $"{rsp}") +
+                                $"{rspTailer}", ParseMode.MarkdownV2);
+        }
+        catch(Exception e)
+        {
+            await userMsg.Reply("```csharp\n" +
+                               $"{Program.StringHandle(e.ToString())}\n" +
+                               $"```",ParseMode.MarkdownV2);
+        }
     }
-    IPEndPoint[] GetDNS(string s,string splitStr)
+    string GetRecTypeStr(ResourceRecordType type)
     {
-        var _s = s.Split(splitStr,StringSplitOptions.RemoveEmptyEntries);
+        switch(type)
+        {
+            case ResourceRecordType.A:
+                return "IPv4";
+            case ResourceRecordType.AAAA:
+                return "IPv6";
+            case ResourceRecordType.CNAME:
+                return "CNAME";
+            case ResourceRecordType.PTR:
+                return "PTR";
+            default:
+                return "Undefined";
+        }
+    }
+    IPEndPoint[]? GetDNS(string s,string splitStr)
+    {
+        try
+        {
+            var _s = s.Split(splitStr, StringSplitOptions.RemoveEmptyEntries);
 
-        return _s.Select(IPEndPoint.Parse).ToArray();
+            return _s.Select(IPEndPoint.Parse).ToArray();
+        }
+        catch
+        {
+            return null;
+        }
     }
     readonly static IPEndPoint DefaultNS1 = IPEndPoint.Parse("192.168.31.11:53");
     readonly static IPEndPoint DefaultNS2 = IPEndPoint.Parse("192.168.31.4:53");
+    //readonly static IPEndPoint DefaultNS1 = IPEndPoint.Parse("10.0.0.1:53");
+    //readonly static IPEndPoint DefaultNS2 = IPEndPoint.Parse("10.0.0.232:53");
 }
-public enum QueryType
+public enum DnsProtocol
 {
-    A = 1,
-    AAAA = 28,
-    NS = 2,
-    CNAME = 5,
-    SOA = 6,
-    WKS = 11,
-    PTR = 12,
-    HINFO = 13,
-    MX = 15,
-    ANY = 255
+    Udp,
+    Tcp,
+    Tls,
+    Https,
+    Quic,
+    Unknown
 }
+
 public class DnsQuery
 {
     public string Host { get; set; }
