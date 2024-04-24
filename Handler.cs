@@ -42,11 +42,14 @@ namespace TelegramBot
                 var s = prefix.Split("@", 2, StringSplitOptions.RemoveEmptyEntries);
 
                 if (s.Length != 2 || s[1] != BotUsername)
-                    return;
-
-                cmd.Prefix = s.First();
+                    return;                
+            }
+            if(cmd.Prefix.Contains("@"))
+            {
+                cmd.Prefix = cmd.Prefix.Split("@",StringSplitOptions.RemoveEmptyEntries).First();
                 msg.Command = cmd;
             }
+
             // Sender check
             if (!user.IsNormal)
             {
