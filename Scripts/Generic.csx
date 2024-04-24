@@ -276,7 +276,7 @@ public partial class Generic : IExtension
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var param = cmd.Params.Skip(1).ToArray();
+        var param = cmd.Params.ToArray();
 
         var replyTo = userMsg.ReplyTo;
         User target = null;
@@ -285,17 +285,12 @@ public partial class Generic : IExtension
         {
             if (long.TryParse(param.First(), out long i))
             {
-                if (!querier.CheckPermission(Permission.Admin))
-                {
-                    userMsg.Reply("Permission denied.");
-                    return;
-                }
-                else
-                    target = Config.SearchUser(i);
+                target = Config.SearchUser(i);
             }
             else if (param.First().ToLower() == "group")
             {
-                // GetGroupInfo();
+                GetGroupInfo(userMsg);
+                return;
             }
             else
             {
@@ -310,18 +305,61 @@ public partial class Generic : IExtension
 
         if (target is null)
             userMsg.Reply("User not found at database");
+        else if (target.Id != querier.Id && !querier.CheckPermission(Permission.Admin))
+            userMsg.Reply("Permission denied.");
         else
             userMsg.Reply($"User Infomation:\n```copy\n" + Program.StringHandle(
-                $"Name      : {target.Name}\n" +
-                $"Id        : {target.Id}\n" +
-                $"Permission: {target.Level}\n" +
-                $"MaiUserId : {(userMsg.IsGroup ? 
-                              (target.MaiUserId is null ? "未绑定" : "喵") : 
-                              (target.MaiUserId is null ? "未绑定" : target.MaiUserId))}\n")+"```", ParseMode.MarkdownV2);
+                          $"Name      : {target.Name}\n" +
+                          $"Id        : {target.Id}\n" +
+                          $"Permission: {target.Level}\n" +
+                          $"MaiUserId : {(userMsg.IsGroup ? 
+                                         (target.MaiUserId is null ? "未绑定" : "喵") : 
+                                         (target.MaiUserId is null ? "未绑定" : target.MaiUserId))}\n")+"```", ParseMode.MarkdownV2);
 
 
 
 
+    }
+    void GetGroupInfo(Message userMsg)
+    {
+        var cmd = (Command)userMsg.Command!;
+        var querier = userMsg.From;
+        var param = cmd.Params.Skip(1).ToArray();
+        var group = userMsg.GetGroup();
+
+        var replyTo = userMsg.ReplyTo;
+        Group target = null;
+
+        if(!userMsg.IsGroup)
+        {
+            userMsg.Reply("This function only can use at group");
+            return;
+        }
+        else if (!param.IsEmpty())
+        {
+            if (long.TryParse(param.First(), out long i))
+               target = Config.SearchGroup(i);
+            else
+            {
+                GetHelpInfo(cmd, userMsg);
+                return;
+            }
+        }
+        else
+            target = userMsg.GetGroup();
+
+        if (target is null)
+            userMsg.Reply("User not found at database");
+        else if (target.Id != group.Id && !querier.CheckPermission(Permission.Admin))
+            userMsg.Reply("Permission denied.");
+        else
+            userMsg.Reply($"User Infomation:\n```copy\n" + Program.StringHandle(
+                          $"Name      : {target.Name}\n" +
+                          $"Id        : {target.Id}\n" +
+                          $"Permission: {target.Level}\n\n" +
+                          $"Group Setting:\n" +
+                          $"Force Check Reference: {target.Setting.ForceCheckReference}\n" +
+                          $"Listening : {target.Setting.Listen}") + "```", ParseMode.MarkdownV2);
     }
     void SetUserPermission(Message userMsg, int diff)
     {
@@ -572,7 +610,7 @@ public partial class Generic : IExtension
             return;
         }
 
-        string prefix = param.First();
+        string prefix = param.First().ToLower();
         bool boolValue;
         switch (prefix)
         {
