@@ -33,13 +33,15 @@ namespace TelegramBot
             var cmd = (Command)msg.Command;
 
             // Reference check
-            if (cmd.Prefix.Contains("@"))
+            if (group is not null && group.Setting.ForceCheckReference)
             {
+                if (!cmd.Prefix.Contains("@")) 
+                    return;
+
                 var prefix = cmd.Prefix;
                 var s = prefix.Split("@", 2, StringSplitOptions.RemoveEmptyEntries);
 
-                if ((s.Length != 2 || s[1] != BotUsername) && 
-                    (group is not null && group.Setting.ForceCheckReference))
+                if (s.Length != 2 || s[1] != BotUsername)
                     return;
 
                 cmd.Prefix = s.First();

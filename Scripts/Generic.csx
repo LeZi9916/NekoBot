@@ -553,7 +553,7 @@ public partial class Generic : IExtension
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var param = cmd.Params.Skip(1).ToArray();
+        var param = cmd.Params;
         var group = userMsg.GetGroup();
 
         if (!userMsg.IsGroup)
