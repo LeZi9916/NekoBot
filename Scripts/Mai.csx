@@ -831,6 +831,8 @@ public partial class Mai : IExtension
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
         var param = cmd.Params.Skip(1).ToArray();
+        if (cmd.Prefix == "maistatus")
+            param = cmd.Params;
 
         var titlePingInfo = monitor.GetAvgPing(ServerType.Title);
         var oauthPingInfo = monitor.GetAvgPing(ServerType.OAuth);
@@ -850,10 +852,9 @@ public partial class Mai : IExtension
                      $"\n  - Main 服务器  : {monitor.MainServerDelay}ms" +
                      $"\n" +
                      $"响应包跳过率 : \n" +
-                     $"  -  5min  : {Math.Round(skipRateInfo[0] * 100, 2)}%\n" +
-                     $"  - 10min  : {Math.Round(skipRateInfo[1] * 100, 2)}%\n" +
-                     $"  - 15min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
-                     $"  -  Avg   : {Math.Round(monitor.CompressSkipRate * 100, 2)}%" +
+                     $"  - 30min  : {Math.Round(skipRateInfo[0] * 100, 2)}%\n" +
+                     $"  - 60min  : {Math.Round(skipRateInfo[1] * 100, 2)}%\n" +
+                     $"  - 90min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
                      $"\n") +
                       "```";
         }
@@ -891,9 +892,6 @@ public partial class Mai : IExtension
                      $"  - 15min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
                      $"  -  Avg   : {Math.Round(monitor.CompressSkipRate * 100, 2)}%\n" +
                      $"- 最新一次响应 : {monitor.LastResponseStatusCode}\n\n" +
-                     $"土豆性:\n" +
-                     $"-       土豆？: {(monitor.ServiceAvailability ? monitor.CompressSkipRate > 0.18 ? "差不多熟了" : "新鲜的" : "熟透了")}\n" +
-                     $"- 平均土豆间隔 : {(monitor.FaultInterval == -1 ? "不可用" : $"{monitor.FaultInterval}s")}\n" +
                      $"\n") +
                       "```";
         }
@@ -1137,7 +1135,7 @@ public partial class Mai
         public void Init()
         {
             LastFailureTime = DateTime.Now;
-            CompressSkipLogs = Load<List<SkipLog>>(Path.Combine(DatabasePath, "CompressSkipLogs.data"));
+            //CompressSkipLogs = Load<List<SkipLog>>(Path.Combine(DatabasePath, "CompressSkipLogs.data"));
             FaultIntervalList = Load<List<long>>(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"));
             LastFailureTime = Load<DateTime>(Path.Combine(Config.DatabasePath, "LastFailureTime.data"));
 
@@ -1214,7 +1212,7 @@ public partial class Mai
                             LastFailureTime = DateTime.Now;
                         ServiceAvailability = true;
                     }
-                    var lastSkip = GetAvgSkipRate()[0] is double.NaN ? 0 : GetAvgSkipRate()[0];
+                    var lastSkip = GetAvgSkipRate()[0];
                     if (LastResponseStatusCode == HttpStatusCode.GatewayTimeout)
                         TimeoutRequestCount++;
                     else if (LastResponseStatusCode is HttpStatusCode.OK)
@@ -1234,9 +1232,12 @@ public partial class Mai
                     if (FaultIntervalList.Count != 0)
                         FaultInterval = FaultIntervalList.Sum() / FaultIntervalList.Count();
 
+                    CompressSkipLogs = CompressSkipLogs.Where(x => (DateTime.Now - x.Timestamp).Minutes <= 90).ToList();
+
+
                     Config.Save(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"), FaultIntervalList, false);
                     Config.Save(Path.Combine(Config.DatabasePath, "LastFailureTime.data"), LastFailureTime, false);
-                    Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs, false);
+                    //Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs, false);
 
 
                     Thread.Sleep(5000);
