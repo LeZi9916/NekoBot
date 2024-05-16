@@ -138,12 +138,14 @@ public partial class Mai : IExtension
             case "ticket":
                 //GetTicket(userMsg);
                 break;
+            case "maiscanner":
+                break;
                 //case "upsert":
                 //    MaiUpsert(userMsg);
                 //    break;
         }
     }
-    internal static void GetMaiUserId(Message userMsg)
+    internal void GetMaiUserId(Message userMsg)
     {
 
     }
@@ -153,7 +155,7 @@ public partial class Mai : IExtension
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static async void GetUserInfo(Message userMsg)
+    internal async void GetUserInfo(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
@@ -772,7 +774,7 @@ public partial class Mai : IExtension
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static void GetTopRank(Message userMsg)
+    internal void GetTopRank(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
@@ -1520,7 +1522,6 @@ public partial class Mai
 
                 var request = new Request<UserPreviewRequest>();
                 request.Object.userId = account.userId;
-
 
                 QpsIncrease();
                 for (; CurrentQps > QpsLimit || monitor.CompressSkipRate >= 0.20 || !canUpdate; QpsIncrease())
