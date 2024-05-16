@@ -11,7 +11,7 @@ using TelegramBot;
 using System.IO;
 using System.Threading.Tasks;
 using TelegramBot.Types;
-using Action = TelegramBot.Action;
+using Action = TelegramBot.Types.Action;
 using Message = TelegramBot.Types.Message;
 using User = TelegramBot.Types.User;
 using System.Text.RegularExpressions;

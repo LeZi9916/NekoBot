@@ -1,4 +1,6 @@
-﻿namespace TelegramBot.Interfaces
+﻿using TelegramBot.Types;
+
+namespace TelegramBot.Interfaces
 {
     internal interface IAccount
     {
