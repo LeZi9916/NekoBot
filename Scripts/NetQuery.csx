@@ -13,11 +13,10 @@ using TelegramBot;
 using TelegramBot.Interfaces;
 using TelegramBot.Types;
 using Message = TelegramBot.Types.Message;
-
+#nullable enable
 public class NetQuery: ExtensionCore, IExtension
 {
-    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public BotCommand[] Commands { get; } =
+    public new BotCommand[] Commands { get; } =
     {
         new BotCommand()
         {
@@ -26,22 +25,9 @@ public class NetQuery: ExtensionCore, IExtension
         }
     };
     public string Name { get; } = "NetQuery";
-    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
-    public void Init()
+    public override void Handle(Message userMsg)
     {
-
-    }
-    public void Save()
-    {
-
-    }
-    public void Destroy()
-    {
-
-    }
-    public void Handle(Message userMsg)
-    {
-        var cmd = (Command)userMsg.Command;
+        var cmd = (Command)userMsg.Command!;
         switch(cmd.Prefix)
         {
             case "nslookup":
@@ -54,7 +40,7 @@ public class NetQuery: ExtensionCore, IExtension
         // /nslookup [host]
         // /nslookup [protocol] [host] [NS]
         // /nslookup [protocol] [host] [NS] [queryType]
-        var param = ((Command)userMsg.Command).Params;
+        var param = ((Command)userMsg.Command!).Params;
         var lookuper = new LookupClient(new IPEndPoint[] { DefaultNS1, DefaultNS2 });
         string host = "";
         QueryType qType = QueryType.A;

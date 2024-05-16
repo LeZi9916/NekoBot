@@ -36,8 +36,7 @@ public partial class Mai : ExtensionCore, IExtension
     static MaiScanner scanner;
     static MaiDatabase database;
 
-    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public BotCommand[] Commands { get; } =
+    public new BotCommand[] Commands { get; } =
     {
             new BotCommand()
             {
@@ -56,7 +55,7 @@ public partial class Mai : ExtensionCore, IExtension
             }
         };
     public string Name { get; } = "Mai";
-    public void Init()
+    public override void Init()
     {
         monitor = new();
         scanner = new();
@@ -67,12 +66,12 @@ public partial class Mai : ExtensionCore, IExtension
         monitor.Init();
 
     }
-    public void Save()
+    public override void Save()
     {
         database.Save();
         monitor.Save();
     }
-    public void Destroy()
+    public override void Destroy()
     {
         monitor.Destroy();
         scanner.Destroy();
@@ -80,8 +79,7 @@ public partial class Mai : ExtensionCore, IExtension
         monitor = null;
         scanner = null;
     }
-    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
-    public void Handle(Message userMsg)
+    public override void Handle(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;

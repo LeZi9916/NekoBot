@@ -15,8 +15,7 @@ using Group = TelegramBot.Types.Group;
 #pragma warning disable CS4014
 public partial class Generic : ExtensionCore, IExtension
 {
-    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public BotCommand[] Commands { get; } =
+    public new BotCommand[] Commands { get; } =
 {
         new BotCommand()
         {
@@ -75,7 +74,7 @@ public partial class Generic : ExtensionCore, IExtension
         }
 };
     public string Name { get; } = "Generic";
-    public void Handle(Message userMsg)
+    public override void Handle(Message userMsg)
     {
         var cmd = (Command)userMsg.Command;
         if (cmd.Prefix is "help")
@@ -121,19 +120,6 @@ public partial class Generic : ExtensionCore, IExtension
                 break;
         }
     }
-    public void Init()
-    {
-
-    }
-    public void Save()
-    {
-
-    }
-    public void Destroy()
-    {
-
-    }
-    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
     //bool MessageFilter(string content, Update update, TelegramBot.Types.User querier, Group group)
     //{
     //    if (group is null)

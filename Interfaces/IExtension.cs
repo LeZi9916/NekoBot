@@ -1,8 +1,8 @@
 ﻿using System.Reflection;
 using Telegram.Bot.Types;
-using TelegramBot.Types;
 using Message = TelegramBot.Types.Message;
 
+#nullable enable
 namespace TelegramBot.Interfaces
 {
     public interface IExtension
@@ -23,6 +23,6 @@ namespace TelegramBot.Interfaces
         void Init();
         void Save();
         void Destroy();
-        MethodInfo GetMethod(string methodName);
+        MethodInfo? GetMethod(string methodName);
     }
 }

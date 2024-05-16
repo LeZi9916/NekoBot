@@ -16,9 +16,11 @@
 
   <ItemGroup>
     <None Remove="Scripts\Generic.csx" />
+    <None Remove="Scripts\JsonSerializer.csx" />
     <None Remove="Scripts\Mai.csx" />
     <None Remove="Scripts\NetQuery.csx" />
     <None Remove="Scripts\ScriptHelper.csx" />
+    <None Remove="Scripts\YamlSerializer.csx" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,6 +32,8 @@
     </Compile>
     <Compile Include="Scripts\NetQuery.csx" />
     <Compile Include="Scripts\ScriptHelper.csx" />
+    <Compile Include="Scripts\JsonSerializer.csx" />
+    <Compile Include="Scripts\YamlSerializer.csx" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,6 +42,7 @@
     <PackageReference Include="DnsClient" Version="1.7.0" />
     <PackageReference Include="SkiaSharp" Version="2.88.7" />
     <PackageReference Include="Telegram.Bot" Version="19.0.0" />
+    <PackageReference Include="YamlDotNet" Version="15.1.4" />
     <PackageReference Include="ZXing.Net" Version="0.16.6" />
     <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.10" />
   </ItemGroup>
