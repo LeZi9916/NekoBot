@@ -57,7 +57,7 @@ namespace TelegramBot
             }
             catch (Exception e)
             {
-                Program.Debug(DebugType.Error, $"Loading script failure ({filePath}):\n{e}");
+                Core.Debug(DebugType.Error, $"Loading script failure ({filePath}):\n{e}");
             }
         }
         public static void Save()
@@ -95,7 +95,7 @@ namespace TelegramBot
                         await msg.Edit(
                             $"Loading \"{fileName}\" failure:\n" +
                             "```csharp\n" +
-                            Program.StringHandle(e.ToString()) +
+                            Core.StringHandle(e.ToString()) +
                             "\n```",
                             ParseMode.MarkdownV2);
                     }
@@ -120,7 +120,7 @@ namespace TelegramBot
             catch(Exception e)
             {
                 await msg.Edit("Reload script failure");
-                Program.Debug(DebugType.Error, $"Reload script failure:\n{e}");
+                Core.Debug(DebugType.Error, $"Reload script failure:\n{e}");
             }
             IsCompiling = false;
         }
@@ -202,9 +202,9 @@ namespace TelegramBot
                 Command = x.Command,
                 Description = x.Description,                
             });
-            Program.BotCommands = result.ToArray();
-            await Program.botClient.SetMyCommandsAsync(result);
-            Program.Debug(DebugType.Info,"Bot commands has been updated");
+            Core.BotCommands = result.ToArray();
+            await Core.botClient.SetMyCommandsAsync(result);
+            Core.Debug(DebugType.Info,"Bot commands has been updated");
         }
         
     }
@@ -245,7 +245,7 @@ namespace TelegramBot
             }
             objs.Add(ext);
             ext.Init();
-            Program.Debug(DebugType.Info, $"Loaded script : {ext.Name}");
+            Core.Debug(DebugType.Info, $"Loaded script : {ext.Name}");
         }
         /// <summary>
         /// 卸载该Extension
@@ -267,7 +267,7 @@ namespace TelegramBot
                 commands.Remove(cmd);
             objs.Remove(ext);
             ext.Destroy();
-            Program.Debug(DebugType.Info, $"Unloaded script : {ext.Name}");
+            Core.Debug(DebugType.Info, $"Unloaded script : {ext.Name}");
         }
 
         /// <summary>

@@ -17,7 +17,7 @@ using Microsoft.CodeAnalysis;
 using Message = TelegramBot.Types.Message;
 using File = System.IO.File;
 #pragma warning disable CS4014
-public partial class ScriptHelper : IExtension
+public partial class ScriptHelper : ExtensionCore, IExtension
 {
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public BotCommand[] Commands { get; } =
@@ -91,7 +91,7 @@ public partial class ScriptHelper : IExtension
                 var result = ScriptManager.EvalCode(code) ?? "null";
                 var _result = string.IsNullOrEmpty(result) ? "empty" : result;
                 msg.Edit("```csharp\n" +
-                        $"{Program.StringHandle(result)}\n" +
+                        $"{Core.StringHandle(result)}\n" +
                         $"```",ParseMode.MarkdownV2);
             }
             else
@@ -232,7 +232,7 @@ public partial class ScriptHelper : IExtension
             {
                 await msg.Edit("Error: Compile script failure\n" +
                     "```csharp\n" +
-                    $"{Program.StringHandle(script.Exception.ToString())}" +
+                    $"{Core.StringHandle(script.Exception.ToString())}" +
                     "\n```",ParseMode.MarkdownV2);
                 return;
             }

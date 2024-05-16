@@ -30,7 +30,7 @@ using Message = TelegramBot.Types.Message;
 using File = System.IO.File;
 using MaiAccount = TelegramBot.Types.MaiAccount;
 #pragma warning disable CS4014
-public partial class Mai : IExtension
+public partial class Mai : ExtensionCore, IExtension
 {
     static MaiMonitor monitor;
     static MaiScanner scanner;
@@ -248,7 +248,7 @@ public partial class Mai : IExtension
         }
         catch (Exception e)
         {
-            Program.Debug(DebugType.Error, e.ToString());
+            Debug(DebugType.Error, e.ToString());
         }
 
 
@@ -961,7 +961,7 @@ public partial class Mai : IExtension
         switch (cmd.Prefix)
         {
             case "mai":
-                helpStr += Program.StringHandle(
+                helpStr += Core.StringHandle(
                         "命令用法：\n" +
                         "\n/mai bind image    上传二维码并进行绑定" +
                         "\n/mai bind [str]    使用SDWC标识符进行绑定" +
@@ -978,7 +978,7 @@ public partial class Mai : IExtension
                         "\n/mai logout        登出");
                 break;
             case "maiscanner":
-                helpStr += Program.StringHandle(
+                helpStr += Core.StringHandle(
                         "命令用法：\n" +
                         "\n/maiscanner status       获取扫描器状态" +
                         "\n/maiscanner update [int] 从指定位置更新数据库" +

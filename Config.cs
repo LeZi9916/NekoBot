@@ -85,10 +85,10 @@ namespace TelegramBot
             if (File.Exists(Path.Combine(DatabasePath, "HotpAuthenticator.data")))
                 Authenticator = Load<HotpAuthenticator>(Path.Combine(DatabasePath, "HotpAuthenticator.data"));  
             if (File.Exists(Path.Combine(DatabasePath, "token.config")))
-                Program.Token = File.ReadAllText(Path.Combine(DatabasePath, "token.config"));
+                Core.Token = File.ReadAllText(Path.Combine(DatabasePath, "token.config"));
             else
             {
-                Program.Debug(DebugType.Error, "Config file isn't exist");
+                Core.Debug(DebugType.Error, "Config file isn't exist");
                 Environment.Exit(-1);
             }
             AutoSave();
@@ -128,7 +128,7 @@ namespace TelegramBot
                     Thread.Sleep(AutoSaveInterval);
                     if (!EnableAutoSave)
                         break;
-                    Program.Debug(DebugType.Debug, "Auto save data start");
+                    Core.Debug(DebugType.Debug, "Auto save data start");
                     SaveData();
                 }
             });
@@ -143,7 +143,7 @@ namespace TelegramBot
             Save(Path.Combine(DatabasePath, "GroupIdList.data"), GroupIdList);
             Save(Path.Combine(DatabasePath, "HotpAuthenticator.data"), Authenticator);
             ScriptManager.Save();
-            Program.BotCommands = await Program.botClient.GetMyCommandsAsync();
+            Core.BotCommands = await Core.botClient.GetMyCommandsAsync();
         }
         static void Check()
         {
@@ -164,12 +164,12 @@ namespace TelegramBot
                 await fileStream.WriteAsync(Encoding.UTF8.GetBytes(ToJsonString(target)));
                 fileStream.Close();
                 if (debugMessage)
-                    Program.Debug(DebugType.Info, $"Saved File {path}");
+                    Core.Debug(DebugType.Info, $"Saved File {path}");
             }
             catch(Exception e)
             {
                 
-                Program.Debug(DebugType.Error, $"Saving File \"{path}\" Failure:\n{e.Message}");
+                Core.Debug(DebugType.Error, $"Saving File \"{path}\" Failure:\n{e.Message}");
             }
         }
         public static T Load<T>(string path) where T : new()
@@ -179,12 +179,12 @@ namespace TelegramBot
                 var json = File.ReadAllText(path);
                 var result = FromJsonString<T>(json);
 
-                Program.Debug(DebugType.Info, $"Loaded File: {path}");
+                Core.Debug(DebugType.Info, $"Loaded File: {path}");
                 return result;
             }
             catch (Exception e) 
             {
-                Program.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
+                Core.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
                 return new T();
             }
         }
@@ -195,12 +195,12 @@ namespace TelegramBot
                 var json = File.ReadAllText(path);
                 obj = FromJsonString<T>(json);
 
-                Program.Debug(DebugType.Info, $"Loaded File: {path}");
+                Core.Debug(DebugType.Info, $"Loaded File: {path}");
                 
             }
             catch (Exception e)
             {
-                Program.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
+                Core.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
                 obj = default(T);
             }
         }

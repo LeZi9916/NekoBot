@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using static TelegramBot.Program;
+using static TelegramBot.Core;
 
 #nullable enable
 namespace TelegramBot.Types;

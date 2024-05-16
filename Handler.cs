@@ -12,7 +12,7 @@ using Message = TelegramBot.Types.Message;
 
 namespace TelegramBot
 {
-    public partial class Program
+    public partial class Core
     {
         public static Func<string, string> StringHandle = s =>
         {

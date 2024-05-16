@@ -49,7 +49,7 @@ namespace TelegramBot
             }
             catch (Exception e)
             {
-                Program.Debug(DebugType.Error, $"Failure to get processor info : \n{e.Message}");
+                Core.Debug(DebugType.Error, $"Failure to get processor info : \n{e.Message}");
             }
         }
         public async static void CalMemInfo()
@@ -70,7 +70,7 @@ namespace TelegramBot
                 }
                 catch(Exception e)
                 {
-                    Program.Debug(DebugType.Error,$"Failure to get memory info : \n{e.Message}");
+                    Core.Debug(DebugType.Error,$"Failure to get memory info : \n{e.Message}");
                 }
             });
         }

@@ -24,7 +24,7 @@ namespace TelegramBot
         Warning,        
         Error
     }
-    public partial class Program
+    public partial class Core
     {
         public static TelegramBotClient botClient;
         public static string Token = "";

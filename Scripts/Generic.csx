@@ -8,17 +8,12 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using TelegramBot.Interfaces;
 using TelegramBot;
-using System.IO;
-using System.Threading.Tasks;
 using TelegramBot.Types;
-using Action = TelegramBot.Types.Action;
 using Message = TelegramBot.Types.Message;
 using User = TelegramBot.Types.User;
-using System.Text.RegularExpressions;
 using Group = TelegramBot.Types.Group;
-using AquaTools.Users;
 #pragma warning disable CS4014
-public partial class Generic : IExtension
+public partial class Generic : ExtensionCore, IExtension
 {
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public BotCommand[] Commands { get; } =
@@ -308,7 +303,7 @@ public partial class Generic : IExtension
         else if (target.Id != querier.Id && !querier.CheckPermission(Permission.Admin))
             userMsg.Reply("Permission denied.");
         else
-            userMsg.Reply($"User Infomation:\n```copy\n" + Program.StringHandle(
+            userMsg.Reply($"User Infomation:\n```copy\n" + Core.StringHandle(
                           $"Name      : {target.Name}\n" +
                           $"Id        : {target.Id}\n" +
                           $"Permission: {target.Level}\n" +
@@ -353,7 +348,7 @@ public partial class Generic : IExtension
         else if (target.Id != group.Id && !querier.CheckPermission(Permission.Admin))
             userMsg.Reply("Permission denied.");
         else
-            userMsg.Reply($"User Infomation:\n```copy\n" + Program.StringHandle(
+            userMsg.Reply($"User Infomation:\n```copy\n" + Core.StringHandle(
                           $"Name      : {target.Name}\n" +
                           $"Id        : {target.Id}\n" +
                           $"Permission: {target.Level}\n\n" +
@@ -424,7 +419,7 @@ public partial class Generic : IExtension
                     return;
                 }
                 target.SetPermission(targetLevel);
-                userMsg.Reply($"Success change*{Program.StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2);
+                userMsg.Reply($"Success change*{Core.StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2);
             }
             else
             {
@@ -449,10 +444,10 @@ public partial class Generic : IExtension
     }
     async void GetSystemInfo(Message userMsg)
     {
-        var uptime = DateTime.Now - Program.startTime;
+        var uptime = DateTime.Now - Core.startTime;
         var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
 
-        await userMsg.Reply(Program.StringHandle(
+        await userMsg.Reply(Core.StringHandle(
             $"当前版本: v{ScriptManager.GetVersion()}\n\n" +
              "硬件信息:\n" +
             $"-核心数: {Monitor.ProcessorCount}\n" +
@@ -577,12 +572,12 @@ public partial class Generic : IExtension
                 msgGroup.Add(msg);
                 foreach (var s in msgGroup)
                     await userMsg.Reply("```csharp\n" +
-                         $"{Program.StringHandle(s)}\n" +
+                         $"{Core.StringHandle(s)}\n" +
                          $"```",ParseMode.MarkdownV2);
             }
             else
                 await userMsg.Reply("```csharp\n" +
-                         $"{Program.StringHandle(logText)}\n" +
+                         $"{Core.StringHandle(logText)}\n" +
                          $"```",ParseMode.MarkdownV2);
         }
         //await UploadFile(Config.LogFile,chat.Id);
@@ -632,37 +627,37 @@ public partial class Generic : IExtension
         switch (cmd.Prefix)
         {
             case "add":
-                helpStr += Program.StringHandle(
+                helpStr += Core.StringHandle(
                     "命令用法:\n" +
                     "\n/add        允许reply对象访问bot" +
                     "\n/add [int]  允许指定用户访问bot");
                 break;
             case "ban":
-                helpStr += Program.StringHandle(
+                helpStr += Core.StringHandle(
                     "命令用法:\n" +
                     "\n/ban        封禁reply对象" +
                     "\n/ban [int]  封禁指定用户");
                 break;
             case "info":
-                helpStr += Program.StringHandle(
+                helpStr += Core.StringHandle(
                     "命令用法:\n" +
                     "\n/info        获取reply对象的用户信息" +
                     "\n/info [int]  获取指定用户的用户信息");
                 break;
             case "promote":
-                helpStr += Program.StringHandle(
+                helpStr += Core.StringHandle(
                     "命令用法:\n" +
                     "\n/promote        提升reply对象的权限等级" +
                     "\n/promote [int]  提升指定用户的权限等级");
                 break;
             case "demote":
-                helpStr += Program.StringHandle(
+                helpStr += Core.StringHandle(
                     "命令用法:\n" +
                     "\n/demote        降低reply对象的权限等级" +
                     "\n/demote [int]  降低指定用户的权限等级");
                 break;
             case "help":
-                helpStr += Program.StringHandle(
+                helpStr += Core.StringHandle(
                     "\n相关命令：\n" +
                     "\n/add        允许指定用户访问bot" +
                     "\n/ban        禁止指定用户访问bot" +
@@ -677,7 +672,7 @@ public partial class Generic : IExtension
                     "\n更详细的信息请输入\"/{command} help\"");
                 break;
             case "logs":
-                helpStr += Program.StringHandle(
+                helpStr += Core.StringHandle(
                         "命令用法：\n" +
                         "\n/logs            获取最近15条等级为Error或以上的日志信息" +
                         "\n/logs [Lv|int]   获取自定义数量或等级的日志信息" +
@@ -768,7 +763,7 @@ public partial class Generic
                 return;
             }
             group.SetPermission(targetLevel);
-            userMsg.Reply($"Success change*{Program.StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
+            userMsg.Reply($"Success change*{Core.StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
         }
         else if(param.Length == 2)
         {
@@ -799,7 +794,7 @@ public partial class Generic
             }
 
             user.SetPermission(targetLevel);
-            userMsg.Reply($"Success change*{Program.StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
+            userMsg.Reply($"Success change*{Core.StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
         }
         else
             GetHelpInfo(cmd, userMsg);

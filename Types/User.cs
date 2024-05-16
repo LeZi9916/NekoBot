@@ -73,7 +73,7 @@ namespace TelegramBot.Types
                     continue;
                 else
                 {
-                    Program.Debug(DebugType.Info, $"User info had been updated:\n" +
+                    Core.Debug(DebugType.Info, $"User info had been updated:\n" +
                     $"Name: {user.FirstName} {user.LastName}\n" +
                     $"isBot: {user.IsBot}\n" +
                     $"Username: {user.Username}\n" +

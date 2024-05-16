@@ -14,7 +14,7 @@ using TelegramBot.Interfaces;
 using TelegramBot.Types;
 using Message = TelegramBot.Types.Message;
 
-public class NetQuery: IExtension
+public class NetQuery: ExtensionCore, IExtension
 {
     public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
     public BotCommand[] Commands { get; } =
@@ -109,7 +109,7 @@ public class NetQuery: IExtension
 
             if (result.HasError)
             {
-                rsp = $"{rspHeader}" + Program.StringHandle(
+                rsp = $"{rspHeader}" + Core.StringHandle(
                       $"{nsInfo}\n" +
                       $"From \"{result.NameServer}\" message: {result.ErrorMessage}") +
                       $"{rspTailer}";
@@ -132,7 +132,7 @@ public class NetQuery: IExtension
                                $"Ttl: {r.TimeToLive}\n\n";
                 });
             }
-            await userMsg.Reply($"{rspHeader}" + Program.StringHandle(
+            await userMsg.Reply($"{rspHeader}" + Core.StringHandle(
                                 $"{nsInfo}\n" +
                                 $"{rsp}") +
                                 $"{rspTailer}", ParseMode.MarkdownV2);
@@ -140,7 +140,7 @@ public class NetQuery: IExtension
         catch(Exception e)
         {
             await userMsg.Reply("```csharp\n" +
-                               $"{Program.StringHandle(e.ToString())}\n" +
+                               $"{Core.StringHandle(e.ToString())}\n" +
                                $"```",ParseMode.MarkdownV2);
         }
     }
