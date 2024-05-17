@@ -6,17 +6,17 @@ using System.Reflection;
 using System.Security.Cryptography;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot.Interfaces;
-using TelegramBot;
-using TelegramBot.Types;
-using Message = TelegramBot.Types.Message;
-using User = TelegramBot.Types.User;
-using Group = TelegramBot.Types.Group;
+using Message = NekoBot.Types.Message;
+using User = NekoBot.Types.User;
+using Group = NekoBot.Types.Group;
+using NekoBot.Interfaces;
+using NekoBot;
+using NekoBot.Types;
 #pragma warning disable CS4014
 public partial class Generic : ExtensionCore, IExtension
 {
     public new BotCommand[] Commands { get; } =
-{
+    {
         new BotCommand()
         {
             Command = "start",
@@ -72,7 +72,7 @@ public partial class Generic : ExtensionCore, IExtension
             Command = "help",
             Description = "显示帮助信息"
         }
-};
+    };
     public string Name { get; } = "Generic";
     public override void Handle(Message userMsg)
     {

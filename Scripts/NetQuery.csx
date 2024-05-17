@@ -9,10 +9,10 @@ using DnsClient;
 using DnsClient.Protocol;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot;
-using TelegramBot.Interfaces;
-using TelegramBot.Types;
-using Message = TelegramBot.Types.Message;
+using NekoBot;
+using Message = NekoBot.Types.Message;
+using NekoBot.Interfaces;
+using NekoBot.Types;
 #nullable enable
 public class NetQuery: ExtensionCore, IExtension
 {

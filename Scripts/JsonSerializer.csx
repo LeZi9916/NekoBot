@@ -1,4 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
+using NekoBot.Interfaces;
+using NekoBot.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,12 +11,10 @@ using System.Text.Json;
 using System.Text.Unicode;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
-using TelegramBot.Interfaces;
-using TelegramBot.Types;
-using Message = TelegramBot.Types.Message;
+using Message = NekoBot.Types.Message;
 
 #nullable enable
-namespace TelegramBot.Scripts
+namespace NekoBot.Scripts
 {
     public class JsonSerializer : ExtensionCore, ISerializer
     {

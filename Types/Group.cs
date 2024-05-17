@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using NekoBot.Interfaces;
+using System.Collections.Generic;
 using Telegram.Bot.Types;
-using TelegramBot.Interfaces;
 
-namespace TelegramBot.Types;
+namespace NekoBot.Types;
 public class Group : IAccount
 {
     public long Id { get; set; }

@@ -5,8 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using TelegramBot;
 
-namespace TelegramBot
+namespace NekoBot
 {
     public static class LogManager
     {
@@ -32,20 +33,20 @@ namespace TelegramBot
             else
                 return DebugType.Error;
         }
-        public static string[] GetLog(int count,DebugType logLevel = DebugType.Error)
+        public static string[] GetLog(int count, DebugType logLevel = DebugType.Error)
         {
             string[] logs = File.ReadAllLines(LogFile);
             List<string> result = new();
             string s = "";
 
-            for(int index = logs.Length - 1;index >= 0;index--)
+            for (int index = logs.Length - 1; index >= 0; index--)
             {
                 if (string.IsNullOrEmpty(logs[index]))
                     continue;
-                else if ((logs[index])[0] == '[')
+                else if (logs[index][0] == '[')
                 {
                     s = $"{logs[index]}\n{s}";
-                    if(GetLogLevel(s) >= logLevel)
+                    if (GetLogLevel(s) >= logLevel)
                         result.Add(s);
                     s = "";
                 }

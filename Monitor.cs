@@ -4,8 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CZGL.SystemInfo;
+using TelegramBot;
 
-namespace TelegramBot
+namespace NekoBot
 {
     public static class Monitor
     {
@@ -23,13 +24,13 @@ namespace TelegramBot
         static void CalCPULoadHistory()
         {
             var count = CPULoadHistory.Count;
-            var _5minLoads = CPULoadHistory.Skip(Math.Max(0,count - 300)).Sum();
-            var _10minLoads = CPULoadHistory.Skip(Math.Max(0,count - 600)).Sum();
+            var _5minLoads = CPULoadHistory.Skip(Math.Max(0, count - 300)).Sum();
+            var _10minLoads = CPULoadHistory.Skip(Math.Max(0, count - 600)).Sum();
             var _15minLoads = CPULoadHistory.Skip(Math.Max(0, count - 900)).Sum();
 
-            _5CPULoad = (int)((_5minLoads / 300) * 100);
-            _10CPULoad = (int)((_10minLoads / 600) * 100);
-            _15CPULoad = (int)((_15minLoads / 900) * 100);
+            _5CPULoad = (int)(_5minLoads / 300 * 100);
+            _10CPULoad = (int)(_10minLoads / 600 * 100);
+            _15CPULoad = (int)(_15minLoads / 900 * 100);
         }
         public async static void CalCPULoad()
         {
@@ -54,8 +55,8 @@ namespace TelegramBot
         }
         public async static void CalMemInfo()
         {
-            await Task.Run(() => 
-            { 
+            await Task.Run(() =>
+            {
                 try
                 {
                     while (true)
@@ -68,9 +69,9 @@ namespace TelegramBot
                         Thread.Sleep(5000);
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
-                    Core.Debug(DebugType.Error,$"Failure to get memory info : \n{e.Message}");
+                    Core.Debug(DebugType.Error, $"Failure to get memory info : \n{e.Message}");
                 }
             });
         }

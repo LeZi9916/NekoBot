@@ -9,13 +9,13 @@ using System.Net.Http;
 using System.Net;
 using System.IO;
 using System.Collections.Generic;
-using static TelegramBot.ChartHelper;
-using TelegramBot.Types;
+using static NekoBot.ChartHelper;
 using Telegram.Bot.Types;
-using User = TelegramBot.Types.User;
-using Message = TelegramBot.Types.Message;
+using User = NekoBot.Types.User;
+using Message = NekoBot.Types.Message;
+using NekoBot.Types;
 
-namespace TelegramBot
+namespace NekoBot
 {
     public enum DebugType
     {

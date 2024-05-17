@@ -5,10 +5,11 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using TelegramBot;
 using static TelegramBot.Core;
 
 #nullable enable
-namespace TelegramBot.Types;
+namespace NekoBot.Types;
 public class Message
 {
     public required int Id { get; init; }
@@ -21,7 +22,7 @@ public class Message
     public bool IsGroup { get => Chat.Type is ChatType.Group or ChatType.Supergroup; }
     public Audio? Audio { get; set; }
     public Document? Document { get; set; }
-    public PhotoSize[]? Photo {  get; set; }
+    public PhotoSize[]? Photo { get; set; }
     public Command? Command { get; set; }
     public required ITelegramBotClient Client { get; init; }
     public Group? GetGroup() => IsGroup ? Config.SearchGroup(Chat.Id) : null;
@@ -32,7 +33,7 @@ public class Message
             if (Document is null)
                 return false;
 
-            return await DownloadFile(dPath,Document.FileId);
+            return await DownloadFile(dPath, Document.FileId);
         }
         catch
         {
@@ -67,7 +68,7 @@ public class Message
             return false;
         }
     }
-    public async Task<bool> DownloadFile(string dPath,string fileId)
+    public async Task<bool> DownloadFile(string dPath, string fileId)
     {
         try
         {
@@ -83,7 +84,7 @@ public class Message
             return false;
         }
     }
-    public async Task<Message?> Send(string text,ParseMode? parseMode = null)
+    public async Task<Message?> Send(string text, ParseMode? parseMode = null)
     {
         try
         {
@@ -155,7 +156,7 @@ public class Message
         var from = Config.SearchUser(msg.From!.Id);
         if (from is null)
             from = msg.From;
-        
+
         var content = (msg.Text ?? msg.Caption) ?? string.Empty;
         var cmd = Types.Command.Parse(content);
 
@@ -165,7 +166,7 @@ public class Message
             From = from,
             Chat = msg.Chat,
             Type = msg.Type,
-            ReplyTo = Parse(client,msg.ReplyToMessage),
+            ReplyTo = Parse(client, msg.ReplyToMessage),
             Audio = msg.Audio,
             Document = msg.Document,
             Photo = msg.Photo,
@@ -173,6 +174,6 @@ public class Message
             Client = client,
             Content = content,
         };
-        
+
     }
 }

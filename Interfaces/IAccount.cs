@@ -1,6 +1,6 @@
-﻿using TelegramBot.Types;
+﻿using NekoBot.Types;
 
-namespace TelegramBot.Interfaces
+namespace NekoBot.Interfaces
 {
     internal interface IAccount
     {

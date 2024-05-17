@@ -1,8 +1,9 @@
 ﻿using Telegram.Bot.Types;
 using System.Text.Json.Serialization;
-using TelegramBot.Interfaces;
+using NekoBot.Interfaces;
+using TelegramBot;
 
-namespace TelegramBot.Types
+namespace NekoBot.Types
 {
     public class User : IAccount
     {
@@ -113,9 +114,9 @@ namespace TelegramBot.Types
         /// </summary>
         /// <param name="user"></param>
         /// <returns>if equals,return true</returns>
-        public bool Equals(User user) => user.Username == Username && 
-                                         user.FirstName == FirstName && 
-                                         user.LastName == LastName && 
+        public bool Equals(User user) => user.Username == Username &&
+                                         user.FirstName == FirstName &&
+                                         user.LastName == LastName &&
                                          user.IsPremium == IsPremium &&
                                          user.Id == Id;
 

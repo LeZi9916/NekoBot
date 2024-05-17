@@ -18,17 +18,17 @@ using System.Text.Json;
 using System.Text.Unicode;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot;
-using TelegramBot.Interfaces;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
-using TelegramBot.Types;
 using CSScripting;
-using static TelegramBot.Config;
-using static TelegramBot.ChartHelper;
-using Message = TelegramBot.Types.Message;
+using static NekoBot.Config;
+using static NekoBot.ChartHelper;
+using Message = NekoBot.Types.Message;
 using File = System.IO.File;
-using MaiAccount = TelegramBot.Types.MaiAccount;
+using MaiAccount = NekoBot.Types.MaiAccount;
+using NekoBot.Interfaces;
+using NekoBot;
+using NekoBot.Types;
 #pragma warning disable CS4014
 public partial class Mai : ExtensionCore, IExtension
 {
@@ -1049,7 +1049,7 @@ public partial class Mai
                 GetMaiAccount(user);
             CalRating();
         }
-        public async void GetMaiAccount(TelegramBot.Types.User user)
+        public async void GetMaiAccount(NekoBot.Types.User user)
         {
             await Task.Run(() =>
             {

@@ -1,9 +1,9 @@
 ﻿using System.Reflection;
 using Telegram.Bot.Types;
-using Message = TelegramBot.Types.Message;
+using Message = NekoBot.Types.Message;
 
 #nullable enable
-namespace TelegramBot.Interfaces
+namespace NekoBot.Interfaces
 {
     public interface IExtension
     {

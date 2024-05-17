@@ -1,4 +1,6 @@
 ﻿using CSScripting;
+using NekoBot;
+using NekoBot.Types;
 using System;
 using System.Data;
 using System.IO;
@@ -7,10 +9,9 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot.Types;
-using Message = TelegramBot.Types.Message;
+using Message = NekoBot.Types.Message;
 
-namespace TelegramBot
+namespace NekoBot
 {
     public partial class Core
     {

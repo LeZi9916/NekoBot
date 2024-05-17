@@ -1,4 +1,4 @@
-﻿namespace TelegramBot.Interfaces;
+﻿namespace NekoBot.Interfaces;
 
 public interface ISerializer : IExtension
 {

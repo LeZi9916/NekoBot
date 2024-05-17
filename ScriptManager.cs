@@ -1,5 +1,6 @@
-﻿using CSScripting;
-using CSScriptLib;
+﻿using CSScriptLib;
+using NekoBot.Interfaces;
+using NekoBot.Types;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,13 +13,10 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot.Interfaces;
-using TelegramBot.Types;
-using File = System.IO.File;
-using Message = TelegramBot.Types.Message;
+using Message = NekoBot.Types.Message;
 
 #nullable enable
-namespace TelegramBot
+namespace NekoBot
 {
     public class Script<T>
     {
@@ -279,7 +277,7 @@ namespace TelegramBot
         /// 获取主Assembly的版本号
         /// </summary>
         /// <returns></returns>
-        public static Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
+        public static System.Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
     }
 }

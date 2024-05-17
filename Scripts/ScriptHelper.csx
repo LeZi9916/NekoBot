@@ -7,15 +7,16 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types;
 
 using TelegramBot;
-using TelegramBot.Interfaces;
-using TelegramBot.Types;
 
 using CSScripting;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
-using Message = TelegramBot.Types.Message;
+using Message = NekoBot.Types.Message;
 using File = System.IO.File;
+using NekoBot.Interfaces;
+using NekoBot.Types;
+using NekoBot;
 #pragma warning disable CS4014
 public partial class ScriptHelper : ExtensionCore, IExtension
 {

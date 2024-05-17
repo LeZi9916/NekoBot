@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TelegramBot.Types
+namespace NekoBot.Types
 {
     public enum Permission
     {

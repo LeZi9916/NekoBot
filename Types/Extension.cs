@@ -2,8 +2,9 @@
 using System.Reflection;
 using Telegram.Bot.Types;
 
+
 #nullable enable
-namespace TelegramBot.Types
+namespace NekoBot.Types
 {
     public class ExtensionCore
     {

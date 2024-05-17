@@ -1,6 +1,6 @@
 ﻿using Telegram.Bot.Types.Enums;
 
-namespace TelegramBot.Types;
+namespace NekoBot.Types;
 public class FilterRule
 {
     public required User Target { get; set; }

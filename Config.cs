@@ -10,10 +10,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using File = System.IO.File;
 using Telegram.Bot;
-using Group = TelegramBot.Types.Group;
-using TelegramBot.Types;
+using Group = NekoBot.Types.Group;
+using NekoBot.Types;
 
-namespace TelegramBot
+namespace NekoBot
 {
     public static class Config
     {
@@ -22,7 +22,7 @@ namespace TelegramBot
         public static string LogsPath = Path.Combine(AppPath, "logs");
         public static string DatabasePath = Path.Combine(AppPath, "Database");
         public static string TempPath = Path.Combine(AppPath, "Temp");
-        public static string LogFile = Path.Combine(LogsPath,$"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
+        public static string LogFile = Path.Combine(LogsPath, $"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
         public static HotpAuthenticator Authenticator = new HotpAuthenticator();
 
         public static bool EnableAutoSave = true;
@@ -45,9 +45,9 @@ namespace TelegramBot
                 LastName = null,
                 Level = Permission.Root
             }
-        };        
+        };
 
-        public static List<KeyChip> keyChips = new() 
+        public static List<KeyChip> keyChips = new()
         {
             new KeyChip()
             {
@@ -57,7 +57,7 @@ namespace TelegramBot
                 RegionName = "广西",
                 KeyChipId = "A63E-01E14596415"
             },
-            new KeyChip() 
+            new KeyChip()
             {
                 PlaceId = 1,
                 PlaceName = "Unknow",
@@ -83,7 +83,7 @@ namespace TelegramBot
             if (File.Exists(Path.Combine(DatabasePath, "GroupIdList.data")))
                 GroupIdList = Load<List<long>>(Path.Combine(DatabasePath, "GroupIdList.data"));
             if (File.Exists(Path.Combine(DatabasePath, "HotpAuthenticator.data")))
-                Authenticator = Load<HotpAuthenticator>(Path.Combine(DatabasePath, "HotpAuthenticator.data"));  
+                Authenticator = Load<HotpAuthenticator>(Path.Combine(DatabasePath, "HotpAuthenticator.data"));
             if (File.Exists(Path.Combine(DatabasePath, "token.config")))
                 Core.Token = File.ReadAllText(Path.Combine(DatabasePath, "token.config"));
             else
@@ -116,14 +116,14 @@ namespace TelegramBot
         {
             TUserList.Add(user);
             UserIdList.Add(user.Id);
-            Save(Path.Combine(DatabasePath, "UserList.data"),TUserList);
-            Save(Path.Combine(DatabasePath, "UserIdList.data"),UserIdList);
+            Save(Path.Combine(DatabasePath, "UserList.data"), TUserList);
+            Save(Path.Combine(DatabasePath, "UserIdList.data"), UserIdList);
         }
         public static async void AutoSave()
         {
-            await Task.Run(() => 
+            await Task.Run(() =>
             {
-                while(true)
+                while (true)
                 {
                     Thread.Sleep(AutoSaveInterval);
                     if (!EnableAutoSave)
@@ -153,10 +153,10 @@ namespace TelegramBot
                 Directory.CreateDirectory(DatabasePath);
             if (!Directory.Exists(TempPath))
                 Directory.CreateDirectory(TempPath);
-        }        
+        }
 
 
-        public static async void Save<T>(string path,T target,bool debugMessage = true)
+        public static async void Save<T>(string path, T target, bool debugMessage = true)
         {
             try
             {
@@ -166,9 +166,9 @@ namespace TelegramBot
                 if (debugMessage)
                     Core.Debug(DebugType.Info, $"Saved File {path}");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                
+
                 Core.Debug(DebugType.Error, $"Saving File \"{path}\" Failure:\n{e.Message}");
             }
         }
@@ -182,13 +182,13 @@ namespace TelegramBot
                 Core.Debug(DebugType.Info, $"Loaded File: {path}");
                 return result;
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 Core.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
                 return new T();
             }
         }
-        public static void Load<T>(string path,out T obj)
+        public static void Load<T>(string path, out T obj)
         {
             try
             {
@@ -196,12 +196,12 @@ namespace TelegramBot
                 obj = FromJsonString<T>(json);
 
                 Core.Debug(DebugType.Info, $"Loaded File: {path}");
-                
+
             }
             catch (Exception e)
             {
                 Core.Debug(DebugType.Error, $"Loading \"{path}\" Failure:\n{e.Message}");
-                obj = default(T);
+                obj = default;
             }
         }
         public static string ToJsonString<T>(T target) => JsonSerializer.Serialize(target);
