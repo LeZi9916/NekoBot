@@ -18,7 +18,6 @@ using System.Text.Json;
 using System.Text.Unicode;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using System.Reflection;
 using Microsoft.CodeAnalysis;
 using CSScripting;
 using static NekoBot.Config;
@@ -29,6 +28,7 @@ using MaiAccount = NekoBot.Types.MaiAccount;
 using NekoBot.Interfaces;
 using NekoBot;
 using NekoBot.Types;
+using Version = NekoBot.Types.Version;
 #pragma warning disable CS4014
 public partial class Mai : ExtensionCore, IExtension
 {
@@ -36,8 +36,12 @@ public partial class Mai : ExtensionCore, IExtension
     static MaiScanner scanner;
     static MaiDatabase database;
 
-    public new BotCommand[] Commands { get; } =
+    public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
+        Name = "Mai",
+        Version = new Version() { Major = 1, Minor = 0 },
+        Commands = new BotCommand[]
+        {
             new BotCommand()
             {
                 Command = "mai",
@@ -53,8 +57,8 @@ public partial class Mai : ExtensionCore, IExtension
                 Command = "maistatus",
                 Description = "查看土豆服务器状态"
             }
-        };
-    public string Name { get; } = "Mai";
+        }
+    };
     public override void Init()
     {
         monitor = new();

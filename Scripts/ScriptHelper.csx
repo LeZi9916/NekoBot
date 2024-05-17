@@ -2,58 +2,45 @@
 using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
-using System.Reflection;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types;
-
-using TelegramBot;
-
 using CSScripting;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
-using Message = NekoBot.Types.Message;
-using File = System.IO.File;
 using NekoBot.Interfaces;
 using NekoBot.Types;
 using NekoBot;
+using Version = NekoBot.Types.Version;
+using Message = NekoBot.Types.Message;
+using File = System.IO.File;
 #pragma warning disable CS4014
 public partial class ScriptHelper : ExtensionCore, IExtension
 {
-    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public BotCommand[] Commands { get; } =
+    public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
-        new BotCommand()
+        Name = "ScriptHelper",
+        Version = new Version() { Major = 1, Minor = 0 },
+        Commands = new BotCommand[]
         {
-            Command = "script",
-           Description = "Script管理"
-        },
-        new BotCommand()
-        {
-           Command = "reload",
-            Description = "重新加载Script"
-        },
-        new BotCommand()
-        {
-           Command = "eval",
-           Description = "CS 解析器"
+            new BotCommand()
+            {
+                Command = "script",
+                Description = "Script管理"
+            },
+            new BotCommand()
+            {
+                Command = "reload",
+                Description = "重新加载Script"
+            },
+            new BotCommand()
+            {
+                Command = "eval",
+                Description = "CS 解析器"
+            }
         }
     };
-    public string Name { get; } = "ScriptHelper";
-    public void Init()
-    {
-
-    }
-    public void Save()
-    {
-
-    }
-    public void Destroy()
-    {
-
-    }
-    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
-    public void Handle(Message userMsg)
+    public override void Handle(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         switch (cmd.Prefix)
@@ -176,7 +163,7 @@ public partial class ScriptHelper : ExtensionCore, IExtension
             userMsg.Reply($"Error: Extension \"{extName}\" not found");
             return;
         }
-        else if(extName == Name)
+        else if(extName == Info.Name)
         {
             userMsg.Reply($"Error: Cannot unload this extension");
             return;
@@ -214,7 +201,7 @@ public partial class ScriptHelper : ExtensionCore, IExtension
             var script = ScriptManager.CompileScript<IExtension>(filePath);
             if (script.Instance is not null)
             {
-                var loadedScript = ScriptManager.GetExtension(script.Instance.Name);
+                var loadedScript = ScriptManager.GetExtension(script.Instance.Info.Name);
                 if (loadedScript is not null)
                     await msg.Edit("Updating script...(3/4)");
                 else
@@ -223,7 +210,7 @@ public partial class ScriptHelper : ExtensionCore, IExtension
                 if(isUpdate)
                 {
                     await msg.Edit("Overwriting script...(4/4)");
-                    File.Copy(filePath, $"{Path.Combine(ScriptManager.ScriptPath, $"{script.Instance.Name}.csx")}", true);
+                    File.Copy(filePath, $"{Path.Combine(ScriptManager.ScriptPath, $"{script.Instance.Info.Name}.csx")}", true);
                 }
                 else
                     await msg.Edit("Clean up...(4/4)");

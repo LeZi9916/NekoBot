@@ -2,78 +2,82 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Security.Cryptography;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Message = NekoBot.Types.Message;
-using User = NekoBot.Types.User;
-using Group = NekoBot.Types.Group;
 using NekoBot.Interfaces;
 using NekoBot;
 using NekoBot.Types;
+using Version = NekoBot.Types.Version;
+using Message = NekoBot.Types.Message;
+using User = NekoBot.Types.User;
+using Group = NekoBot.Types.Group;
 #pragma warning disable CS4014
 public partial class Generic : ExtensionCore, IExtension
 {
-    public new BotCommand[] Commands { get; } =
-    {
-        new BotCommand()
+    public new ExtensionInfo Info { get; } = new ExtensionInfo() 
+    { 
+        Name = "Generic",
+        Version = new Version() { Major = 1, Minor = 0 },
+        Commands = new BotCommand[] 
         {
-            Command = "start",
-            Description = "简介"
-        },
-        new BotCommand()
-        {
-            Command = "add",
-            Description = "允许指定用户访问bot"
-        },
-        new BotCommand()
-        {
-            Command = "ban",
-            Description = "禁止指定用户访问bot"
-        },
-        new BotCommand()
-        {
-            Command = "info",
-            Description = "获取指定用户信息"
-        },
-        new BotCommand()
-        {
-            Command = "promote",
-            Description = "提升指定用户权限"
-        },
-        new BotCommand()
-        {
-            Command = "demote",
-            Description = "降低指定用户权限"
-        },
-        new BotCommand()
-        {
-            Command = "status",
-            Description = "显示bot服务器状态"
-        },
-        new BotCommand()
-        {
-            Command = "logs",
-            Description = "获取本次运行日志"
-        },
-        new BotCommand()
-        {
-            Command = "config",
-            Description = "修改bot在Group的设置"
-        },
-        new BotCommand()
-        {
-            Command = "set",
-            Description = "权限狗专用"
-        },
-        new BotCommand()
-        {
-            Command = "help",
-            Description = "显示帮助信息"
+            new BotCommand()
+            {
+                Command = "start",
+                Description = "简介"
+            },
+            new BotCommand()
+            {
+                Command = "add",
+                Description = "允许指定用户访问bot"
+            },
+            new BotCommand()
+            {
+                Command = "ban",
+                Description = "禁止指定用户访问bot"
+            },
+            new BotCommand()
+            {
+                Command = "info",
+                Description = "获取指定用户信息"
+            },
+            new BotCommand()
+            {
+                Command = "promote",
+                Description = "提升指定用户权限"
+            },
+            new BotCommand()
+            {
+                Command = "demote",
+                Description = "降低指定用户权限"
+            },
+            new BotCommand()
+            {
+                Command = "status",
+                Description = "显示bot服务器状态"
+            },
+            new BotCommand()
+            {
+                Command = "logs",
+                Description = "获取本次运行日志"
+            },
+            new BotCommand()
+            {
+                Command = "config",
+                Description = "修改bot在Group的设置"
+            },
+            new BotCommand()
+            {
+                Command = "set",
+                Description = "权限狗专用"
+            },
+            new BotCommand()
+            {
+                Command = "help",
+                Description = "显示帮助信息"
+            }
         }
     };
-    public string Name { get; } = "Generic";
     public override void Handle(Message userMsg)
     {
         var cmd = (Command)userMsg.Command;

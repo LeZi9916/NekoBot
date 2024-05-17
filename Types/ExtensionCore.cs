@@ -1,15 +1,16 @@
-﻿using System;
+﻿using NekoBot.Interfaces;
 using System.Reflection;
-using Telegram.Bot.Types;
-
 
 #nullable enable
 namespace NekoBot.Types
 {
-    public class ExtensionCore
+    public class ExtensionCore : IExtension
     {
-        public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-        public BotCommand[] Commands { get; } = { };
+        public ExtensionInfo Info { get; } = new ExtensionInfo()
+        {
+            Name = "Default",
+            Version = new Version() { Major = 1, Minor = 0 }
+        };
         public virtual void Handle(Message userMsg)
         {
 
@@ -26,7 +27,7 @@ namespace NekoBot.Types
         {
 
         }
-        public virtual MethodInfo? GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
+        public virtual MethodInfo? GetMethod(string methodName) => Info.ExtAssembly.GetType().GetMethod(methodName);
         public static void Debug(DebugType type, string message) => Core.Debug(type, message);
     }
 }

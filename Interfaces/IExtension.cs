@@ -1,5 +1,5 @@
-﻿using System.Reflection;
-using Telegram.Bot.Types;
+﻿using NekoBot.Types;
+using System.Reflection;
 using Message = NekoBot.Types.Message;
 
 #nullable enable
@@ -8,17 +8,10 @@ namespace NekoBot.Interfaces
     public interface IExtension
     {
         /// <summary>
-        /// Return a assembly
+        /// Extension Info
+        /// <para>include name,version,commands,dependencies and assembly</para>
         /// </summary>
-        Assembly ExtAssembly { get; }
-        /// <summary>
-        /// Command list which extension can support
-        /// </summary>
-        BotCommand[] Commands { get; }
-        /// <summary>
-        /// Extension Name
-        /// </summary>
-        string Name { get; }
+        public ExtensionInfo Info { get; }
         void Handle(Message msg);
         void Init();
         void Save();

@@ -1,21 +1,19 @@
-﻿using NekoBot.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Telegram.Bot.Types;
+﻿using NekoBot.Interfaces;
+using NekoBot.Types;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using ISerializer = NekoBot.Interfaces.ISerializer;
-using Message = NekoBot.Types.Message;
+using Version = NekoBot.Types.Version;
 #nullable enable
 namespace NekoBot.Scripts
 {
-    public class YamlSerializer : ExtensionCore, ISerializer
+    public class YamlSerializer : ExtensionCore, IExtension, ISerializer
     {
-        public string Name { get; } = "YamlSerializer";
+        public new ExtensionInfo Info { get; } = new ExtensionInfo()
+        {
+            Name = "YamlSerializer",
+            Version = new Version() { Major = 1, Minor = 0 }
+        };
         public static string Serialize<T>(T obj)
         {
             var serializer = new SerializerBuilder()

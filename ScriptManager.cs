@@ -272,7 +272,7 @@ namespace NekoBot
         /// 获取已加载Script的Name
         /// </summary>
         /// <returns></returns>
-        public static string[] GetLoadedScript() => objs.Select(x => x.Name).ToArray();
+        public static string[] GetLoadedScript() => objs.Select(x => x.Info.Name).ToArray();
         /// <summary>
         /// 获取主Assembly的版本号
         /// </summary>

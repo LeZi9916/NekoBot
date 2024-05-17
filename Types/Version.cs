@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace NekoBot.Types;
-
 public struct Version
 {
     public required int Major;
@@ -24,6 +19,8 @@ public struct Version
                Build == ver.Build;
     }
     public override string ToString() => $"{Major}.{Minor}.{Revision}.{Build}";
+    public override bool Equals([NotNullWhen(true)] object obj) => base.Equals(obj);
+    public override int GetHashCode() => base.GetHashCode();
     public static bool operator >(Version left, Version right)
     {
         return left.Major > right.Major ||
