@@ -1,4 +1,5 @@
 ﻿using CSScriptLib;
+using NekoBot.Exceptions;
 using NekoBot.Interfaces;
 using NekoBot.Types;
 using System;
@@ -6,13 +7,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security;
 using System.Security.Cryptography;
-using System.Security.Permissions;
-using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
 using Message = NekoBot.Types.Message;
 
 #nullable enable
@@ -27,7 +24,7 @@ namespace NekoBot
     {
         public static bool IsCompiling { get; private set; } = false;
 
-        static List<IExtension> objs = new();
+        static List<IExtension> loadedScripts = new();
         static List<BotCommand> commands = new();
         static Dictionary<string,IExtension> handlers = new();
         public static string ScriptPath { get => Path.Combine(Config.AppPath, "Scripts"); }
@@ -35,32 +32,25 @@ namespace NekoBot
         {
             if (!Directory.Exists(ScriptPath))
                 return;
-
-            var scripts = new DirectoryInfo(ScriptPath).GetFiles()
-                                           .Where(x => x.Extension is ".csx" or ".cs")
-                                           .Select(x => x.FullName)
-                                           .ToArray();
-            foreach (var filepath in scripts)
-                Load(filepath);
-        }
-        public static void Load(string filePath)
-        {
             try
             {
-                var eva = CSScript.Evaluator;
-                var obj = eva.LoadFile<IExtension>(filePath);
-                var name = obj.Name;
-
-                AddExtension(obj);                
+                var scripts = GetScripts();
+                var loader = new ScriptLoader(scripts.Select(x => x.Info).ToList());
+                var loadOrder = loader.GetLoadOrder();
+                foreach (var name in loadOrder)
+                {
+                    var obj = scripts.Find(x => x.Info.Name == name);
+                    AddExtension(obj);
+                }
             }
             catch (Exception e)
             {
-                Core.Debug(DebugType.Error, $"Loading script failure ({filePath}):\n{e}");
+                Core.Debug(DebugType.Error, $"Loading script failure:\n{e}");
             }
         }
         public static void Save()
         {
-            foreach (var obj in objs)
+            foreach (var obj in loadedScripts)
                 obj.Save();
         }
         /// <summary>
@@ -72,47 +62,19 @@ namespace NekoBot
             IsCompiling = true;
             var msg = (await userMsg.Reply("Reloading Script..."))!;
             try
-            {                
-                List<IExtension> newObjs = new();
-                var scripts = new DirectoryInfo(ScriptPath).GetFiles()
-                                               .Where(x => x.Extension is ".csx" or ".cs")
-                                               .Select(x => x.FullName);
-                foreach (var filePath in scripts)
-                {
-                    var fileName = new FileInfo(filePath).Name;
-                    await msg.Edit($"Compiling \"{fileName}\"...");
-                    try
-                    {
-                        var ext = CompileScript<IExtension>(filePath);
-                        if (ext.Instance is null)
-                            throw new Exception();
-                        newObjs.Add(ext.Instance);
-                    }
-                    catch (Exception e)
-                    {
-                        await msg.Edit(
-                            $"Loading \"{fileName}\" failure:\n" +
-                            "```csharp\n" +
-                            Core.StringHandle(e.ToString()) +
-                            "\n```",
-                            ParseMode.MarkdownV2);
-                    }
-                }
+            {
+                List<IExtension> newScripts = GetScripts(s => msg.Edit(s));
+                var oldScripts = new List<IExtension>(loadedScripts);
 
-                var _objs = objs.ToArray();
-                var needUpdate = _objs.Where(x => newObjs.Any(y => y.Name == x.Name))
-                                      .Select(x => x.Name);
-
-                foreach (var oldExt in _objs.Where(x => needUpdate.Any(y => x.Name == y)))
-                    RemoveExtension(oldExt);
-
-                foreach (var ext in newObjs.Where(x => needUpdate.Any(y => x.Name == y)))
-                    AddExtension(ext);
+                foreach (var old in oldScripts)
+                    RemoveExtension(old);
+                foreach (var newScript in newScripts)
+                    AddExtension(newScript);
 
                 UpdateCommand();
                 await msg.Edit(
                     "Scripts have been loaded:\n" +
-                    $"-{string.Join("\n-", objs.Select(x => x.Name))}");
+                    $"-{string.Join("\n-", loadedScripts.Select(x => x.Info.Name))}");
                 GC.Collect();
             }
             catch(Exception e)
@@ -125,8 +87,6 @@ namespace NekoBot
         public static void CommandHandle(Message msg)
         {
             var prefix = ((Command)msg.Command!).Prefix;
-            if(prefix == "nslookup")
-                new NetQuery().Handle(msg);
             if (handlers.ContainsKey(prefix))
                 handlers[prefix].Handle(msg);
             else
@@ -139,7 +99,7 @@ namespace NekoBot
         public static void UpdateScript(IExtension ext)
         {
             IsCompiling = true;
-            var loadedExt = GetExtension(ext.Name);
+            var loadedExt = GetExtension(ext.Info.Name);
             if(loadedExt is not null)
                 RemoveExtension(loadedExt);
             AddExtension(ext);            
@@ -213,14 +173,7 @@ namespace NekoBot
         /// </summary>
         /// <param name="moduleName"></param>
         /// <returns>IExtension的实例，不存在则返回null</returns>
-        public static IExtension? GetExtension(string extName)
-        {
-            var result = objs.Where(x => x.Name == extName).ToArray();
-            if (result.Length > 0)
-                return result.First();
-            else
-                return null;
-        }
+        public static IExtension? GetExtension(string extName) => loadedScripts.Find(x => x.Info.Name == extName);
         /// <summary>
         /// 加载并初始化该Extension
         /// </summary>
@@ -234,16 +187,16 @@ namespace NekoBot
         {
             if (ext is null) return;
 
-            foreach (var item in ext.Commands)
+            foreach (var item in ext.Info.Commands)
             {
                 if (handlers.ContainsKey(item.Command))
                     continue;
                 handlers.Add(item.Command, ext);
                 commands.Add(item);
             }
-            objs.Add(ext);
+            loadedScripts.Add(ext);
             ext.Init();
-            Core.Debug(DebugType.Info, $"Loaded script : {ext.Name}");
+            Core.Debug(DebugType.Info, $"Loaded script : {ext.Info.Name}");
         }
         /// <summary>
         /// 卸载该Extension
@@ -256,28 +209,116 @@ namespace NekoBot
         /// <param name="ext"></param>
         public static void RemoveExtension(IExtension? ext)
         {
-            if (ext is null || !objs.Contains(ext)) return;
+            if (ext is null || !loadedScripts.Contains(ext)) return;
 
             var oldKeys = handlers.Where(x => x.Value == ext).Select(x => x.Key);
             foreach (var key in oldKeys)
                 handlers.Remove(key);
-            foreach(var cmd in ext.Commands)
+            foreach(var cmd in ext.Info.Commands)
                 commands.Remove(cmd);
-            objs.Remove(ext);
+            loadedScripts.Remove(ext);
             ext.Destroy();
-            Core.Debug(DebugType.Info, $"Unloaded script : {ext.Name}");
+            Core.Debug(DebugType.Info, $"Unloaded script : {ext.Info.Name}");
         }
 
         /// <summary>
         /// 获取已加载Script的Name
         /// </summary>
         /// <returns></returns>
-        public static string[] GetLoadedScript() => objs.Select(x => x.Info.Name).ToArray();
+        public static string[] GetLoadedScript() => loadedScripts.Select(x => x.Info.Name).ToArray();
+        static List<IExtension> GetScripts() => GetScripts(s => { });
+        static List<IExtension> GetScripts(Action<string> step)
+        {
+            var scriptPaths = new DirectoryInfo(ScriptPath).GetFiles()
+                                           .Where(x => x.Extension is ".csx" or ".cs")
+                                           .Select(x => x.FullName)
+                                           .ToArray();
+            var eva = CSScript.Evaluator;
+            List<IExtension> uninitObjs = new();
+            foreach (var path in scriptPaths)
+            {
+                try
+                {
+                    step($"Compiling \"{new FileInfo(path).Name}\"...");
+                    var obj = eva.LoadFile<IExtension>(path);
+                    var info = obj.Info;
+                    var conflictObj = uninitObjs.Find(x => x.Info.Name == info.Name);
+                    if (conflictObj is not null)
+                    {
+                        if (conflictObj.Info.Version < info.Version)
+                        {
+                            uninitObjs.Remove(conflictObj);
+                            Core.Debug(DebugType.Info, $"Conflicting scripts, removing: {conflictObj.Info.Name}(v{conflictObj.Info.Version})\n");
+                        }
+                        else
+                            continue;
+                    }
+                    uninitObjs.Add(obj);
+                    Core.Debug(DebugType.Info, $"Compiled script: {info.Name}(v{info.Version})\n");
+                }
+                catch (Exception e)
+                {
+                    var name = new FileInfo(path).Name;
+                    Core.Debug(DebugType.Error, $"Compiling script failure ({name}):\n{e}");
+                    step($"Compiling script failure ({name})");
+
+                }
+            }
+            return uninitObjs;
+        }
         /// <summary>
         /// 获取主Assembly的版本号
         /// </summary>
         /// <returns></returns>
         public static System.Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
+    }
+    public class ScriptLoader
+    {
+        Dictionary<string, ExtensionInfo> scriptInfos;
+        HashSet<string> visited = new();
+        HashSet<string> visiting = new();
+        Stack<string> sortedScripts = new();
+
+        public ScriptLoader(List<ExtensionInfo> scriptsList)
+        {
+            scriptInfos = scriptsList.ToDictionary(x => x.Name);
+        }
+        public List<string> GetLoadOrder()
+        {
+            foreach (var scriptInfo in scriptInfos.Values)
+            {
+                if (!visited.Contains(scriptInfo.Name))
+                {
+                    if (!Sort(scriptInfo))
+                        throw new InvalidOperationException("Circular dependency detected");
+                }
+            }
+            return sortedScripts.ToList();
+        }
+        bool Sort(ExtensionInfo info)
+        {
+            if (visited.Contains(info.Name))
+                return true;
+
+            if (visiting.Contains(info.Name))
+                return false;
+
+            visiting.Add(info.Name);
+
+            foreach (var depend in info.Dependencies)
+            {
+                if (!scriptInfos.ContainsKey(depend.Name))
+                    throw new DependNotFoundException($"Script \"{info.Name}\" depends on \"{depend.Name}\",but \"{depend.Name}\" is not found");
+                if (!Sort(scriptInfos[depend.Name]))
+                    return false;
+            }
+
+            visiting.Remove(info.Name);
+            visited.Add(info.Name);
+            sortedScripts.Push(info.Name);
+
+            return true;
+        }
     }
 }
