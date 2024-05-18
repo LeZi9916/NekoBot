@@ -19,6 +19,7 @@ public partial class Generic : ExtensionCore, IExtension
     { 
         Name = "Generic",
         Version = new Version() { Major = 1, Minor = 0 },
+        Type = ExtensionType.Handler,
         Commands = new BotCommand[] 
         {
             new BotCommand()

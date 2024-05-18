@@ -1,7 +1,6 @@
 ﻿using Telegram.Bot.Types;
 using System.Text.Json.Serialization;
 using NekoBot.Interfaces;
-using TelegramBot;
 
 namespace NekoBot.Types
 {

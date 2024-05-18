@@ -5,9 +5,7 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot;
-using static TelegramBot.Core;
-
+using static NekoBot.Core;
 #nullable enable
 namespace NekoBot.Types;
 public class Message
@@ -153,10 +151,7 @@ public class Message
         if (msg is null || msg.From is null) return null;
 
         var id = msg.MessageId;
-        var from = Config.SearchUser(msg.From!.Id);
-        if (from is null)
-            from = msg.From;
-
+        var from = Config.SearchUser(msg.From!.Id) ?? msg.From;
         var content = (msg.Text ?? msg.Caption) ?? string.Empty;
         var cmd = Types.Command.Parse(content);
 

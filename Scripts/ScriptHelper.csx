@@ -21,6 +21,7 @@ public partial class ScriptHelper : ExtensionCore, IExtension
     {
         Name = "ScriptHelper",
         Version = new Version() { Major = 1, Minor = 0 },
+        Type = ExtensionType.Handler,
         Commands = new BotCommand[]
         {
             new BotCommand()

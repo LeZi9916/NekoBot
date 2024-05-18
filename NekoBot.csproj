@@ -8,6 +8,7 @@
     <PublishAot>False</PublishAot>
     <PublishTrimmed>False</PublishTrimmed>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +21,7 @@
     <None Remove="Scripts\Mai.csx" />
     <None Remove="Scripts\NetQuery.csx" />
     <None Remove="Scripts\ScriptHelper.csx" />
+    <None Remove="Scripts\UserDatabase.csx" />
     <None Remove="Scripts\YamlSerializer.csx" />
   </ItemGroup>
 
@@ -33,6 +35,7 @@
     <Compile Include="Scripts\NetQuery.csx" />
     <Compile Include="Scripts\ScriptHelper.csx" />
     <Compile Include="Scripts\JsonSerializer.csx" />
+    <Compile Include="Scripts\UserDatabase.csx" />
     <Compile Include="Scripts\YamlSerializer.csx" />
   </ItemGroup>
 

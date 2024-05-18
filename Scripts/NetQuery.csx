@@ -13,18 +13,24 @@ using NekoBot;
 using Message = NekoBot.Types.Message;
 using NekoBot.Interfaces;
 using NekoBot.Types;
+using Version = NekoBot.Types.Version;
 #nullable enable
 public class NetQuery: ExtensionCore, IExtension
 {
-    public new BotCommand[] Commands { get; } =
+    public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
-        new BotCommand()
+        Name = "NetQuery",
+        Version = new Version() { Major = 1, Minor = 0 },
+        Type = ExtensionType.Handler,
+        Commands = new BotCommand[]
         {
-             Command = "nslookup",
-             Description = "域名解析"
+            new BotCommand()
+            {
+                Command = "nslookup",
+                Description = "域名解析"
+            }
         }
     };
-    public string Name { get; } = "NetQuery";
     public override void Handle(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;

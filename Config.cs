@@ -18,25 +18,23 @@ namespace NekoBot
     public static class Config
     {
         static DateTime Up = DateTime.Now;
-        public static string AppPath = Environment.CurrentDirectory;
-        public static string LogsPath = Path.Combine(AppPath, "logs");
-        public static string DatabasePath = Path.Combine(AppPath, "Database");
-        public static string TempPath = Path.Combine(AppPath, "Temp");
-        public static string LogFile = Path.Combine(LogsPath, $"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log");
-        public static HotpAuthenticator Authenticator = new HotpAuthenticator();
+        public static string AppPath { get => Environment.CurrentDirectory; }
+        public static string LogsPath { get => Path.Combine(AppPath, "logs"); }
+        public static string DatabasePath { get => Path.Combine(AppPath, "Database"); }
+        public static string TempPath { get => Path.Combine(AppPath, "Temp"); }
+        public static string LogFile { get => Path.Combine(LogsPath, $"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log"); }
+        public static HotpAuthenticator Authenticator { get; set; } = new HotpAuthenticator();
 
-        public static bool EnableAutoSave = true;
-        public static int AutoSaveInterval = 900000;
+        public static bool EnableAutoSave { get; set; } = true;
+        public static int AutoSaveInterval { get; set; } = 900000;
 
-        public static long TotalHandleCount = 0;
-        public static List<long> TimeSpentList = new();
+        public static long TotalHandleCount { get; set; } = 0;
+        public static List<long> TimeSpentList { get; set; } = new();
 
-        public static List<long> GroupIdList = new();
-        public static List<Group> GroupList = new();
-
-
-        public static List<long> UserIdList = new() { 1136680302 };
-        public static List<User> TUserList = new()
+        public static List<long> GroupIdList { get; set; } = new();
+        public static List<Group> GroupList { get; set; } = new();
+        public static List<long> UserIdList { get; set; } = new() { 1136680302 };
+        public static List<User> TUserList { get; set; } = new()
         {
             new User()
             {
@@ -46,8 +44,7 @@ namespace NekoBot
                 Level = Permission.Root
             }
         };
-
-        public static List<KeyChip> keyChips = new()
+        public static List<KeyChip> keyChips { get; set; } = new()
         {
             new KeyChip()
             {

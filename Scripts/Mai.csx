@@ -40,6 +40,7 @@ public partial class Mai : ExtensionCore, IExtension
     {
         Name = "Mai",
         Version = new Version() { Major = 1, Minor = 0 },
+        Type = ExtensionType.Handler,
         Commands = new BotCommand[]
         {
             new BotCommand()
