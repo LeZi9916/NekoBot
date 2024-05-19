@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Scripts\Database\GroupDatabase.csx" />
     <None Remove="Scripts\Generic.csx" />
     <None Remove="Scripts\JsonSerializer.csx" />
     <None Remove="Scripts\Mai.csx" />
@@ -28,18 +29,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="Scripts\Generic.csx">
+    <Compile Include="Scripts\Database\GroupDatabase.csx" />
+    <Compile Include="Scripts\Module\Generic.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Scripts\Mai.csx">
+    <Compile Include="Scripts\Module\Mai.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Scripts\MaiDatabase.csx" />
-    <Compile Include="Scripts\MessageHandler.csx" />
-    <Compile Include="Scripts\NetQuery.csx" />
-    <Compile Include="Scripts\ScriptHelper.csx" />
+    <Compile Include="Scripts\Database\MaiDatabase.csx" />
+    <Compile Include="Scripts\Handler\MessageHandler.csx" />
+    <Compile Include="Scripts\Module\NetQuery.csx" />
+    <Compile Include="Scripts\Module\ScriptHelper.csx" />
     <Compile Include="Scripts\JsonSerializer.csx" />
-    <Compile Include="Scripts\UserDatabase.csx" />
+    <Compile Include="Scripts\Database\UserDatabase.csx" />
     <Compile Include="Scripts\YamlSerializer.csx" />
   </ItemGroup>
 
