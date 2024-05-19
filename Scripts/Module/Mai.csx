@@ -32,15 +32,15 @@ using Version = NekoBot.Types.Version;
 #pragma warning disable CS4014
 public partial class Mai : ExtensionCore, IExtension
 {
-    static MaiMonitor monitor;
-    static MaiScanner scanner;
-    static MaiDatabase database;
+    static MaiMonitor? monitor;
+    static MaiScanner? scanner;
+    static MaiDatabase? database;
 
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "Mai",
         Version = new Version() { Major = 1, Minor = 0 },
-        Type = ExtensionType.Handler,
+        Type = ExtensionType.Module,
         Commands = new BotCommand[]
         {
             new BotCommand()
@@ -58,6 +58,38 @@ public partial class Mai : ExtensionCore, IExtension
                 Command = "maistatus",
                 Description = "查看土豆服务器状态"
             }
+        },
+        Dependencies = new ExtensionInfo[]{
+            new ExtensionInfo()
+            {
+                Name = "UserDatabase",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Database
+            },
+            new ExtensionInfo()
+            {
+                Name = "GroupDatabase",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Database
+            },
+            new ExtensionInfo()
+            {
+                Name = "MaiDatabase",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Database
+            },
+            new ExtensionInfo()
+            {
+                Name = "JsonSerializer",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Serializer
+            },
+            new ExtensionInfo()
+            {
+                Name = "YamlSerializer",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Serializer
+            }
         }
     };
     public override void Init()
@@ -73,13 +105,13 @@ public partial class Mai : ExtensionCore, IExtension
     }
     public override void Save()
     {
-        database.Save();
-        monitor.Save();
+        database!.Save();
+        monitor!.Save();
     }
     public override void Destroy()
     {
-        monitor.Destroy();
-        scanner.Destroy();
+        monitor!.Destroy();
+        scanner!.Destroy();
         database = null;
         monitor = null;
         scanner = null;
@@ -88,7 +120,7 @@ public partial class Mai : ExtensionCore, IExtension
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var group = userMsg.GetGroup();
+        var group = userMsg.Group;
 
         if (cmd.Prefix == "maistatus")
         {
@@ -745,7 +777,7 @@ public partial class Mai : ExtensionCore, IExtension
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
         var param = cmd.Params.Skip(1).ToArray();
-        var group = userMsg.GetGroup();
+        var group = userMsg.Group;
 
         var userId = (int)querier.MaiUserId;
         if (!param.IsEmpty())
@@ -1686,30 +1718,45 @@ public partial class Mai
         }
         public static string ToJsonString<T>(T target) => Serialize(target);
         public static T FromJsonString<T>(string json) => Deserialize<T>(json);
-        public static string Serialize<T>(T obj)
+        public static string? Serialize<T>(T obj)
         {
-            var options = new JsonSerializerOptions
+            var ext = ScriptManager.GetExtension("JsonSerializer") as ISerializer;
+            JsonSerializer? serializer = null;
+            if (ext is not null)
             {
-                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters = { new DateTimeConverter() },
-                IncludeFields = true,
-                WriteIndented = true
-            };
-            return JsonSerializer.Serialize(obj, options);
+                serializer = ext as JsonSerializer;
+                var options = new JsonSerializerOptions
+                {
+                    Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    Converters = { new DateTimeConverter() },
+                    IncludeFields = true,
+                    WriteIndented = true
+                };
+                var result = serializer!.Serialize<T>(obj, options);
+                return result;
+            }
+            return default;
+            
         }
-        public static T Deserialize<T>(string json)
+        public static T? Deserialize<T>(string json)
         {
-            var options = new JsonSerializerOptions
-            {
-                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                Converters = { new DateTimeConverter() },
-                IncludeFields = true
-            };
-            var result = JsonSerializer.Deserialize<T>(json, options);
-
-            return result;
+            var ext = ScriptManager.GetExtension("JsonSerializer") as ISerializer;
+            JsonSerializer? serializer = null;
+            if(ext is not null)
+            { 
+                serializer = ext as JsonSerializer;
+                var options = new JsonSerializerOptions
+                {
+                    Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    Converters = { new DateTimeConverter() },
+                    IncludeFields = true
+                };
+                var result = serializer!.Deserialize<T>(json, options);
+                return result;
+            }
+            return default;
         }
     }
     public static string StringHandle(string s)

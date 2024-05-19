@@ -19,7 +19,7 @@ public partial class Generic : ExtensionCore, IExtension
     { 
         Name = "Generic",
         Version = new Version() { Major = 1, Minor = 0 },
-        Type = ExtensionType.Handler,
+        Type = ExtensionType.Module,
         Commands = new BotCommand[] 
         {
             new BotCommand()
@@ -76,6 +76,20 @@ public partial class Generic : ExtensionCore, IExtension
             {
                 Command = "help",
                 Description = "显示帮助信息"
+            }
+        },
+        Dependencies = new ExtensionInfo[]{
+            new ExtensionInfo()
+            {
+                Name = "UserDatabase",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Database
+            },
+            new ExtensionInfo()
+            {
+                Name = "GroupDatabase",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Database
             }
         }
     };
