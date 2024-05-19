@@ -294,7 +294,7 @@ public partial class Generic : ExtensionCore, IExtension
         else if (target.Id != querier.Id && !querier.CheckPermission(Permission.Admin))
             userMsg.Reply("Permission denied.");
         else
-            userMsg.Reply($"User Infomation:\n```copy\n" + Core.StringHandle(
+            userMsg.Reply($"User Infomation:\n```copy\n" + StringHandle(
                           $"Name      : {target.Name}\n" +
                           $"Id        : {target.Id}\n" +
                           $"Permission: {target.Level}\n" +
@@ -339,7 +339,7 @@ public partial class Generic : ExtensionCore, IExtension
         else if (target.Id != group.Id && !querier.CheckPermission(Permission.Admin))
             userMsg.Reply("Permission denied.");
         else
-            userMsg.Reply($"User Infomation:\n```copy\n" + Core.StringHandle(
+            userMsg.Reply($"User Infomation:\n```copy\n" + StringHandle(
                           $"Name      : {target.Name}\n" +
                           $"Id        : {target.Id}\n" +
                           $"Permission: {target.Level}\n\n" +
@@ -410,7 +410,7 @@ public partial class Generic : ExtensionCore, IExtension
                     return;
                 }
                 target.SetPermission(targetLevel);
-                userMsg.Reply($"Success change*{Core.StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2);
+                userMsg.Reply($"Success change*{StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2);
             }
             else
             {
@@ -438,7 +438,7 @@ public partial class Generic : ExtensionCore, IExtension
         var uptime = DateTime.Now - Core.startTime;
         var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
 
-        await userMsg.Reply(Core.StringHandle(
+        await userMsg.Reply(StringHandle(
             $"当前版本: v{ScriptManager.GetVersion()}\n\n" +
              "硬件信息:\n" +
             $"-核心数: {Monitor.ProcessorCount}\n" +
@@ -563,12 +563,12 @@ public partial class Generic : ExtensionCore, IExtension
                 msgGroup.Add(msg);
                 foreach (var s in msgGroup)
                     await userMsg.Reply("```csharp\n" +
-                         $"{Core.StringHandle(s)}\n" +
+                         $"{StringHandle(s)}\n" +
                          $"```",ParseMode.MarkdownV2);
             }
             else
                 await userMsg.Reply("```csharp\n" +
-                         $"{Core.StringHandle(logText)}\n" +
+                         $"{StringHandle(logText)}\n" +
                          $"```",ParseMode.MarkdownV2);
         }
         //await UploadFile(Config.LogFile,chat.Id);
@@ -618,37 +618,37 @@ public partial class Generic : ExtensionCore, IExtension
         switch (cmd.Prefix)
         {
             case "add":
-                helpStr += Core.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/add        允许reply对象访问bot" +
                     "\n/add [int]  允许指定用户访问bot");
                 break;
             case "ban":
-                helpStr += Core.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/ban        封禁reply对象" +
                     "\n/ban [int]  封禁指定用户");
                 break;
             case "info":
-                helpStr += Core.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/info        获取reply对象的用户信息" +
                     "\n/info [int]  获取指定用户的用户信息");
                 break;
             case "promote":
-                helpStr += Core.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/promote        提升reply对象的权限等级" +
                     "\n/promote [int]  提升指定用户的权限等级");
                 break;
             case "demote":
-                helpStr += Core.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/demote        降低reply对象的权限等级" +
                     "\n/demote [int]  降低指定用户的权限等级");
                 break;
             case "help":
-                helpStr += Core.StringHandle(
+                helpStr += StringHandle(
                     "\n相关命令：\n" +
                     "\n/add        允许指定用户访问bot" +
                     "\n/ban        禁止指定用户访问bot" +
@@ -663,7 +663,7 @@ public partial class Generic : ExtensionCore, IExtension
                     "\n更详细的信息请输入\"/{command} help\"");
                 break;
             case "logs":
-                helpStr += Core.StringHandle(
+                helpStr += StringHandle(
                         "命令用法：\n" +
                         "\n/logs            获取最近15条等级为Error或以上的日志信息" +
                         "\n/logs [Lv|int]   获取自定义数量或等级的日志信息" +
@@ -754,7 +754,7 @@ public partial class Generic
                 return;
             }
             group.SetPermission(targetLevel);
-            userMsg.Reply($"Success change*{Core.StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
+            userMsg.Reply($"Success change*{StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
         }
         else if(param.Length == 2)
         {
@@ -785,7 +785,7 @@ public partial class Generic
             }
 
             user.SetPermission(targetLevel);
-            userMsg.Reply($"Success change*{Core.StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
+            userMsg.Reply($"Success change*{StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
         }
         else
             GetHelpInfo(cmd, userMsg);

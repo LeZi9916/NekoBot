@@ -7,9 +7,9 @@ namespace NekoBot.Types
     public class User : IAccount
     {
         public long Id { get; set; }
-        public string Username { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
+        public string? Username { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
         public string Name
         {
             get => FirstName + " " + LastName;
@@ -22,7 +22,7 @@ namespace NekoBot.Types
         public bool IsBot { get; private set; } = false;
         public bool? IsPremium { get; set; }
         [JsonIgnore]
-        public MaiAccount Account { get; set; }
+        public MaiAccount? Account { get; set; }
         public bool CheckPermission(Permission targetLevel) => Level >= targetLevel;
         public bool CheckPermission(Permission targetLevel, Group group)
         {

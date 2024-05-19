@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NekoBot.Interfaces;
+using System;
 using System.Reflection;
 
 #nullable enable
@@ -30,5 +31,14 @@ namespace NekoBot.Types
 
         }
         public virtual MethodInfo? GetMethod(string methodName) => Info.ExtAssembly.GetType().GetMethod(methodName);
-        public static void Debug(DebugType type, string message) => Core.Debug(type, message);    }
+        public static void Debug(DebugType type, string message) => Core.Debug(type, message);
+        public static string StringHandle(string s)
+        {
+            string[] reservedChar = { "_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!" };
+            foreach (var c in reservedChar)
+                s = s.Replace(c, $"\\{c}");
+            return s;
+
+        }
+    }
 }

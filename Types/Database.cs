@@ -16,16 +16,24 @@ namespace NekoBot.Types
 
         public int Count => database.Count;
         public bool IsReadOnly => ((ICollection<T>)database).IsReadOnly;
-        public T this[int index] 
-        { 
-            get => database[index]; 
-            set => database[index] = value; 
+        public T this[int index]
+        {
+            get => database[index];
+            set => database[index] = value;
         }
 
+        public override void Init()
+        {
+            jsonSerializer = (ISerializer)ScriptManager.GetExtension("JsonSerializer")!;
+            yamlSerializer = (ISerializer)ScriptManager.GetExtension("YmalSerializer")!;
+            dbPath = Config.DatabasePath;
+        }
+        public override void Destroy() => Save();
+        public bool Exists(Predicate<T> match) => FindIndex(match) != -1;
         public T? Find(Predicate<T> match)
         {
-            foreach(var item in database)
-                if(match(item))
+            foreach (var item in database)
+                if (match(item))
                     return item;
             return default;
         }
@@ -33,16 +41,32 @@ namespace NekoBot.Types
         public int FindIndex(Predicate<T> match) => database.FindIndex(match);
         public T? FindLast(Predicate<T> match) => database.FindLast(match);
         public int FindLastIndex(Predicate<T> match) => database.FindLastIndex(match);
-        public void Add(T item) => database.Add(item);
-        public bool Remove(T item) => database.Remove(item);
-        public void SetAll(T[] collection) => database = new(collection);
-        public T[] All() => database.ToArray();
+        public virtual void Add(T item) => database.Add(item);
+        public virtual bool Remove(T item) => database.Remove(item);
+        public virtual void SetAll(T[] collection) => database = new(collection);
+        public virtual T[] All() => database.ToArray();
         public int IndexOf(T item) => database.IndexOf(item);
         public void Insert(int index, T item) => database.Insert(index, item);
         public void RemoveAt(int index) => database.RemoveAt(index);
         public void Clear() => database.Clear();
         public bool Contains(T item) => database.Contains(item);
         public void CopyTo(T[] array, int arrayIndex) => database.CopyTo(array, arrayIndex);
+        public bool Update(Predicate<T> match, T item) 
+        {
+            try
+            {
+                var originIndex = FindIndex(match);
+                if (originIndex != -1)
+                    database[originIndex] = item;
+                else
+                    database.Add(item);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         public IEnumerator<T> GetEnumerator() => database.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => database.GetEnumerator();
         protected static T2 Load<T2>(ISerializer serializer, string path) where T2 : new()

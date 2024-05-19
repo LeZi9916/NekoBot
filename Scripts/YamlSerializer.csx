@@ -4,7 +4,6 @@ using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using ISerializer = NekoBot.Interfaces.ISerializer;
 using Version = NekoBot.Types.Version;
-#nullable enable
 public class YamlSerializer : ExtensionCore, IExtension, ISerializer
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()

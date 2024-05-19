@@ -6,13 +6,14 @@ namespace NekoBot.Interfaces
 {
     public interface IDatabase<T>: IExtension, IList<T>
     {         
-        void Add(T item);
-        bool Remove(T item);
         void SetAll(T[] collection);
         T[] All();
+        T? Find(Predicate<T> match);
         List<T> FindAll(Predicate<T> match);
         int FindIndex(Predicate<T> match);
         T? FindLast(Predicate<T> match);
         int FindLastIndex(Predicate<T> match);
+        bool Exists(Predicate<T> match);
+        bool Update(Predicate<T> match, T item);
     }
 }

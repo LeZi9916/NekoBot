@@ -19,6 +19,8 @@
     <None Remove="Scripts\Generic.csx" />
     <None Remove="Scripts\JsonSerializer.csx" />
     <None Remove="Scripts\Mai.csx" />
+    <None Remove="Scripts\MaiDatabase.csx" />
+    <None Remove="Scripts\MessageHandler.csx" />
     <None Remove="Scripts\NetQuery.csx" />
     <None Remove="Scripts\ScriptHelper.csx" />
     <None Remove="Scripts\UserDatabase.csx" />
@@ -32,6 +34,8 @@
     <Compile Include="Scripts\Mai.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
+    <Compile Include="Scripts\MaiDatabase.csx" />
+    <Compile Include="Scripts\MessageHandler.csx" />
     <Compile Include="Scripts\NetQuery.csx" />
     <Compile Include="Scripts\ScriptHelper.csx" />
     <Compile Include="Scripts\JsonSerializer.csx" />

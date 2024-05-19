@@ -964,7 +964,7 @@ public partial class Mai : ExtensionCore, IExtension
         switch (cmd.Prefix)
         {
             case "mai":
-                helpStr += Core.StringHandle(
+                helpStr += StringHandle(
                         "命令用法：\n" +
                         "\n/mai bind image    上传二维码并进行绑定" +
                         "\n/mai bind [str]    使用SDWC标识符进行绑定" +
@@ -981,7 +981,7 @@ public partial class Mai : ExtensionCore, IExtension
                         "\n/mai logout        登出");
                 break;
             case "maiscanner":
-                helpStr += Core.StringHandle(
+                helpStr += StringHandle(
                         "命令用法：\n" +
                         "\n/maiscanner status       获取扫描器状态" +
                         "\n/maiscanner update [int] 从指定位置更新数据库" +

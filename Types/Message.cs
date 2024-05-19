@@ -6,12 +6,12 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using static NekoBot.Core;
-#nullable enable
+
 namespace NekoBot.Types;
 public class Message
 {
     public required int Id { get; init; }
-    public required User From { get; init; }
+    public required User From { get; set; }
     public required Chat Chat { get; init; }
     public required MessageType Type { get; init; }
     public Message? ReplyTo { get; init; } = null;
@@ -23,7 +23,9 @@ public class Message
     public PhotoSize[]? Photo { get; set; }
     public Command? Command { get; set; }
     public required ITelegramBotClient Client { get; init; }
-    public Group? GetGroup() => IsGroup ? Config.SearchGroup(Chat.Id) : null;
+    public Group? Group { get; set; }
+    public Update? Raw { get; set; }
+
     public async Task<bool> GetDocument(string dPath)
     {
         try
@@ -145,13 +147,12 @@ public class Message
             return null;
         }
     }
-
     public static Message? Parse(ITelegramBotClient client, Telegram.Bot.Types.Message? msg)
     {
         if (msg is null || msg.From is null) return null;
 
         var id = msg.MessageId;
-        var from = Config.SearchUser(msg.From!.Id) ?? msg.From;
+        var from = msg.From;
         var content = (msg.Text ?? msg.Caption) ?? string.Empty;
         var cmd = Types.Command.Parse(content);
 

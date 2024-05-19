@@ -3,14 +3,16 @@ using NekoBot.Types;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Version = NekoBot.Types.Version;
 
-public class UserDatabase : Database<User>, IExtension, IDatabase<User>
+public class MaiDatabase : Database<User>, IExtension, IDatabase<User>
 {
-    
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
-        Name = "UserDatabase",
+        Name = "MaiDatabase",
         Version = new Version() { Major = 1, Minor = 0 },
         Type = ExtensionType.Database,
         Dependencies = new ExtensionInfo[]{
@@ -31,11 +33,10 @@ public class UserDatabase : Database<User>, IExtension, IDatabase<User>
     public override void Init()
     {
         base.Init();
-        database = Load<List<User>>(yamlSerializer!, Path.Combine(dbPath!, "UserDatabase.yaml"));
+        database = Load<List<User>>(yamlSerializer!, Path.Combine(dbPath!, "MaiDatabase.yaml"));
     }
     public override void Save()
     {
-        Save(yamlSerializer!, Path.Combine(dbPath!, "UserDatabase.yaml"), database);
+        Save(yamlSerializer!, Path.Combine(dbPath!, "MaiDatabase.yaml"), database);
     }
-    public override void Add(User item) => Update(x => x.Id == item.Id, item);
 }

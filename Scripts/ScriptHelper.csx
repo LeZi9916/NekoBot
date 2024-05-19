@@ -80,7 +80,7 @@ public partial class ScriptHelper : ExtensionCore, IExtension
                 var result = ScriptManager.EvalCode(code) ?? "null";
                 var _result = string.IsNullOrEmpty(result) ? "empty" : result;
                 msg.Edit("```csharp\n" +
-                        $"{Core.StringHandle(result)}\n" +
+                        $"{StringHandle(result)}\n" +
                         $"```",ParseMode.MarkdownV2);
             }
             else
@@ -221,7 +221,7 @@ public partial class ScriptHelper : ExtensionCore, IExtension
             {
                 await msg.Edit("Error: Compile script failure\n" +
                     "```csharp\n" +
-                    $"{Core.StringHandle(script.Exception.ToString())}" +
+                    $"{StringHandle(script.Exception.ToString())}" +
                     "\n```",ParseMode.MarkdownV2);
                 return;
             }

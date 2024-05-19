@@ -101,7 +101,7 @@ public class NetQuery: ExtensionCore, IExtension
 
             if (result.HasError)
             {
-                rsp = $"{rspHeader}" + Core.StringHandle(
+                rsp = $"{rspHeader}" + StringHandle(
                       $"{nsInfo}\n" +
                       $"From \"{result.NameServer}\" message: {result.ErrorMessage}") +
                       $"{rspTailer}";
@@ -124,7 +124,7 @@ public class NetQuery: ExtensionCore, IExtension
                                $"Ttl: {r.TimeToLive}\n\n";
                 });
             }
-            await userMsg.Reply($"{rspHeader}" + Core.StringHandle(
+            await userMsg.Reply($"{rspHeader}" + StringHandle(
                                 $"{nsInfo}\n" +
                                 $"{rsp}") +
                                 $"{rspTailer}", ParseMode.MarkdownV2);
@@ -132,7 +132,7 @@ public class NetQuery: ExtensionCore, IExtension
         catch(Exception e)
         {
             await userMsg.Reply("```csharp\n" +
-                               $"{Core.StringHandle(e.ToString())}\n" +
+                               $"{StringHandle(e.ToString())}\n" +
                                $"```",ParseMode.MarkdownV2);
         }
     }
