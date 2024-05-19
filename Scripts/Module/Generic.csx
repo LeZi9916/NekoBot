@@ -12,9 +12,44 @@ using Version = NekoBot.Types.Version;
 using Message = NekoBot.Types.Message;
 using User = NekoBot.Types.User;
 using Group = NekoBot.Types.Group;
+using NekoBot.Exceptions;
 #pragma warning disable CS4014
 public partial class Generic : ExtensionCore, IExtension
 {
+    IDatabase<User> userDatabase 
+    { 
+        get
+        {
+            var newDB = ScriptManager.GetExtension("UserDatabase");
+            if(newDB is not null and IDatabase<User> db)
+            {
+                if(db != _userDatabase)
+                {
+                    _userDatabase = db;
+                    return db;
+                }
+            }
+            return _userDatabase;
+        }
+    }
+    IDatabase<Group> groupDatabase
+    {
+        get
+        {
+            var newDB = ScriptManager.GetExtension("GroupDatabase");
+            if (newDB is not null and IDatabase<Group> db)
+            {
+                if (db != _groupDatabase)
+                {
+                    _groupDatabase = db;
+                    return db;
+                }
+            }
+            return _groupDatabase;
+        }
+    }
+    IDatabase<User> _userDatabase = new Database<User>();
+    IDatabase<Group> _groupDatabase = new Database<Group>();
     public new ExtensionInfo Info { get; } = new ExtensionInfo() 
     { 
         Name = "Generic",
@@ -93,9 +128,16 @@ public partial class Generic : ExtensionCore, IExtension
             }
         }
     };
+    public override void Init()
+    {
+        _userDatabase = ((ScriptManager.GetExtension("UserDatabase") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize")) 
+                        as IDatabase<User>)!;
+        _groupDatabase = ((ScriptManager.GetExtension("GroupDatabase") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize")) 
+                        as IDatabase<Group>)!;
+    }
     public override void Handle(Message userMsg)
     {
-        var cmd = (Command)userMsg.Command;
+        var cmd = (Command)userMsg.Command!;
         if (cmd.Prefix is "help")
         {
             GetHelpInfo((Command)userMsg.Command,userMsg);
@@ -179,7 +221,7 @@ public partial class Generic : ExtensionCore, IExtension
         var param = cmd.Params.Skip(1).ToArray();
 
         var replyTo = userMsg.ReplyTo;
-        User target = null;
+        User? target = null;
 
         if (param.IsEmpty())
         {
@@ -188,14 +230,14 @@ public partial class Generic : ExtensionCore, IExtension
                 GetHelpInfo(cmd,userMsg);
                 return;
             }
-            target = Config.SearchUser(replyTo.From.Id);
+            target = userDatabase.Find(x => x.Id ==replyTo.From.Id);
         }
         else
         {
             long id = -1;
 
             if (long.TryParse(param.First(), out id))
-                target = Config.SearchUser(id);
+                target = userDatabase.Find(x => x.Id ==id);
             else
             {
                 userMsg.Reply("Invild userId");
@@ -232,7 +274,7 @@ public partial class Generic : ExtensionCore, IExtension
         var param = cmd.Params.Skip(1).ToArray();
 
         var replyTo = userMsg.ReplyTo;
-        User target = null;
+        User? target = null;
 
         if (param.IsEmpty())
         {
@@ -241,14 +283,14 @@ public partial class Generic : ExtensionCore, IExtension
                 GetHelpInfo(cmd,userMsg);
                 return;
             }
-            target = Config.SearchUser(replyTo.From.Id);
+            target = userDatabase.Find(x => x.Id ==replyTo.From.Id);
         }
         else
         {
             long id = -1;
 
             if (long.TryParse(param.First(), out id))
-                target = Config.SearchUser(id);
+                target = userDatabase.Find(x => x.Id ==id);
             else
             {
                 userMsg.Reply("Invild userId");
@@ -279,13 +321,13 @@ public partial class Generic : ExtensionCore, IExtension
         var param = cmd.Params.ToArray();
 
         var replyTo = userMsg.ReplyTo;
-        User target = null;
+        User? target = null;
 
         if (!param.IsEmpty())
         {
             if (long.TryParse(param.First(), out long i))
             {
-                target = Config.SearchUser(i);
+                target = userDatabase.Find(x => x.Id ==i);
             }
             else if (param.First().ToLower() == "group")
             {
@@ -325,10 +367,10 @@ public partial class Generic : ExtensionCore, IExtension
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
         var param = cmd.Params.Skip(1).ToArray();
-        var group = userMsg.GetGroup();
+        var group = userMsg.Group;
 
         var replyTo = userMsg.ReplyTo;
-        Group target = null;
+        Group? target = null;
 
         if(!userMsg.IsGroup)
         {
@@ -338,7 +380,7 @@ public partial class Generic : ExtensionCore, IExtension
         else if (!param.IsEmpty())
         {
             if (long.TryParse(param.First(), out long i))
-               target = Config.SearchGroup(i);
+               target = groupDatabase.Find(x => x.Id == i);
             else
             {
                 GetHelpInfo(cmd, userMsg);
@@ -346,11 +388,11 @@ public partial class Generic : ExtensionCore, IExtension
             }
         }
         else
-            target = userMsg.GetGroup();
+            target = userMsg.Group;
 
         if (target is null)
             userMsg.Reply("User not found at database");
-        else if (target.Id != group.Id && !querier.CheckPermission(Permission.Admin))
+        else if (target.Id != group!.Id && !querier.CheckPermission(Permission.Admin))
             userMsg.Reply("Permission denied.");
         else
             userMsg.Reply($"User Infomation:\n```copy\n" + StringHandle(
@@ -392,8 +434,8 @@ public partial class Generic : ExtensionCore, IExtension
                 return;
             }
 
-            var target = Config.SearchUser(id);
-            var targetLevel = target.Level + diff;
+            var target = userDatabase.Find(x => x.Id ==id);
+            var targetLevel = target!.Level + diff;
 
             if (target is null)
             {
@@ -592,7 +634,7 @@ public partial class Generic : ExtensionCore, IExtension
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
         var param = cmd.Params;
-        var group = userMsg.GetGroup();
+        var group = userMsg.Group;
 
         if (!userMsg.IsGroup)
         {
@@ -617,7 +659,7 @@ public partial class Generic : ExtensionCore, IExtension
             case "forcecheckreference":
                 if (bool.TryParse(param[1], out boolValue))
                 {
-                    group.Setting.ForceCheckReference = boolValue;
+                    group!.Setting.ForceCheckReference = boolValue;
                     userMsg.Reply($"ForceCheckReference: *{boolValue}*",ParseMode.MarkdownV2);
                     Config.SaveData();
                 }
@@ -754,7 +796,7 @@ public partial class Generic
                 return;
             }
 
-            Group group = Config.SearchGroup(id);
+            Group? group = groupDatabase.Find(x => x.Id == id);
             if(group is null)
             {
                 userMsg.Reply("Group not found at database");
@@ -779,7 +821,7 @@ public partial class Generic
                 return;
             }
 
-            User user = Config.SearchUser(id);
+            User? user = userDatabase.Find(x => x.Id == id);
             if (user is null)
             {
                 userMsg.Reply("User not found at database");

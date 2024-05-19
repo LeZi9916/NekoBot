@@ -104,7 +104,7 @@ public class Message
     {
         try
         {
-            await botClient.DeleteMessageAsync(
+            await Client.DeleteMessageAsync(
                 chatId: Chat.Id,
                 messageId: Id
                 );
@@ -147,7 +147,7 @@ public class Message
             return null;
         }
     }
-    public static Message? Parse(ITelegramBotClient client, Telegram.Bot.Types.Message? msg)
+    public static Message? Parse(in ITelegramBotClient client, Telegram.Bot.Types.Message? msg)
     {
         if (msg is null || msg.From is null) return null;
 

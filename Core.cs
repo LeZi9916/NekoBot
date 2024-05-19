@@ -32,7 +32,7 @@ namespace NekoBot
         {
             ScriptManager.Init();
             Monitor.Init();
-            Config.Init();
+            Config.Check();
             startTime = DateTime.Now;
             Config.Load(Path.Combine(Config.DatabasePath, "Proxy.config"),out string proxyStr);
             HttpClient httpClient = new(new SocketsHttpHandler

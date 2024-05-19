@@ -53,35 +53,6 @@ namespace NekoBot.Types
             return true;
         }
         /// <summary>
-        /// Update all user in <paramref name="update"/> instance
-        /// </summary>
-        /// <param name="update">The update instance</param>
-        public static void Update(Update update)
-        {
-            var users = GetUsers(update);
-
-            foreach (var user in users)
-            {
-                if (user is null)
-                    continue;
-
-                var target = Config.SearchUser(user.Id);
-
-                if (target is null)
-                    continue;
-                else if (!target.Update(user))
-                    continue;
-                else
-                {
-                    Core.Debug(DebugType.Info, $"User info had been updated:\n" +
-                    $"Name: {user.FirstName} {user.LastName}\n" +
-                    $"isBot: {user.IsBot}\n" +
-                    $"Username: {user.Username}\n" +
-                    $"isPremium: {user.IsPremium}");
-                }
-            }
-        }
-        /// <summary>
         /// Get all user in <paramref name="update"/> instance
         /// </summary>
         /// <param name="update"></param>

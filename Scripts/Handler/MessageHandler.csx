@@ -5,6 +5,7 @@ using NekoBot.Types;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Action = System.Action;
@@ -50,9 +51,9 @@ public class MessageHandler: ExtensionCore, IExtension, IHandler
         groupDatabase = groupDB;
     }
     
-    Message PreHandle(Update update)
+    Message PreHandle(in ITelegramBotClient client, Update update)
     {
-        var userMsg = Message.Parse(Core.botClient, update.Message);
+        var userMsg = Message.Parse(client, update.Message);
         UserDiscover(update);
         if (userMsg!.IsGroup)
             GroupDiscover(update);
@@ -65,11 +66,11 @@ public class MessageHandler: ExtensionCore, IExtension, IHandler
     }
     // 此处传入的userMsg为待处理的Message
     // From未被替换为NekoBot.User
-    public Action? Handle(in List<IExtension> extensions, Update update)
+    public Action? Handle(in ITelegramBotClient client, in List<IExtension> extensions, Update update)
     {
         if (update.Message is null)
             return default;
-        var userMsg = PreHandle(update);        
+        var userMsg = PreHandle(client, update);        
 
         if (userMsg.Command is null)
             return default;
@@ -210,7 +211,7 @@ public class MessageHandler: ExtensionCore, IExtension, IHandler
 
             var groupId = chat.Id;
 
-            if (Config.GroupIdList.Contains(groupId))
+            if (groupDatabase.FindIndex(x => x.Id == groupId) != -1)
                 return;
 
             var group = new Group()
