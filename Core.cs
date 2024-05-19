@@ -28,9 +28,9 @@ namespace NekoBot
     {
         public static TelegramBotClient botClient;
         public static string Token = "";
-        static string BotUsername = "";
+        public static string BotUsername { get; private set; } = "";
         public static DateTime startTime;
-        public static BotCommand[] BotCommands;
+        public static BotCommand[] BotCommands = Array.Empty<BotCommand>();
         //static void Test()
         //{
         //    List<KNode> data = new List<KNode>

@@ -24,7 +24,7 @@ namespace NekoBot.Types
         [JsonIgnore]
         public MaiAccount? Account { get; set; }
         public bool CheckPermission(Permission targetLevel) => Level >= targetLevel;
-        public bool CheckPermission(Permission targetLevel, Group group)
+        public bool CheckPermission(Permission targetLevel, Group? group)
         {
             if (group is not null && group.CheckPermission(targetLevel))
                 return Level >= Permission.Common;
