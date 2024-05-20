@@ -55,7 +55,9 @@
     <Compile Include="Scripts\Module\Mai.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Scripts\Module\Monitor.csx" />
+    <Compile Include="Scripts\Module\Monitor.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
     <Compile Include="Scripts\Module\NetQuery.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>

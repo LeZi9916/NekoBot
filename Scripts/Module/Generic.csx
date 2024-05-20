@@ -21,15 +21,12 @@ public partial class Generic : ExtensionCore, IExtension
         get
         {
             var newDB = ScriptManager.GetExtension("UserDatabase");
-            if(newDB is not null and IDatabase<User> db)
+            if(newDB is not null and IDatabase<User> db && 
+               db != _userDatabase)
             {
-                if(db != _userDatabase)
-                {
-                    _userDatabase = db;
-                    return db;
-                }
+                _userDatabase = db;
             }
-            return _userDatabase;
+            return _userDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
         }
     }
     IDatabase<Group> groupDatabase
@@ -37,19 +34,16 @@ public partial class Generic : ExtensionCore, IExtension
         get
         {
             var newDB = ScriptManager.GetExtension("GroupDatabase");
-            if (newDB is not null and IDatabase<Group> db)
+            if (newDB is not null and IDatabase<Group> db && 
+                db != _groupDatabase)
             {
-                if (db != _groupDatabase)
-                {
-                    _groupDatabase = db;
-                    return db;
-                }
+                _groupDatabase = db;
             }
-            return _groupDatabase;
+            return _groupDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
         }
     }
-    IDatabase<User> _userDatabase = new Database<User>();
-    IDatabase<Group> _groupDatabase = new Database<Group>();
+    IDatabase<User>? _userDatabase = new Database<User>();
+    IDatabase<Group>? _groupDatabase = new Database<Group>();
     public new ExtensionInfo Info { get; } = new ExtensionInfo() 
     { 
         Name = "Generic",
@@ -132,7 +126,13 @@ public partial class Generic : ExtensionCore, IExtension
                 Version = new Version() { Major = 1, Minor = 0 },
                 Type = ExtensionType.Module
             }
+        },
+        SupportUpdate = new UpdateType[] 
+        {
+            UpdateType.Message,
+            UpdateType.EditedMessage
         }
+
     };
     public override void Init()
     {
@@ -140,9 +140,18 @@ public partial class Generic : ExtensionCore, IExtension
                         as IDatabase<User>)!;
         _groupDatabase = ((ScriptManager.GetExtension("GroupDatabase") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize")) 
                         as IDatabase<Group>)!;
+
+        _userDatabase.OnDestroy += () => _userDatabase = null;
+        _groupDatabase.OnDestroy += () => _groupDatabase = null;
     }
     public override void Handle(Message userMsg)
     {
+        if(_userDatabase is null || _groupDatabase is null)
+        {
+            userMsg.Reply("Internal error: Module\"UserDatabase\" or \"GroupDatabase\" not found");
+            return;
+        }
+
         var cmd = (Command)userMsg.Command!;
         if (cmd.Prefix is "help")
         {
@@ -498,31 +507,39 @@ public partial class Generic : ExtensionCore, IExtension
     async void GetSystemInfo(Message userMsg)
     {
         var uptime = DateTime.Now - Config.Up;
-        var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
+        var scripts = string.Join("\n  - ", ScriptManager.GetLoadedScript());
         var analyzer = Core.Config.Analyzer;
         var extension = ScriptManager.GetExtension("Monitor");
 
         if (extension is IMonitor<Dictionary<string, long>> monitor)
         {
             var result = monitor.GetResult();
-            await userMsg.Reply(StringHandle(
-            $"当前版本: v{ScriptManager.GetVersion()}\n\n" +
-             "硬件信息:\n" +
-            $"-核心数: {result["ProcessorCount"]}\n" +
-            $"-使用率: {result["CPULoad"]}%\n" +
-            $"-进程占用: {GC.GetTotalMemory(false) / (1024 * 1024)} MiB\n" +
-            $"-剩余内存: {result["FreeMemory"] / 1000000} MiB\n" +
-            $"-已用内存: {result["UsedMemory"] / 1000000} MiB ({result["UsedMemory"] * 100 / result["TotalMemory"]}%)\n" +
-            $"-总内存: {result["TotalMemory"] / 1000000} MiB\n" +
-            $"-在线时间: {uptime.Hours}h{uptime.Minutes}m{uptime.Seconds}s\n\n" +
-            $"统计器:\n" +
-            $"-总计处理消息数: {analyzer.TotalHandleCount}\n" +
-            $"-平均耗时: {analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount}ms\n" +
-            $"-5分钟平均CPU占用率: {result["_5CPULoad"]}%\n" +
-            $"-10分钟平均CPU占用率: {result["_10CPULoad"]}%\n" +
-            $"-15分钟平均CPU占用率: {result["_15CPULoad"]}%\n\n" +
-            $"已加载的Script:\n" +
-            $"-{scripts}"), ParseMode.MarkdownV2);
+            string _ = $"""
+                        - Bot info: 
+                          Version  : v{ScriptManager.GetVersion()}
+                          MemUsage : {GC.GetTotalMemory(false) / (1024 * 1024)} MB
+                          Latency  : {analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount} ms
+                          Processed Msg : {analyzer.TotalHandleCount}
+                        - HW info
+                          - CPU
+                            Core : {result["ProcessorCount"]}
+                            Usage: {result["CPULoad"]}%
+                            - Avg
+                              5m: {result["_5CPULoad"]}%
+                             10m: {result["_10CPULoad"]}%
+                             15m: {result["_15CPULoad"]}%
+                          - Memory
+                            Total: {result["TotalMemory"] / 1000000} MB
+                            Free : {result["FreeMemory"] / 1000000} MB
+                            Usage: {result["UsedMemory"] / 1000000} MB ({result["UsedMemory"] * 100 / result["TotalMemory"]}%)
+                        - Scripts
+                          - {scripts}
+                        """;
+            await userMsg.Reply($"""
+                                 ```python
+                                 {StringHandle(_)}
+                                 ```
+                                 """, ParseMode.MarkdownV2);
         }
         else
             userMsg.Reply("Internal error: Module\"Monitor\" not found");

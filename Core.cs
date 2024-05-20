@@ -28,6 +28,7 @@ public partial class Core
         Config.Check();
         ScriptManager.Init();
 
+
         if (File.Exists(Config.ConfigPath))
             Config = Config.Deserialize<Config>(File.ReadAllText(Config.ConfigPath))!;
         else

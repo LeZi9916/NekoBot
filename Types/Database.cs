@@ -14,6 +14,7 @@ namespace NekoBot.Types
         protected ISerializer? yamlSerializer;
         protected List<T> database = new();
 
+        public event System.Action? OnDestroy;
         public int Count => database.Count;
         public bool IsReadOnly => ((ICollection<T>)database).IsReadOnly;
         public T this[int index]
@@ -28,7 +29,12 @@ namespace NekoBot.Types
             yamlSerializer = (ISerializer)ScriptManager.GetExtension("YamlSerializer")!;
             dbPath = Config.DatabasePath;
         }
-        public override void Destroy() => Save();
+        public override void Destroy()
+        {
+            Save();
+            if(OnDestroy is not null)
+                OnDestroy();
+        }
         public bool Exists(Predicate<T> match) => FindIndex(match) != -1;
         public T? Find(Predicate<T> match)
         {

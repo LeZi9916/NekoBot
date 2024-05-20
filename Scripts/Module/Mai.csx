@@ -109,6 +109,11 @@ public partial class Mai : ExtensionCore, IExtension
                 Version = new Version() { Major = 1, Minor = 0 },
                 Type = ExtensionType.Serializer
             }
+        },
+        SupportUpdate = new UpdateType[]
+        {
+            UpdateType.Message,
+            UpdateType.EditedMessage
         }
     };
     public override void Init()

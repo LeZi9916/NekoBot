@@ -29,6 +29,11 @@ public class NetQuery: ExtensionCore, IExtension
                 Command = "nslookup",
                 Description = "域名解析"
             }
+        },
+        SupportUpdate = new UpdateType[]
+        {
+            UpdateType.Message,
+            UpdateType.EditedMessage
         }
     };
     public override void Handle(Message userMsg)

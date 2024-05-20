@@ -39,6 +39,11 @@ public partial class ScriptHelper : ExtensionCore, IExtension
                 Command = "eval",
                 Description = "CS 解析器"
             }
+        },
+        SupportUpdate = new UpdateType[]
+        {
+            UpdateType.Message,
+            UpdateType.EditedMessage
         }
     };
     public override void Handle(Message userMsg)

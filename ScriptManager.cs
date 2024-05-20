@@ -238,7 +238,7 @@ namespace NekoBot
         /// 获取已加载Script的Name
         /// </summary>
         /// <returns></returns>
-        public static string[] GetLoadedScript() => loadedScripts.Select(x => x.Info.Name).ToArray();
+        public static string[] GetLoadedScript() => loadedScripts.Select(x => $"{x.Info.Name}(v{x.Info.Version})").ToArray();
         static List<IExtension> GetScripts() => GetScripts(s => { });
         static FileInfo[] ScanFile(string path)
         {

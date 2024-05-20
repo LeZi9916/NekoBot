@@ -5,7 +5,8 @@ using System.Collections.Generic;
 namespace NekoBot.Interfaces
 {
     public interface IDatabase<T>: IExtension, IList<T>
-    {         
+    {
+        event Action? OnDestroy;
         void SetAll(T[] collection);
         T[] All();
         T? Find(Predicate<T> match);
