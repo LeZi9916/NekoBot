@@ -21,7 +21,7 @@ public class NetQuery: ExtensionCore, IExtension
     {
         Name = "NetQuery",
         Version = new Version() { Major = 1, Minor = 0 },
-        Type = ExtensionType.Handler,
+        Type = ExtensionType.Module,
         Commands = new BotCommand[]
         {
             new BotCommand()

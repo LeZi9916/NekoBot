@@ -20,7 +20,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Microsoft.CodeAnalysis;
 using CSScripting;
-using static NekoBot.Config;
+using static NekoBot.Types.Config;
 using static NekoBot.ChartHelper;
 using Message = NekoBot.Types.Message;
 using File = System.IO.File;

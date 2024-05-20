@@ -24,6 +24,7 @@
     <None Remove="Scripts\MessageHandler.csx" />
     <None Remove="Scripts\Module\Generic.csx" />
     <None Remove="Scripts\Module\Mai.csx" />
+    <None Remove="Scripts\Module\Monitor.csx" />
     <None Remove="Scripts\Module\NetQuery.csx" />
     <None Remove="Scripts\Module\ScriptHelper.csx" />
     <None Remove="Scripts\NetQuery.csx" />
@@ -42,7 +43,7 @@
     <Compile Include="Scripts\Handler\MessageHandler.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Scripts\JsonSerializer.csx">
+    <Compile Include="Scripts\Serializer\JsonSerializer.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Database\UserDatabase.csx">
@@ -54,13 +55,14 @@
     <Compile Include="Scripts\Module\Mai.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
+    <Compile Include="Scripts\Module\Monitor.csx" />
     <Compile Include="Scripts\Module\NetQuery.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Module\ScriptHelper.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Scripts\YamlSerializer.csx">
+    <Compile Include="Scripts\Serializer\YamlSerializer.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
   </ItemGroup>

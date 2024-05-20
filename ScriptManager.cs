@@ -10,9 +10,9 @@ using System.Reflection;
 using System.Security.Cryptography;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using static System.Net.Mime.MediaTypeNames;
 using Message = NekoBot.Types.Message;
 
-#nullable enable
 namespace NekoBot
 {
     public class Script<T>
@@ -85,13 +85,25 @@ namespace NekoBot
             }
             IsCompiling = false;
         }
-        public static void CommandHandle(Message msg)
+        public static void MessageHandle(in ITelegramBotClient client,Update update)
         {
-            var prefix = ((Command)msg.Command!).Prefix;
-            if (handlers.ContainsKey(prefix))
-                handlers[prefix].Handle(msg);
+            var type = update.Type;
+            var handlerName = $"{type}Handler";
+            var index = loadedScripts.FindIndex(x => x.Info.Name == handlerName);
+            if (index != -1)
+            {
+                var ext = loadedScripts[index];
+                if (ext is IHandler handler)
+                {
+                    var foo = handler.Handle(client, loadedScripts, update);
+                    if (foo is not null)
+                        foo();
+                }
+                else
+                    Core.Debug(DebugType.Warning, $"Unknown handler module \"{ext.Info.Name}\",maybe you didn't inherit and implement IHandler?");
+            }
             else
-                return;
+                Core.Debug(DebugType.Warning, $"No handler found for handling message type \"{type}\",this message will not be handled");
         }
         /// <summary>
         /// 更新指定Script

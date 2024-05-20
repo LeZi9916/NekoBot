@@ -27,7 +27,6 @@ public partial class Core
         Config.Up = DateTime.Now;
         Config.Check();
         ScriptManager.Init();
-        Monitor.Init();
 
         if (File.Exists(Config.ConfigPath))
             Config = Config.Deserialize<Config>(File.ReadAllText(Config.ConfigPath))!;
@@ -115,7 +114,7 @@ public partial class Core
                     $"Type   : {msg.Type}\n" +
                     $"Content: {(string.IsNullOrEmpty(msg.Content) ? string.Empty : msg.Content)}\n");
 
-                /// To-Dos
+                ScriptManager.MessageHandle(botClient,update);
             }
             catch (Exception e)
             {

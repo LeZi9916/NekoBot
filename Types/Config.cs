@@ -1,10 +1,9 @@
 ﻿using System;
 using System.IO;
-using NekoBot.Types;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace NekoBot
+namespace NekoBot.Types
 {
     public class Proxy
     {

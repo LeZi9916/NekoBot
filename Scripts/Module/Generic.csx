@@ -125,6 +125,12 @@ public partial class Generic : ExtensionCore, IExtension
                 Name = "GroupDatabase",
                 Version = new Version() { Major = 1, Minor = 0 },
                 Type = ExtensionType.Database
+            },
+            new ExtensionInfo()
+            {
+                Name = "Monitor",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Module
             }
         }
     };
@@ -494,24 +500,32 @@ public partial class Generic : ExtensionCore, IExtension
         var uptime = DateTime.Now - Config.Up;
         var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
         var analyzer = Core.Config.Analyzer;
-        await userMsg.Reply(StringHandle(
+        var extension = ScriptManager.GetExtension("Monitor");
+
+        if (extension is IMonitor<Dictionary<string, long>> monitor)
+        {
+            var result = monitor.GetResult();
+            await userMsg.Reply(StringHandle(
             $"当前版本: v{ScriptManager.GetVersion()}\n\n" +
              "硬件信息:\n" +
-            $"-核心数: {Monitor.ProcessorCount}\n" +
-            $"-使用率: {Monitor.CPULoad}%\n" +
+            $"-核心数: {result["ProcessorCount"]}\n" +
+            $"-使用率: {result["CPULoad"]}%\n" +
             $"-进程占用: {GC.GetTotalMemory(false) / (1024 * 1024)} MiB\n" +
-            $"-剩余内存: {Monitor.FreeMemory / 1000000} MiB\n" +
-            $"-已用内存: {Monitor.UsedMemory / 1000000} MiB ({Monitor.UsedMemory * 100 / Monitor.TotalMemory}%)\n" +
-            $"-总内存: {Monitor.TotalMemory / 1000000} MiB\n" +
+            $"-剩余内存: {result["FreeMemory"] / 1000000} MiB\n" +
+            $"-已用内存: {result["UsedMemory"] / 1000000} MiB ({result["UsedMemory"] * 100 / result["TotalMemory"]}%)\n" +
+            $"-总内存: {result["TotalMemory"] / 1000000} MiB\n" +
             $"-在线时间: {uptime.Hours}h{uptime.Minutes}m{uptime.Seconds}s\n\n" +
             $"统计器:\n" +
             $"-总计处理消息数: {analyzer.TotalHandleCount}\n" +
             $"-平均耗时: {analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount}ms\n" +
-            $"-5分钟平均CPU占用率: {Monitor._5CPULoad}%\n" +
-            $"-10分钟平均CPU占用率: {Monitor._10CPULoad}%\n" +
-            $"-15分钟平均CPU占用率: {Monitor._15CPULoad}%\n\n" +
+            $"-5分钟平均CPU占用率: {result["_5CPULoad"]}%\n" +
+            $"-10分钟平均CPU占用率: {result["_10CPULoad"]}%\n" +
+            $"-15分钟平均CPU占用率: {result["_15CPULoad"]}%\n\n" +
             $"已加载的Script:\n" +
-            $"-{scripts}"),ParseMode.MarkdownV2);
+            $"-{scripts}"), ParseMode.MarkdownV2);
+        }
+        else
+            userMsg.Reply("Internal error: Module\"Monitor\" not found");
     }
     async void GetBotLog(Message userMsg)
     {
