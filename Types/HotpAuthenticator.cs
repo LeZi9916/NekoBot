@@ -3,16 +3,20 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
+using YamlDotNet.Serialization;
 
 namespace NekoBot.Types;
 
 public class HotpAuthenticator
 {
     [JsonInclude]
+    [YamlMember]
     long counter = 0;
     [JsonInclude]
+    [YamlMember]
     int digits = 8;
     [JsonInclude]
+    [YamlMember]
     string secretKey = "";
     static string Base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     public int FailureCount { get; private set; }
@@ -60,7 +64,6 @@ public class HotpAuthenticator
             {
                 counter++;
                 FailureCount = 0;
-                Config.Save(Path.Combine(Config.DatabasePath, "HotpAuthenticator.data"), this);
                 return true;
             }
         }

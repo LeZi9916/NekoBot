@@ -109,7 +109,7 @@ public class MessageHandler: ExtensionCore, IExtension, IHandler
             }
             var token = sArray[1];
 
-            if (!Config.Authenticator.Compare(token.Trim()))
+            if (!Core.Config.Authenticator.Compare(token.Trim()))
             {
                 //SendMessage("Authentication failed:\nInvalid HOTP code", update);
                 Debug(DebugType.Info, "HOTP code is invalid,rejected");

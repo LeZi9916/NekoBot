@@ -36,6 +36,25 @@ public partial class Mai : ExtensionCore, IExtension
     static MaiScanner? scanner;
     static MaiDatabase? database;
 
+    List<KeyChip> keyChips { get; set; } = new()
+    {
+        new KeyChip()
+        {
+            PlaceId = 2120,
+            PlaceName = "SUPER101潮漫北流店",
+            RegionId = 28,
+            RegionName = "广西",
+            KeyChipId = "A63E-01E14596415"
+        },
+        new KeyChip()
+        {
+            PlaceId = 1,
+            PlaceName = "Unknow",
+            RegionId = 1,
+            RegionName = "Unknow",
+            KeyChipId = "A63E-01E14150010"
+        }
+    };
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "Mai",
@@ -216,7 +235,7 @@ public partial class Mai : ExtensionCore, IExtension
                     maiAccount.lastUpdate = DateTime.Now;
 
                     database.MaiAccountList.Add(maiAccount);
-                    Config.SaveData();
+                    //Config.SaveData();
                     return maiAccount;
                 }
                 else
@@ -402,7 +421,7 @@ public partial class Mai : ExtensionCore, IExtension
 
                     var request = new QRCodeRequest()
                     {
-                        KeyChip = Config.keyChips[0],
+                        KeyChip = keyChips[0],
                         QrCode = Image.FromFile(filePath)
                     };
 
@@ -418,7 +437,7 @@ public partial class Mai : ExtensionCore, IExtension
             {
                 var request = new QRCodeRequest()
                 {
-                    KeyChip = Config.keyChips[0],
+                    KeyChip = keyChips[0],
                     QrCode = param.First()
                 };
                 maiUserId = QRCode.ToUserId(request).Object.userID;
@@ -453,7 +472,7 @@ public partial class Mai : ExtensionCore, IExtension
                 $"Rating: {response.playerRating}\n" +
                 $"最后游玩日期: {response.lastPlayDate}"), ParseMode.MarkdownV2);
 
-            Config.SaveData();
+            //Config.SaveData();
             File.Delete(filePath);
         }
         catch
@@ -463,7 +482,7 @@ public partial class Mai : ExtensionCore, IExtension
     }
     /* internal static async void UserLogin(Message userMsg)
     {
-        //var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], a => { });
+        //var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, keyChips[0], a => { });
         return;
     } */
     /// <summary>
@@ -472,7 +491,7 @@ public partial class Mai : ExtensionCore, IExtension
     /// <param name="command"></param>
     /// <param name="update"></param>
     /// <param name="querier"></param>
-    internal static async void DataBackup(Message userMsg)
+    internal async void DataBackup(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
@@ -509,7 +528,7 @@ public partial class Mai : ExtensionCore, IExtension
         await msg.Edit("正在尝试登录... (0/15)");
         try
         {
-            var user = await AquaTools.Users.User.Login(userid, Config.keyChips[0], async a => await msg.Edit($"正在获取数据... ({a}/15)"));
+            var user = await AquaTools.Users.User.Login(userid, keyChips[0], async a => await msg.Edit($"正在获取数据... ({a}/15)"));
             await msg.Edit("获取数据成功,正在上传备份文件...");
             var userdata = user.Export(password);
             var stream = new MemoryStream(userdata);
@@ -593,7 +612,7 @@ public partial class Mai : ExtensionCore, IExtension
                 querier.Account = maiUser;
                 if (isNew)
                     database.MaiAccountList.Add(maiUser);
-                Config.SaveData();
+                //Config.SaveData();
 
                 await msg.Edit("更新完成喵wAw");
             }
@@ -653,7 +672,7 @@ public partial class Mai : ExtensionCore, IExtension
         EditMessage("正在尝试登录... (0/15)", update, selfMessage.MessageId);
         try
         {
-            var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], async a => await EditMessage($"正在获取数据... ({a}/15)", update, selfMessage.MessageId));
+            var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, keyChips[0], async a => await EditMessage($"正在获取数据... ({a}/15)", update, selfMessage.MessageId));
             await EditMessage("正在尝试申请跑图券...", update, selfMessage.MessageId);
             var result = user.CreateNewTicket((ChargeType)ticketType, count, DateTime.Now.AddDays(14));
             if (result)
@@ -675,7 +694,7 @@ public partial class Mai : ExtensionCore, IExtension
     } */
     /* internal static async void Upsert(Message userMsg)
     {
-        var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, Config.keyChips[0], a => { });
+        var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, keyChips[0], a => { });
         var playlogs = new List<UserPlaylog>();
         var musicDetail = user.CreatePlaylog(11422, new Dictionary<string, int>
     {
@@ -1079,11 +1098,6 @@ public partial class Mai
 
         public void Init()
         {
-            MaiAccountList = Load<List<MaiAccount>>(Path.Combine(DatabasePath, "MaiAccountList.data"));
-            MaiInvaildUserIdList = Load<List<int>>(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"));
-
-            foreach (var user in TUserList)
-                GetMaiAccount(user);
             CalRating();
         }
         public async void GetMaiAccount(NekoBot.Types.User user)
@@ -1105,8 +1119,7 @@ public partial class Mai
         }
         public void Save()
         {
-            Config.Save(Path.Combine(DatabasePath, "MaiAccountList.data"), MaiAccountList);
-            Config.Save(Path.Combine(DatabasePath, "MaiInvalidUserIdList.data"), MaiInvaildUserIdList);
+
         }
         public void CalRating()
         {
@@ -1173,8 +1186,8 @@ public partial class Mai
         {
             LastFailureTime = DateTime.Now;
             //CompressSkipLogs = Load<List<SkipLog>>(Path.Combine(DatabasePath, "CompressSkipLogs.data"));
-            FaultIntervalList = Load<List<long>>(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"));
-            LastFailureTime = Load<DateTime>(Path.Combine(Config.DatabasePath, "LastFailureTime.data"));
+            //FaultIntervalList = Load<List<long>>(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"));
+            //LastFailureTime = Load<DateTime>(Path.Combine(Config.DatabasePath, "LastFailureTime.data"));
 
 
             Proc();
@@ -1193,93 +1206,7 @@ public partial class Mai
         }
         void Proc()
         {
-            monitorTask = Task.Run(() =>
-            {
-                while (true)
-                {
-                    if (isDestroying)
-                        break;
-                    if (DateTime.Today.AddHours(4) <= DateTime.Now && DateTime.Now <= DateTime.Today.AddHours(9))
-                    {
-                        TitleServerDelay = -1;
-                        OAuthServerDelay = -1;
-                        NetServerDelay = -1;
-                        MainServerDelay = -1;
-                        TotalRequestCount = 0;
-                        TimeoutRequestCount = 0;
-                        CompressSkipRate = 0;
-                        OtherErrorCount = 0;
-                        CompressSkipRequestCount = 0;
-                        //CompressSkipLogs.Clear();
-                        PingLogs.Clear();
-                        continue;
-                    }
-
-                    //var response = Aqua.TestPostAsync(Config.keyChips[0]).Result;
-                    var req = new Request<UserRegionRequest>();
-                    req.Object.userId = 11015484;
-                    var response = Aqua.Post<UserRegionRequest, BaseResponse>(req);
-                    LastResponseStatusCode = response.Object.StatusCode;
-                    TotalRequestCount++;
-                    Task.Run(() =>
-                    {
-                        mutex.WaitOne();
-                        TitleServerDelay = TCPing(MaiServer.URL.Title, 42081);
-                        OAuthServerDelay = TCPing(MaiServer.URL.OAuth, 443);
-                        NetServerDelay = TCPing(MaiServer.URL.Net, 443);
-                        MainServerDelay = TCPing(MaiServer.URL.Main, 80);
-
-
-                        PingLogs.Add(new PingResult() { Type = ServerType.Title, Delay = TitleServerDelay });
-                        PingLogs.Add(new PingResult() { Type = ServerType.OAuth, Delay = OAuthServerDelay });
-                        PingLogs.Add(new PingResult() { Type = ServerType.Net, Delay = NetServerDelay });
-                        PingLogs.Add(new PingResult() { Type = ServerType.Main, Delay = MainServerDelay });
-                        mutex.ReleaseMutex();
-                    });
-
-                    if (TitleServerDelay == -1 || OAuthServerDelay == -1 || NetServerDelay == -1 || MainServerDelay == -1)
-                    {
-                        if (ServiceAvailability)
-                            FaultIntervalList.Add((long)(LastFailureTime - DateTime.Now).TotalSeconds);
-                        ServiceAvailability = false;
-                    }
-                    else
-                    {
-                        if (!ServiceAvailability)
-                            LastFailureTime = DateTime.Now;
-                        ServiceAvailability = true;
-                    }
-                    var lastSkip = GetAvgSkipRate()[0];
-                    if (LastResponseStatusCode == HttpStatusCode.GatewayTimeout)
-                        TimeoutRequestCount++;
-                    else if (LastResponseStatusCode is HttpStatusCode.OK)
-                    {
-                        CompressSkipRequestCount++;
-                        CompressSkipLogs.Add(new SkipLog()
-                        {
-                            Timestamp = DateTime.Now,
-                            IsSkip = response.Object.CompressSkip,
-                            LastSkipRate = lastSkip
-                        });
-                    }
-                    else
-                        OtherErrorCount++;
-
-                    CompressSkipRate = (double)CompressSkipRequestCount / (TotalRequestCount - TimeoutRequestCount - OtherErrorCount);
-                    if (FaultIntervalList.Count != 0)
-                        FaultInterval = FaultIntervalList.Sum() / FaultIntervalList.Count();
-
-                    CompressSkipLogs = CompressSkipLogs.Where(x => (DateTime.Now - x.Timestamp).Minutes <= 90).ToList();
-
-
-                    Config.Save(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"), FaultIntervalList, false);
-                    Config.Save(Path.Combine(Config.DatabasePath, "LastFailureTime.data"), LastFailureTime, false);
-                    //Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs, false);
-
-
-                    Thread.Sleep(5000);
-                }
-            });
+            
         }
 
         public long[] GetAvgPing(ServerType type)
@@ -1516,7 +1443,7 @@ public partial class Mai
                     task.Add(GetUser(StartIndex * 10000, StartIndex * 10000 + 9999));
                 Task.WaitAll(task.ToArray());
                 IsFinished();
-                Config.SaveData();
+                //Config.SaveData();
             });
         }
         public async void Update(int index = 0)
@@ -1540,7 +1467,7 @@ public partial class Mai
                     task.Add(UpdateUser(accounts[index]));
                 Task.WaitAll(task.ToArray());
                 IsFinished();
-                Config.SaveData();
+                //Config.SaveData();
             });
         }
         async Task UpdateUser(MaiAccount account)

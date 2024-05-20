@@ -14,7 +14,6 @@ public class Group : IAccount
     public void SetPermission(Permission targetLevel)
     {
         Level = targetLevel;
-        Config.SaveData();
     }
     public bool CheckPermission(Permission targetLevel) => Level >= targetLevel;
     public static void Update(Update update)

@@ -491,9 +491,9 @@ public partial class Generic : ExtensionCore, IExtension
     }
     async void GetSystemInfo(Message userMsg)
     {
-        var uptime = DateTime.Now - Core.startTime;
+        var uptime = DateTime.Now - Config.Up;
         var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
-
+        var analyzer = Core.Config.Analyzer;
         await userMsg.Reply(StringHandle(
             $"当前版本: v{ScriptManager.GetVersion()}\n\n" +
              "硬件信息:\n" +
@@ -505,8 +505,8 @@ public partial class Generic : ExtensionCore, IExtension
             $"-总内存: {Monitor.TotalMemory / 1000000} MiB\n" +
             $"-在线时间: {uptime.Hours}h{uptime.Minutes}m{uptime.Seconds}s\n\n" +
             $"统计器:\n" +
-            $"-总计处理消息数: {Config.TotalHandleCount}\n" +
-            $"-平均耗时: {(Config.TotalHandleCount is 0 ? 0 : Config.TimeSpentList.Sum() / Config.TotalHandleCount)}ms\n" +
+            $"-总计处理消息数: {analyzer.TotalHandleCount}\n" +
+            $"-平均耗时: {analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount}ms\n" +
             $"-5分钟平均CPU占用率: {Monitor._5CPULoad}%\n" +
             $"-10分钟平均CPU占用率: {Monitor._10CPULoad}%\n" +
             $"-15分钟平均CPU占用率: {Monitor._15CPULoad}%\n\n" +
@@ -661,7 +661,7 @@ public partial class Generic : ExtensionCore, IExtension
                 {
                     group!.Setting.ForceCheckReference = boolValue;
                     userMsg.Reply($"ForceCheckReference: *{boolValue}*",ParseMode.MarkdownV2);
-                    Config.SaveData();
+                    //Config.SaveData();
                 }
                 else
                     GetHelpInfo(cmd,userMsg);

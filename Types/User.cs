@@ -30,11 +30,7 @@ namespace NekoBot.Types
                 return Level >= Permission.Common;
             return Level >= targetLevel;
         }
-        public void SetPermission(Permission targetLevel)
-        {
-            Level = targetLevel;
-            Config.SaveData();
-        }
+        public void SetPermission(Permission targetLevel) => Level = targetLevel;
         /// <summary>
         /// Use new infomation to update this instance
         /// </summary>

@@ -2,9 +2,20 @@
 using System.IO;
 using NekoBot.Types;
 using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace NekoBot
 {
+    public class Proxy
+    {
+        public bool UseProxy { get; set; } = false;
+        public string? Address { get; set; } = null;
+    }
+    public class Analyzer
+    {
+        public long TotalHandleCount { get; set; } = 0;
+        public long TotalHandleTime { get; set; } = 0;
+    }
     public class Config
     {
         [YamlIgnore]
@@ -20,10 +31,13 @@ namespace NekoBot
         [YamlIgnore]
         public static string LogFile { get => Path.Combine(LogsPath, $"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log"); }
         [YamlIgnore]
-        public static HotpAuthenticator Authenticator { get; set; } = new HotpAuthenticator();
+        public static string ConfigPath { get => Path.Combine(AppPath, "NekoBot.conf"); }
 
-        public long TotalHandleCount { get; set; } = 0;
-        public long TotalHandleTime { get; set; } = 0;
+        public HotpAuthenticator Authenticator { get; set; } = new HotpAuthenticator();
+        public string Token { get; set; } = "";
+        public Proxy Proxy { get; set; } = new();
+        public Analyzer Analyzer { get; set; } = new();
+
         public static void Check()
         {
             if (!Directory.Exists(LogsPath))
@@ -32,6 +46,20 @@ namespace NekoBot
                 Directory.CreateDirectory(DatabasePath);
             if (!Directory.Exists(TempPath))
                 Directory.CreateDirectory(TempPath);
+        }
+        public string Serialize<T>(T obj)
+        {
+            var serializer = new SerializerBuilder()
+                                 .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                                 .Build();
+            return serializer.Serialize(obj);
+        }
+        public T? Deserialize<T>(string yaml)
+        {
+            var deserializer = new DeserializerBuilder()
+                                   .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                                   .Build();
+            return deserializer.Deserialize<T>(yaml);
         }
     }
 }

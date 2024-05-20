@@ -61,7 +61,7 @@ public partial class ScriptHelper : ExtensionCore, IExtension
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var group = userMsg.GetGroup();
+        var group = userMsg.Group;
         if (!querier.CheckPermission(Permission.Advanced, group))
         {
             await userMsg.Reply("Permission Denied");

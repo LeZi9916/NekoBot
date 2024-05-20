@@ -161,7 +161,7 @@ namespace NekoBot
                 Description = x.Description,                
             });
             Core.BotCommands = result.ToArray();
-            await Core.botClient.SetMyCommandsAsync(result);
+            await Core.GetClient().SetMyCommandsAsync(result);
             Core.Debug(DebugType.Info,"Bot commands has been updated");
         }
         
