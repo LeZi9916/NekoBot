@@ -24,6 +24,7 @@
     <None Remove="Scripts\MessageHandler.csx" />
     <None Remove="Scripts\Module\Generic.csx" />
     <None Remove="Scripts\Module\Mai.csx" />
+    <None Remove="Scripts\Module\MaiMonitor.csx" />
     <None Remove="Scripts\Module\Monitor.csx" />
     <None Remove="Scripts\Module\NetQuery.csx" />
     <None Remove="Scripts\Module\ScriptHelper.csx" />
@@ -43,6 +44,7 @@
     <Compile Include="Scripts\Handler\MessageHandler.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
+    <Compile Include="Scripts\Module\MaiMonitor.csx" />
     <Compile Include="Scripts\Serializer\JsonSerializer.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>

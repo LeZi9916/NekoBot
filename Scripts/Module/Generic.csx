@@ -144,6 +144,11 @@ public partial class Generic : ExtensionCore, IExtension
         _userDatabase.OnDestroy += () => _userDatabase = null;
         _groupDatabase.OnDestroy += () => _groupDatabase = null;
     }
+    public override void Destroy()
+    {
+        _userDatabase = null;
+        _groupDatabase = null;
+    }
     public override void Handle(Message userMsg)
     {
         if(_userDatabase is null || _groupDatabase is null)

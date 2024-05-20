@@ -11,31 +11,39 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Security.Cryptography;
-using System.Diagnostics;
-using System.Net.Sockets;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Unicode;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Microsoft.CodeAnalysis;
 using CSScripting;
-using static NekoBot.Types.Config;
-using static NekoBot.ChartHelper;
-using Message = NekoBot.Types.Message;
-using File = System.IO.File;
-using MaiAccount = NekoBot.Types.MaiAccount;
 using NekoBot.Interfaces;
 using NekoBot;
 using NekoBot.Types;
 using Version = NekoBot.Types.Version;
+using Message = NekoBot.Types.Message;
+using File = System.IO.File;
+using MaiAccount = NekoBot.Types.MaiAccount;
+using NekoBot.Exceptions;
 #pragma warning disable CS4014
 public partial class Mai : ExtensionCore, IExtension
 {
-    static MaiMonitor? monitor;
-    static MaiScanner? scanner;
-    static MaiDatabase? database;
+    IDatabase<MaiAccount> maiDatabase
+    {
+        get
+        {
+            var newDB = ScriptManager.GetExtension("MaiDatabase");
+            if (newDB is not null and IDatabase<MaiAccount> db &&
+               db != _maiDatabase)
+            {
+                _maiDatabase = db;
+            }
+            return _maiDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
+        }
+    }
+    IDatabase<MaiAccount>? _maiDatabase;
 
+    List<MaiAccount>? maiAccountList;
+    List<long>? ratingList;
+    List<IGrouping<long, MaiAccount>>? top;
     List<KeyChip> keyChips { get; set; } = new()
     {
         new KeyChip()
@@ -118,27 +126,14 @@ public partial class Mai : ExtensionCore, IExtension
     };
     public override void Init()
     {
-        monitor = new();
-        scanner = new();
-        database = new();
+        _maiDatabase = ((ScriptManager.GetExtension("MaiDatabase") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize"))
+                        as IDatabase<MaiAccount>)!;
+        _maiDatabase.OnDestroy += () => _maiDatabase = null;
 
-        database.Init();
-        scanner.Init();
-        monitor.Init();
-
-    }
-    public override void Save()
-    {
-        database!.Save();
-        monitor!.Save();
     }
     public override void Destroy()
     {
-        monitor!.Destroy();
-        scanner!.Destroy();
-        database = null;
-        monitor = null;
-        scanner = null;
+        _maiDatabase = null;
     }
     public override void Handle(Message userMsg)
     {
@@ -221,9 +216,9 @@ public partial class Mai : ExtensionCore, IExtension
         var param = cmd.Params.Skip(1).ToArray();
         try
         {
-            querier.Account ??= database.Search((int)querier.Id);
-            MaiAccount account = querier.Account;
-            async Task<MaiAccount> getAccount(int userid)
+            querier.Account ??= maiDatabase.Find(x => x.userId == ((int)querier.Id));
+            MaiAccount? account = querier.Account;
+            async Task<MaiAccount?> getAccount(int userid)
             {
                 var response = (await GetUserPreview((int)querier.MaiUserId)).Object;
 
@@ -239,7 +234,7 @@ public partial class Mai : ExtensionCore, IExtension
                     maiAccount.banState = response.banState;
                     maiAccount.lastUpdate = DateTime.Now;
 
-                    database.MaiAccountList.Add(maiAccount);
+                    maiDatabase.Add(maiAccount);
                     //Config.SaveData();
                     return maiAccount;
                 }
@@ -264,7 +259,7 @@ public partial class Mai : ExtensionCore, IExtension
                     return;
                 }
 
-                account = database.Search(id);
+                account = maiDatabase.Find(x => x.userId == id);
 
                 if (account is null)
                     account = await getAccount(id);
@@ -278,7 +273,7 @@ public partial class Mai : ExtensionCore, IExtension
             {
                 if (account is null)
                 {
-                    querier.Account = await getAccount((int)querier.MaiUserId);
+                    querier.Account = await getAccount((int)querier.MaiUserId!);
                     account = querier.Account;
                 }
             }
@@ -293,7 +288,7 @@ public partial class Mai : ExtensionCore, IExtension
                 $"DX主要版本: {account.lastGameId}\n" +
                 $"最后同步日期: {account.lastUpdate.ToString("yyyy-MM-dd HH:mm:ss")}");
 
-            var ranking = await database.GetUserRank(account.playerRating);
+            var ranking = await GetUserRank(account.playerRating);
 
             msg.Edit(
                 "用户信息:\n" +
@@ -463,7 +458,7 @@ public partial class Mai : ExtensionCore, IExtension
 
             var response = GetUserPreview((int)maiUserId).Result.Object;
             querier.MaiUserId = maiUserId;
-            database.GetMaiAccount(querier);
+            querier.Account = maiDatabase.Find(x => x.userId == maiUserId);
             if (response.StatusCode is not HttpStatusCode.OK)
             {
                 await userMsg.Edit("绑定成功，但无法获取用户信息QAQ");
@@ -599,7 +594,7 @@ public partial class Mai : ExtensionCore, IExtension
 
         try
         {
-            var maiUser = database.Search(userId);
+            var maiUser = maiDatabase.Find(x => x.userId == userId);
             bool isNew = maiUser == null;
             var response = (await GetUserPreview(userId)).Object;
 
@@ -616,7 +611,7 @@ public partial class Mai : ExtensionCore, IExtension
 
                 querier.Account = maiUser;
                 if (isNew)
-                    database.MaiAccountList.Add(maiUser);
+                    maiDatabase.Update(x=>x.userId == maiUser.userId, maiUser);
                 //Config.SaveData();
 
                 await msg.Edit("更新完成喵wAw");
@@ -835,6 +830,9 @@ public partial class Mai : ExtensionCore, IExtension
     /// <param name="querier"></param>
     internal void GetTopRank(Message userMsg)
     {
+        if (maiAccountList is null || ratingList is null || top is null)
+            CalRating();
+
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
         var param = cmd.Params.Skip(1).ToArray();
@@ -843,7 +841,7 @@ public partial class Mai : ExtensionCore, IExtension
         {
             if (param.First() == "refresh")
             {
-                database.CalRating();
+                CalRating();
                 userMsg.Reply("Mai rank have been updated ~");
                 return;
             }
@@ -854,7 +852,7 @@ public partial class Mai : ExtensionCore, IExtension
             }
         }
 
-        var rank = database.Top.Select(x => x.ToList()).ToList();
+        var rank = top!.Select(x => x.ToList()).ToList();
         var strHeader = "全国前300排行榜\n" +
                         "```markdown\n" +
                         $"{"名次".PadRight(14)}{"Rating".PadRight(16)}{"名称".PadRight(12)}\n";
@@ -889,77 +887,82 @@ public partial class Mai : ExtensionCore, IExtension
     /// <param name="querier"></param>
     internal async void GetServerStatus(Message userMsg)
     {
-        var cmd = (Command)userMsg.Command!;
-        var querier = userMsg.From;
-        var param = cmd.Params.Skip(1).ToArray();
-        if (cmd.Prefix == "maistatus")
-            param = cmd.Params;
+        var extension = ScriptManager.GetExtension("MaiMonitor");
 
-        var titlePingInfo = monitor.GetAvgPing(ServerType.Title);
-        var oauthPingInfo = monitor.GetAvgPing(ServerType.OAuth);
-        var netPingInfo = monitor.GetAvgPing(ServerType.Net);
-        var mainPingInfo = monitor.GetAvgPing(ServerType.Main);
-        var skipRateInfo = monitor.GetAvgSkipRate();
-        string text = "";
-        if (param.IsEmpty())
+
+        if(extension is IMonitor<Dictionary<string,string>> monitor)
         {
-            text = "maimai服务器状态:\n" +
-                      "```python" +
-                     StringHandle(
-                      "\nTcping延迟:" +
-                     $"\n  - Title服务器  : {monitor.TitleServerDelay}ms" +
-                     $"\n  - OAuth服务器  : {monitor.OAuthServerDelay}ms" +
-                     $"\n  - DXNet服务器  : {monitor.NetServerDelay}ms" +
-                     $"\n  - Main 服务器  : {monitor.MainServerDelay}ms" +
-                     $"\n" +
-                     $"响应包跳过率 : \n" +
-                     $"  - 30min  : {Math.Round(skipRateInfo[0] * 100, 2)}%\n" +
-                     $"  - 60min  : {Math.Round(skipRateInfo[1] * 100, 2)}%\n" +
-                     $"  - 90min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
-                     $"\n") +
-                      "```";
-        }
-        else if (param.First() is "full")
-        {
-            text = "maimai服务器状态:\n" +
-                      "```python" +
-                     StringHandle(
-                      "\nTcping延迟:" +
-                     $"\n- Title服务器  : {monitor.TitleServerDelay}ms\n" +
-                     $"  -  5min  : {titlePingInfo[0]}ms\n" +
-                     $"  - 10min  : {titlePingInfo[1]}ms\n" +
-                     $"  - 15min  : {titlePingInfo[2]}ms" +
-                     $"\n- OAuth服务器  : {monitor.OAuthServerDelay}ms\n" +
-                     $"  -  5min  : {oauthPingInfo[0]}ms\n" +
-                     $"  - 10min  : {oauthPingInfo[1]}ms\n" +
-                     $"  - 15min  : {oauthPingInfo[2]}ms" +
-                     $"\n- DXNet服务器  : {monitor.NetServerDelay}ms\n" +
-                     $"  -  5min  : {netPingInfo[0]}ms\n" +
-                     $"  - 10min  : {netPingInfo[1]}ms\n" +
-                     $"  - 15min  : {netPingInfo[2]}ms" +
-                     $"\n- Main 服务器  : {monitor.MainServerDelay}ms\n" +
-                     $"  -  5min  : {mainPingInfo[0]}ms\n" +
-                     $"  - 10min  : {mainPingInfo[1]}ms\n" +
-                     $"  - 15min  : {mainPingInfo[2]}ms" +
-                     $"\n\n" +
-                      "响应状态:\n" +
-                     $"- 发送包数累计 : {monitor.TotalRequestCount}\n" +
-                     $"- 响应超时累计 : {monitor.TimeoutRequestCount}\n" +
-                     $"- 其他错误累计 : {monitor.OtherErrorCount}\n" +
-                     $"- 非压缩包累计 : {monitor.CompressSkipRequestCount}\n" +
-                     $"- 响应包跳过率 : \n" +
-                     $"  -  5min  : {Math.Round(skipRateInfo[0] * 100, 2)}%\n" +
-                     $"  - 10min  : {Math.Round(skipRateInfo[1] * 100, 2)}%\n" +
-                     $"  - 15min  : {Math.Round(skipRateInfo[2] * 100, 2)}%\n" +
-                     $"  -  Avg   : {Math.Round(monitor.CompressSkipRate * 100, 2)}%\n" +
-                     $"- 最新一次响应 : {monitor.LastResponseStatusCode}\n\n" +
-                     $"\n") +
-                      "```";
+            var cmd = (Command)userMsg.Command!;
+            var querier = userMsg.From;
+            var param = cmd.Params.Skip(1).ToArray();
+            if (cmd.Prefix == "maistatus")
+                param = cmd.Params;
+
+            var result = monitor.GetResult();
+
+
+            string text = "";
+            if (param.IsEmpty())
+            {
+                text = "maimai服务器状态:\n" +
+                          "```python" +
+                         StringHandle(
+                          "\nTcping延迟:" +
+                         $"\n  - Title服务器  : {result["tAvgPing"]}ms" +
+                         $"\n  - OAuth服务器  : {result["oAvgPing"]}ms" +
+                         $"\n  - DXNet服务器  : {result["nAvgPing"]}ms" +
+                         $"\n  - Main 服务器  : {result["mAvgPing"]}ms" +
+                         $"\n" +
+                         $"响应包跳过率 : \n" +
+                         $"  - 30min  : {result["skipRate1"]}%\n" +
+                         $"  - 60min  : {result["skipRate2"]}%\n" +
+                         $"  - 90min  : {result["skipRate3"]}%\n" +
+                         $"\n") +
+                          "```";
+            }
+            else if (param.First() is "full")
+            {
+                text = "maimai服务器状态:\n" +
+                          "```python" +
+                         StringHandle(
+                          "\nTcping延迟:" +
+                         $"\n- Title服务器  : {result["tAvgPing"]}ms\n" +
+                         $"  -  5min  : {result["tAvgPing1"]}ms\n" +
+                         $"  - 10min  : {result["tAvgPing2"]}ms\n" +
+                         $"  - 15min  : {result["tAvgPing3"]}ms" +
+                         $"\n- OAuth服务器  : {result["oAvgPing"]}ms\n" +
+                         $"  -  5min  : {result["oAvgPing1"]}ms\n" +
+                         $"  - 10min  : {result["oAvgPing2"]}ms\n" +
+                         $"  - 15min  : {result["oAvgPing3"]}ms" +
+                         $"\n- DXNet服务器  : {result["nAvgPing"]}ms\n" +
+                         $"  -  5min  : {result["nAvgPing1"]}ms\n" +
+                         $"  - 10min  : {result["nAvgPing2"]}ms\n" +
+                         $"  - 15min  : {result["nAvgPing3"]}ms" +
+                         $"\n- Main 服务器  : {result["mAvgPing"]}ms\n" +
+                         $"  -  5min  : {result["mAvgPing1"]}ms\n" +
+                         $"  - 10min  : {result["mAvgPing2"]}ms\n" +
+                         $"  - 15min  : {result["mAvgPing3"]}ms" +
+                         $"\n\n" +
+                          "响应状态:\n" +
+                         $"- 发送包数累计 : {result["totalRequestCount"]}\n" +
+                         $"- 响应超时累计 : {result["timeoutRequestCount"]}\n" +
+                         $"- 其他错误累计 : {result["otherErrorCount"]}\n" +
+                         $"- 非压缩包累计 : {result["compressSkipRequestCount"]}\n" +
+                         $"- 响应包跳过率 : \n" +
+                         $"  - 30min  : {result["skipRate1"]}%\n" +
+                         $"  - 60min  : {result["skipRate2"]}%\n" +
+                         $"  - 90min  : {result["skipRate3"]}%\n" +
+                         $"- 最新一次响应 : {result["statusCode"]}\n\n" +
+                         $"\n") +
+                          "```";
+            }
+            else
+                text = $"\"{string.Join(" ", param)}\"为无效参数喵x";
+
+            await userMsg.Reply(text, ParseMode.MarkdownV2);
         }
         else
-            text = $"\"{string.Join(" ", param)}\"为无效参数喵x";
-
-        await userMsg.Reply(text,ParseMode.MarkdownV2);
+            userMsg.Reply("Internal error: Module\"MaiMonitor\" not found");
     }
     /// <summary>
     /// 获取RegionId对应的地区名
@@ -1002,7 +1005,7 @@ public partial class Mai : ExtensionCore, IExtension
             30 => "宁夏",
             31 => "新疆",
             32 => "西藏",
-            _ => null
+            _ => "Unknown"
         };
     }
     internal static async Task<Response<UserPreviewResponse>> GetUserPreview(int userId)
@@ -1052,27 +1055,38 @@ public partial class Mai : ExtensionCore, IExtension
         helpStr += "\n```";
         await userMsg.Reply(helpStr,ParseMode.MarkdownV2);
     }
+    void CalRating()
+    {
+        if (maiAccountList is null)
+            maiAccountList = new (maiDatabase.All());
+        var allRating = maiAccountList.OrderBy(x => x.playerRating);
+        ratingList = allRating.OrderByDescending(x => x.playerRating).Select(x => x.playerRating).ToList();
+        var top = allRating.Skip(allRating.Count() - 300).OrderByDescending(x => x.playerRating);
+        var ratingGroup = top.GroupBy(x => x.playerRating);
+
+        this.top = ratingGroup.ToList();
+    }
+    async Task<long> GetUserRank(long rating)
+    {
+        if (maiAccountList is null || ratingList is null || top is null)
+            CalRating();
+        return await Task.Run(() =>
+        {
+            var rankList = ratingList!.GroupBy(x => x);
+            int ranking = 1;
+            foreach (var rankGroup in rankList)
+            {
+                if (rankGroup.Key == rating)
+                    return ranking;
+                ranking += rankGroup.Count();
+            }
+            return -1;
+        });
+    }
 }
 public partial class Mai
 {
-    public enum ServerType
-    {
-        Title,
-        OAuth,
-        Net,
-        Main
-    }
-    public class PingResult
-    {
-        public ServerType Type { get; set; }
-        public long Delay { get; set; }
-    }
-    public class SkipLog
-    {
-        public DateTime Timestamp { get; set; }
-        public bool IsSkip { get; set; }
-        public double LastSkipRate { get; set; }
-    }
+    
     public struct DateTimeRange
     {
         public DateTime Start { get; set; }
@@ -1092,603 +1106,6 @@ public partial class Mai
                     End = day.AddMinutes(minute)
                 });
             return range.ToArray();
-        }
-    }
-    internal class MaiDatabase
-    {
-        public List<MaiAccount> MaiAccountList = new();
-        public List<int> MaiInvaildUserIdList = new();
-        public List<long> RatingList = new();
-        public List<IGrouping<long, MaiAccount>> Top = new();
-
-        public void Init()
-        {
-            CalRating();
-        }
-        public async void GetMaiAccount(NekoBot.Types.User user)
-        {
-            await Task.Run(() =>
-            {
-                if (user.MaiUserId is null)
-                    return false;
-
-                var userid = (int)user.MaiUserId;
-                var result = MaiAccountList.Where(x => x.userId == userid);
-
-                if (result.Count() == 0)
-                    return false;
-
-                user.Account = result.ToArray()[0];
-                return true;
-            });
-        }
-        public void Save()
-        {
-
-        }
-        public void CalRating()
-        {
-            var allRating = MaiAccountList.OrderBy(x => x.playerRating);
-            RatingList = allRating.OrderByDescending(x => x.playerRating).Select(x => x.playerRating).ToList();
-            var top = allRating.Skip(allRating.Count() - 300).OrderByDescending(x => x.playerRating);
-            var ratingGroup = top.GroupBy(x => x.playerRating);
-
-            Top = ratingGroup.ToList();
-        }
-        public async Task<long> GetUserRank(long rating)
-        {
-            return await Task.Run(() =>
-            {
-                var rankList = RatingList.GroupBy(x => x);
-                int ranking = 1;
-                foreach (var rankGroup in rankList)
-                {
-                    if (rankGroup.Key == rating)
-                        return ranking;
-                    ranking += rankGroup.Count();
-                }
-                return -1;
-            });
-        }
-        public MaiAccount Search(int userId)
-        {
-            var result = MaiAccountList.Where(x => x.userId == userId).ToArray();
-            if (result.Length == 0)
-                return null;
-            else
-                return result[0];
-        }
-    }
-    public partial class MaiMonitor
-    {
-
-        public bool ServiceAvailability = true;
-
-        public long FaultInterval = -1;//平均故障间隔
-        static List<long> FaultIntervalList = new();
-        static DateTime LastFailureTime;
-
-        public long TitleServerDelay = -1;// Title Server
-        public long OAuthServerDelay = -1;// WeChat QRCode
-        public long NetServerDelay = -1;//   DX Net
-        public long MainServerDelay = -1;//  Main Server
-
-        public List<PingResult> PingLogs = new();
-
-        public long TotalRequestCount = 0;
-        public long TimeoutRequestCount = 0;
-        public long OtherErrorCount = 0;
-        public double CompressSkipRate = 0;// 跳过率
-        public long CompressSkipRequestCount = 0;
-        public List<SkipLog> CompressSkipLogs = new();
-        public HttpStatusCode LastResponseStatusCode;
-
-        static Mutex mutex = new Mutex();
-        Task monitorTask;
-        bool isDestroying = false;
-
-        public void Init()
-        {
-            LastFailureTime = DateTime.Now;
-            //CompressSkipLogs = Load<List<SkipLog>>(Path.Combine(DatabasePath, "CompressSkipLogs.data"));
-            //FaultIntervalList = Load<List<long>>(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"));
-            //LastFailureTime = Load<DateTime>(Path.Combine(Config.DatabasePath, "LastFailureTime.data"));
-
-
-            Proc();
-        }
-        public void Save()
-        {
-            //Config.Save(Path.Combine(DatabasePath, "CompressSkipLogs.data"), CompressSkipLogs);
-            //Config.Save(Path.Combine(Config.DatabasePath, "FaultIntervalList.data"),FaultIntervalList);
-            //Config.Save(Path.Combine(Config.DatabasePath, "LastFailureTime.data"), LastFailureTime);
-        }
-        public void Destroy()
-        {
-            isDestroying = true;
-            if (monitorTask is not null)
-                monitorTask.Wait();
-        }
-        void Proc()
-        {
-            
-        }
-
-        public long[] GetAvgPing(ServerType type)
-        {
-            long _5min = -1;
-            long _10min = -1;
-            long _15min = -1;
-
-            var result = PingLogs.Where(x => x.Type == type).Select(x => x.Delay);
-            var count = result.Count();
-            if (count >= 60)
-                _5min = result.Skip(Math.Max(0, count - 60)).Sum() / 60;
-            if (count >= 120)
-                _10min = result.Skip(Math.Max(0, count - 120)).Sum() / 120;
-            if (count >= 180)
-                _15min = result.Skip(Math.Max(0, count - 180)).Sum() / 180;
-
-            return new long[] { _5min, _10min, _15min };
-        }
-        public double[] GetAvgSkipRate()
-        {
-            double _30min = double.NaN;
-            double _60min = double.NaN;
-            double _90min = double.NaN;
-            var count = CompressSkipLogs.Count;
-            var now = DateTime.Now;
-
-            var _30minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 30);
-            var _60minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 60);
-            var _90minLogs = CompressSkipLogs.Where(x => (now - x.Timestamp).Minutes <= 90);
-
-            var _30minSkip = _30minLogs.Where(x => x.IsSkip);
-            var _60minSkip = _60minLogs.Where(x => x.IsSkip);
-            var _90minSkip = _90minLogs.Where(x => x.IsSkip);
-
-            _30min = _30minSkip.Count() / (double)_30minLogs.Count();
-            _60min = _60minSkip.Count() / (double)_60minLogs.Count();
-            _90min = _90minSkip.Count() / (double)_90minLogs.Count();
-
-            //if (count >= 60)
-            //{
-            //    double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 60))
-            //                                       .Where(x => x.IsSkip && (now - x.Timestamp).Minutes <= 5)
-            //                                       .Count();
-            //    _5min = skipCount / 60;
-            //}
-            //if (count >= 120)
-            //{
-            //    double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 120))
-            //                                       .Where(x => x.IsSkip)
-            //                                       .Count();
-            //    _10min = skipCount / 120;
-            //}
-            //if (count >= 180)
-            //{
-            //    double skipCount = CompressSkipLogs.Skip(Math.Max(0, count - 180))
-            //                                       .Where(x => x.IsSkip)
-            //                                       .Count();
-            //    _15min = skipCount / 180;
-            //}
-
-            return new double[] { _30min, _60min, _90min };
-        }
-        static long TCPing(string host, int port)
-        {
-            Stopwatch stopwatch = new();
-            stopwatch.Start();
-            try
-            {
-                TcpClient client = new TcpClient();
-                client.SendTimeout = 2000;
-                client.ReceiveTimeout = 2000;
-                client.Connect(host, port);
-                client.Close();
-                stopwatch.Stop();
-                return stopwatch.ElapsedMilliseconds;
-            }
-            catch
-            {
-                return -1;
-            }
-            finally
-            {
-                stopwatch.Stop();
-            }
-
-        }
-
-    }
-    public partial class MaiMonitor
-    {
-        /// <summary>
-        /// 用于获取指定尺度的全天K线图
-        /// </summary>
-        /// <param name="minute"></param>
-        public void CreateGraph(int minute)
-        {
-            var range = DateTimeRange.Create(minute);
-        }
-        public void CreateGraph(DateTimeRange[] range)
-        {
-            var xSamples = range.Select(x => x.Start.ToString("HH:mm")).ToArray();
-            List<KNode> nodes = new();
-
-            foreach (var item in range)
-                nodes.Add(CreateNode(item, CompressSkipLogs.ToArray()));
-
-            var ySamples = CreateYSamples(nodes);
-        }
-        KNode CreateNode(DateTimeRange range, SkipLog[] samples)
-        {
-            double max = 0;
-            double min = 1;
-            double open = 0;
-            double close = 0;
-
-            var matched = samples.Where(x => range.Contains(x.Timestamp))
-                                 .OrderBy(x => x.Timestamp);
-
-            if (matched.Count() == 0)
-                return new KNode()
-                {
-                    High = 0,
-                    Low = 0,
-                    Close = 0,
-                    Open = 0,
-                    Date = range.Start
-                };
-
-            foreach (var x in matched)
-            {
-                max = Math.Max(x.LastSkipRate, max);
-                min = Math.Min(x.LastSkipRate, min);
-            }
-            open = matched.First().LastSkipRate;
-            close = matched.Last().LastSkipRate;
-
-            return new KNode()
-            {
-                High = (float)max,
-                Low = (float)min,
-                Open = (float)open,
-                Close = (float)close,
-                Date = range.Start
-            };
-
-
-        }
-        IList<float> CreateYSamples(IList<KNode> nodes)
-        {
-            List<float> samples = new();
-            var maxValue = (((int)(nodes.Select(x => x.High).Max() * 100) / 5) + 1) * 5 / 100f;
-
-            for (float i = maxValue; i >= 0;)
-            {
-                samples.Add(i);
-                i -= 0.05f;
-            }
-
-            return samples;
-        }
-    }
-    public partial class MaiScanner
-    {
-
-        static string AppPath = Environment.CurrentDirectory;
-        static string DatabasePath = Path.Combine(AppPath, "Database");
-        static string TempPath = Path.Combine(AppPath, "Database/ScanTempFile");
-
-
-        public int StartIndex = 1000;
-        public int EndIndex = 1199;
-        public int SearchInterval = 1000;
-        public int CurrentQps = 0;
-        public int QpsLimit = 10;
-
-        public long TotalAccountCount = 0;
-        public long CurrentAccountCount = 0;
-
-        public bool isRunning = false;
-
-        List<Task> task = new();
-        Mutex mutex = new();
-        Mutex mutex2 = new();
-        Task QpsTimer = null;
-        bool isDestroying = false;
-        public CancellationTokenSource cancelSource = new CancellationTokenSource();
-        public void Init()
-        {
-
-        }
-        public void Destroy()
-        {
-            isRunning = false;
-            isDestroying = true;
-
-            if (task.Count > 0)
-                Task.WaitAll(task.ToArray());
-            if (QpsTimer is not null)
-                QpsTimer.Wait();
-        }
-        public async void Start()
-        {
-            if (QpsTimer is null)
-            {
-                QpsTimer = Task.Run(() =>
-                {
-                    while (true)
-                    {
-                        if (isDestroying)
-                            break;
-                        mutex.WaitOne();
-                        CurrentQps = 0;
-                        mutex.ReleaseMutex();
-                        Thread.Sleep(1000);
-                    }
-                });
-            }
-
-            if (isRunning)
-                return;
-
-            Aqua.RePostCount = 10;
-            Aqua.Timeout = 1000;
-            isRunning = true;
-            task.Clear();
-            cancelSource = new CancellationTokenSource();
-
-            TotalAccountCount = (EndIndex - StartIndex + 1) * 10000;
-
-            await Task.Run(() =>
-            {
-                for (; StartIndex <= EndIndex; StartIndex++)
-                    task.Add(GetUser(StartIndex * 10000, StartIndex * 10000 + 9999));
-                Task.WaitAll(task.ToArray());
-                IsFinished();
-                //Config.SaveData();
-            });
-        }
-        public async void Update(int index = 0)
-        {
-            if (isRunning)
-                return;
-
-            Aqua.RePostCount = 10;
-            Aqua.Timeout = 1000;
-            isRunning = true;
-            task.Clear();
-            cancelSource = new CancellationTokenSource();
-
-            TotalAccountCount = database.MaiAccountList.Count;
-            CurrentAccountCount = index;
-
-            await Task.Run(() =>
-            {
-                var accounts = database.MaiAccountList;
-                for (; index < accounts.Count; index++)
-                    task.Add(UpdateUser(accounts[index]));
-                Task.WaitAll(task.ToArray());
-                IsFinished();
-                //Config.SaveData();
-            });
-        }
-        async Task UpdateUser(MaiAccount account)
-        {
-            bool canUpdate = true;
-            while (true)
-            {
-                if (isDestroying)
-                    break;
-                if (DateTime.Today.AddHours(3) <= DateTime.Now && DateTime.Now <= DateTime.Today.AddHours(9))
-                    canUpdate = false;
-                else
-                    canUpdate = true;
-
-                var request = new Request<UserPreviewRequest>();
-                request.Object.userId = account.userId;
-
-                QpsIncrease();
-                for (; CurrentQps > QpsLimit || monitor.CompressSkipRate >= 0.20 || !canUpdate; QpsIncrease())
-                {
-                    if (cancelSource.Token.IsCancellationRequested)
-                        break;
-                    Thread.Sleep(500);
-                }
-                if (cancelSource.Token.IsCancellationRequested)
-                    break;
-
-
-                var response = (await Aqua.PostAsync<UserPreviewRequest, UserPreviewResponse>(request)).Object;
-
-                if (response.StatusCode is not System.Net.HttpStatusCode.OK)
-                    continue;
-
-                account.playerRating = response.playerRating ?? 0;
-                account.lastDataVersion = response.lastDataVersion;
-                account.lastRomVersion = response.lastRomVersion;
-                account.lastGameId = response.lastGameId;
-                account.banState = response.banState;
-                account.lastUpdate = DateTime.Now;
-                CountIncrease();
-                break;
-
-            }
-
-        }
-        async Task GetUser(int startIndex, int endIndex)
-        {
-            int targetUserId = startIndex;
-            List<MaiAccount> accounts = new();
-            List<int> failureList = new();
-
-            for (; targetUserId <= endIndex; targetUserId++)
-            {
-                if (isDestroying)
-                    break;
-                for (; CurrentQps > QpsLimit || monitor.CompressSkipRate >= 0.20;)
-                {
-                    Thread.Sleep(100);
-                    continue;
-                }
-
-                var request = new Request<UserPreviewRequest>();
-                request.Object.userId = targetUserId;
-
-                var response = (await Aqua.PostAsync<UserPreviewRequest, UserPreviewResponse>(request)).Object;
-
-                if (response.StatusCode is not HttpStatusCode.OK)
-                {
-                    failureList.Add(targetUserId);
-                    continue;
-                }
-
-                var account = new MaiAccount();
-                account.userName = StringHandle(response.userName);
-                account.playerRating = response.playerRating ?? 0;
-                account.userId = targetUserId;
-                account.lastDataVersion = response.lastDataVersion;
-                account.lastRomVersion = response.lastRomVersion;
-                account.lastGameId = response.lastGameId;
-                account.banState = response.banState;
-                account.lastUpdate = DateTime.Now;
-                accounts.Add(account);
-                CountIncrease();
-
-                QpsIncrease();
-                Thread.Sleep(SearchInterval);
-
-                if (!isRunning)
-                    return;
-            }
-
-            for (; failureList.Count != 0;)
-            {
-                if (isDestroying)
-                    break;
-                var _failureList = new List<int>(failureList);
-                foreach (var userid in _failureList)
-                {
-                    for (; CurrentQps > QpsLimit || monitor.CompressSkipRate >= 0.20;)
-                    {
-                        Thread.Sleep(100);
-                        continue;
-                    }
-
-                    failureList.Remove(userid);
-                    var request = new Request<UserPreviewRequest>();
-                    request.Object.userId = userid;
-
-                    var response = (await Aqua.PostAsync<UserPreviewRequest, UserPreviewResponse>(request)).Object;
-
-                    if (response.StatusCode is not System.Net.HttpStatusCode.OK)
-                    {
-                        failureList.Add(userid);
-                        continue;
-                    }
-
-                    var account = new MaiAccount();
-                    account.userName = StringHandle(response.userName);
-                    account.playerRating = response.playerRating ?? 0;
-                    account.userId = userid;
-                    account.lastDataVersion = response.lastDataVersion;
-                    account.lastRomVersion = response.lastRomVersion;
-                    account.lastGameId = response.lastGameId;
-                    account.banState = response.banState;
-                    account.lastUpdate = DateTime.Now;
-                    accounts.Add(account);
-                    CountIncrease();
-
-                    QpsIncrease();
-                    Thread.Sleep(SearchInterval);
-
-                    if (!isRunning)
-                        return;
-                }
-
-                continue;
-            }
-
-            var result = accounts.GroupBy(x => x.userId)
-                                 .Select(x => x.First())
-                                 .Where(x => x.userName is not null);
-
-            database.MaiAccountList.AddRange(result);
-        }
-    }
-    public partial class MaiScanner
-    {
-        /// <summary>
-        /// QPS递增
-        /// </summary>
-        void QpsIncrease()
-        {
-            mutex.WaitOne();
-            CurrentQps++;
-            mutex.ReleaseMutex();
-        }
-        /// <summary>
-        /// 用于报告目前进度
-        /// </summary>
-        void CountIncrease()
-        {
-            mutex2.WaitOne();
-            CurrentAccountCount++;
-            mutex2.ReleaseMutex();
-        }
-        bool IsFinished()
-        {
-            var count = task.Where(x => x.IsCompleted == true).Count();
-            if (count != task.Count)
-            {
-                isRunning = false;
-                return false;
-            }
-            return true;
-        }
-        public static string ToJsonString<T>(T target) => Serialize(target);
-        public static T FromJsonString<T>(string json) => Deserialize<T>(json);
-        public static string? Serialize<T>(T obj)
-        {
-            var ext = ScriptManager.GetExtension("JsonSerializer") as ISerializer;
-            JsonSerializer? serializer = null;
-            if (ext is not null)
-            {
-                serializer = ext as JsonSerializer;
-                var options = new JsonSerializerOptions
-                {
-                    Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    Converters = { new DateTimeConverter() },
-                    IncludeFields = true,
-                    WriteIndented = true
-                };
-                var result = serializer!.Serialize<T>(obj, options);
-                return result;
-            }
-            return default;
-            
-        }
-        public static T? Deserialize<T>(string json)
-        {
-            var ext = ScriptManager.GetExtension("JsonSerializer") as ISerializer;
-            JsonSerializer? serializer = null;
-            if(ext is not null)
-            { 
-                serializer = ext as JsonSerializer;
-                var options = new JsonSerializerOptions
-                {
-                    Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    Converters = { new DateTimeConverter() },
-                    IncludeFields = true
-                };
-                var result = serializer!.Deserialize<T>(json, options);
-                return result;
-            }
-            return default;
         }
     }
     public static string StringHandle(string s)
