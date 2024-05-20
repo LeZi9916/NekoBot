@@ -37,6 +37,7 @@ namespace NekoBot
                 var scripts = GetScripts();
                 var loader = new ScriptLoader(scripts.Select(x => x.Info).ToList());
                 var loadOrder = loader.GetLoadOrder();
+                loadOrder.Reverse();
                 foreach (var name in loadOrder)
                 {
                     var obj = scripts.Find(x => x.Info.Name == name);
@@ -227,12 +228,27 @@ namespace NekoBot
         /// <returns></returns>
         public static string[] GetLoadedScript() => loadedScripts.Select(x => x.Info.Name).ToArray();
         static List<IExtension> GetScripts() => GetScripts(s => { });
+        static FileInfo[] ScanFile(string path)
+        {
+            List<FileInfo> files = new();
+            Stack<string> dirs = new();
+            dirs.Push(path);
+
+            while(dirs.Count > 0)
+            {
+                var dirPath = dirs.Pop();
+                files.AddRange(Directory.GetFiles(dirPath).Select(x => new FileInfo(x)));
+
+                foreach (var dir in Directory.GetDirectories(dirPath))
+                    dirs.Push(dir);
+            }
+            return files.ToArray();
+        }
         static List<IExtension> GetScripts(Action<string> step)
         {
-            var scriptPaths = new DirectoryInfo(ScriptPath).GetFiles()
-                                           .Where(x => x.Extension is ".csx" or ".cs")
-                                           .Select(x => x.FullName)
-                                           .ToArray();
+            var scriptPaths = ScanFile(ScriptPath).Where(x => x.Extension is ".csx" or ".cs")
+                                                  .Select(x => x.FullName)
+                                                  .ToArray();
             var eva = CSScript.Evaluator;
             List<IExtension> uninitObjs = new();
             foreach (var path in scriptPaths)
@@ -248,13 +264,13 @@ namespace NekoBot
                         if (conflictObj.Info.Version < info.Version)
                         {
                             uninitObjs.Remove(conflictObj);
-                            Core.Debug(DebugType.Info, $"Conflicting scripts, removing: {conflictObj.Info.Name}(v{conflictObj.Info.Version})\n");
+                            Core.Debug(DebugType.Info, $"Conflicting scripts, removing: {conflictObj.Info.Name}(v{conflictObj.Info.Version})");
                         }
                         else
                             continue;
                     }
                     uninitObjs.Add(obj);
-                    Core.Debug(DebugType.Info, $"Compiled script: {info.Name}(v{info.Version})\n");
+                    Core.Debug(DebugType.Info, $"Compiled script: {info.Name}(v{info.Version})");
                 }
                 catch (Exception e)
                 {

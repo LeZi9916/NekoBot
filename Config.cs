@@ -49,16 +49,12 @@ namespace NekoBot
         }
         public string Serialize<T>(T obj)
         {
-            var serializer = new SerializerBuilder()
-                                 .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                                 .Build();
+            var serializer = new SerializerBuilder().Build();
             return serializer.Serialize(obj);
         }
         public T? Deserialize<T>(string yaml)
         {
-            var deserializer = new DeserializerBuilder()
-                                   .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                                   .Build();
+            var deserializer = new DeserializerBuilder().Build();
             return deserializer.Deserialize<T>(yaml);
         }
     }

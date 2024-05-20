@@ -33,20 +33,36 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="Scripts\Database\GroupDatabase.csx" />
-    <Compile Include="Scripts\Database\MaiDatabase.csx" />
-    <Compile Include="Scripts\Handler\MessageHandler.csx" />
-    <Compile Include="Scripts\JsonSerializer.csx" />
-    <Compile Include="Scripts\Database\UserDatabase.csx" />
+    <Compile Include="Scripts\Database\GroupDatabase.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="Scripts\Database\MaiDatabase.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="Scripts\Handler\MessageHandler.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="Scripts\JsonSerializer.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="Scripts\Database\UserDatabase.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
     <Compile Include="Scripts\Module\Generic.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Module\Mai.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Scripts\Module\NetQuery.csx" />
-    <Compile Include="Scripts\Module\ScriptHelper.csx" />
-    <Compile Include="Scripts\YamlSerializer.csx" />
+    <Compile Include="Scripts\Module\NetQuery.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="Scripts\Module\ScriptHelper.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="Scripts\YamlSerializer.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>

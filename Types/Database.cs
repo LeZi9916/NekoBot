@@ -25,7 +25,7 @@ namespace NekoBot.Types
         public override void Init()
         {
             jsonSerializer = (ISerializer)ScriptManager.GetExtension("JsonSerializer")!;
-            yamlSerializer = (ISerializer)ScriptManager.GetExtension("YmalSerializer")!;
+            yamlSerializer = (ISerializer)ScriptManager.GetExtension("YamlSerializer")!;
             dbPath = Config.DatabasePath;
         }
         public override void Destroy() => Save();

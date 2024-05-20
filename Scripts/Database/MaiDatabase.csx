@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using Version = NekoBot.Types.Version;
 
-public class MaiDatabase : Database<User>, IExtension, IDatabase<User>
+public class MaiDatabase : Database<MaiAccount>, IExtension, IDatabase<MaiAccount>
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
@@ -29,7 +29,7 @@ public class MaiDatabase : Database<User>, IExtension, IDatabase<User>
     public override void Init()
     {
         base.Init();
-        database = Load<List<User>>(yamlSerializer!, Path.Combine(dbPath!, "MaiDatabase.yaml"));
+        database = Load<List<MaiAccount>>(yamlSerializer!, Path.Combine(dbPath!, "MaiDatabase.yaml"));
     }
     public override void Save()
     {

@@ -1,6 +1,7 @@
 ﻿using Telegram.Bot.Types;
 using System.Text.Json.Serialization;
 using NekoBot.Interfaces;
+using YamlDotNet.Serialization;
 
 namespace NekoBot.Types
 {
@@ -13,12 +14,13 @@ namespace NekoBot.Types
         public string Name
         {
             get => FirstName + " " + LastName;
+            set { }
         }
         public Permission Level { get; set; } = Permission.Common;
         public int? MaiUserId { get; set; } = null;
-        public bool IsBanned => Level <= Permission.Ban;
-        public bool IsUnknown => Level == Permission.Unknown;
-        public bool IsNormal => !(Id is 136817688 or 1087968824);
+        public bool IsBanned { get => Level <= Permission.Ban; set { } }
+        public bool IsUnknown { get => Level == Permission.Unknown; set { } }
+        public bool IsNormal { get => !(Id is 136817688 or 1087968824); set { } }
         public bool IsBot { get; private set; } = false;
         public bool? IsPremium { get; set; }
         [JsonIgnore]

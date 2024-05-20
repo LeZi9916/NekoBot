@@ -14,16 +14,12 @@ public class YamlSerializer : ExtensionCore, IExtension, ISerializer
     };
     public string Serialize<T>(T obj)
     {
-        var serializer = new SerializerBuilder()
-                             .WithNamingConvention(CamelCaseNamingConvention.Instance)
-                             .Build();
+        var serializer = new SerializerBuilder().Build();
         return serializer.Serialize(obj);
     }
     public T? Deserialize<T>(string yaml)
     {
-        var deserializer = new DeserializerBuilder()
-                               .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                               .Build();
+        var deserializer = new DeserializerBuilder().Build();
         return deserializer.Deserialize<T>(yaml);
     }
 }
