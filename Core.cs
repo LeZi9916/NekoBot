@@ -122,8 +122,8 @@ public partial class Core
                 Debug(DebugType.Error, $"Failure to receive message : \n{e.Message}\n{e.StackTrace}");
             }
             stopwatch.Stop();
-            //Config.TotalHandleCount++;
-            //Config.TimeSpentList.Add((int)stopwatch.ElapsedMilliseconds);
+            Config.Analyzer.TotalHandleCount++;
+            Config.Analyzer.TotalHandleTime += stopwatch.ElapsedMilliseconds;
         });
     }
     public static async void Debug(DebugType type, string message)

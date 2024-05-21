@@ -1,4 +1,5 @@
 ﻿using CSScriptLib;
+using Microsoft.CodeAnalysis.Scripting;
 using NekoBot.Exceptions;
 using NekoBot.Interfaces;
 using NekoBot.Types;
@@ -10,6 +11,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using static System.Net.Mime.MediaTypeNames;
 using Message = NekoBot.Types.Message;
 
@@ -66,16 +68,30 @@ namespace NekoBot
             {
                 List<IExtension> newScripts = GetScripts(s => msg.Edit(s));
                 var oldScripts = new List<IExtension>(loadedScripts);
+                var loader = new ScriptLoader(newScripts.Select(x => x.Info).ToList());
+                var loadOrder = loader.GetLoadOrder();
+                loadOrder.Reverse();
+
 
                 foreach (var old in oldScripts)
                     RemoveExtension(old);
-                foreach (var newScript in newScripts)
-                    AddExtension(newScript);
+                foreach (var newScript in loadOrder)
+                    AddExtension(newScripts.Find(x => x.Info.Name == newScript));
 
                 UpdateCommand();
+                var scripts = string.Join("\n- ", GetLoadedScript());
+                var _ = 
+                    $"""
+                     Scripts have been loaded:
+                     - {scripts}
+                     """;
                 await msg.Edit(
-                    "Scripts have been loaded:\n" +
-                    $"-{string.Join("\n-", loadedScripts.Select(x => x.Info.Name))}");
+                    $"""
+                     ```python
+                     {Extension.StringHandle(_)}
+                     ```
+                     """
+                    ,ParseMode.MarkdownV2);
                 GC.Collect();
             }
             catch(Exception e)
