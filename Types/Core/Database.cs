@@ -42,19 +42,29 @@ public class Database<T> : Destroyable, IDatabase<T>
 
     protected async void AutoSave()
     {
-        if (!Core.Config.DbAutoSave)
-            return;
-        var token = isDestroying.Token;
-        while (true)
+        while(Core.Config.DbAutoSave && !isDestroying.IsCancellationRequested)
         {
-            token.ThrowIfCancellationRequested();
-            if (hasChange)
+            try
             {
-                Debug(DebugType.Info, $"[{Info.Name}] Auto saving...");
-                Save();
-                hasChange = false;
+                var token = isDestroying.Token;
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (hasChange)
+                    {
+                        Debug(DebugType.Info, $"[{Info.Name}] Auto saving...");
+                        Save();
+                        hasChange = false;
+                    }
+                    await Task.Delay(Core.Config.AutoSaveInterval * 1000, token);
+                }
             }
-            await Task.Delay(Core.Config.AutoSaveInterval * 1000, token);
+            catch(IOException e)
+            {
+                Debug(DebugType.Error, e.ToString());
+            }
+            catch
+            { }
         }
     }
     public override void Init()

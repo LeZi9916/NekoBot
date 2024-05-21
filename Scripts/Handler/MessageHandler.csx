@@ -62,6 +62,12 @@ public class MessageHandler: Extension, IExtension, IHandler
         userMsg.From = from!;
         userMsg.Group = groupDatabase!.Find(x => x.Id == msg.Chat.Id);
 
+        if(msg.ReplyTo is not null)
+        {
+            var replyTo = userDatabase!.Find(x => x.Id == msg.ReplyTo.From.Id);
+            userMsg.ReplyTo!.From = replyTo!;
+        }
+
         return userMsg;
     }
     // 此处传入的userMsg为待处理的Message

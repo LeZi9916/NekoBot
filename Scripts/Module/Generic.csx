@@ -13,6 +13,7 @@ using Message = NekoBot.Types.Message;
 using User = NekoBot.Types.User;
 using Group = NekoBot.Types.Group;
 using NekoBot.Exceptions;
+using System.Diagnostics;
 
 #pragma warning disable CS4014
 public partial class Generic : Extension, IExtension
@@ -518,7 +519,7 @@ public partial class Generic : Extension, IExtension
             string _ = $"""
                         - Bot info: 
                           Version  : v{ScriptManager.GetVersion()}
-                          MemUsage : {GC.GetTotalMemory(false) / (1024 * 1024)} MB
+                          MemUsage : {Process.GetCurrentProcess().WorkingSet64 / (1024 * 1024)} MB
                           Latency  : {analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount} ms
                           Processed Msg : {analyzer.TotalHandleCount}
                         - HW info

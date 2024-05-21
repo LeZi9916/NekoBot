@@ -49,13 +49,21 @@ public class Monitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictionar
     }
     async void Proc()
     {
-        var token = isDestroying.Token;
-        while (true)
+        while(!isDestroying.IsCancellationRequested)
         {
-            token.ThrowIfCancellationRequested();
-            CalCPULoad();
-            CalMemInfo();
-            await Task.Delay(1000);
+            try
+            {
+                var token = isDestroying.Token;
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+                    CalCPULoad();
+                    CalMemInfo();
+                    await Task.Delay(1000);
+                }
+            }
+            catch
+            { }
         }
     }
     public override void Destroy()
