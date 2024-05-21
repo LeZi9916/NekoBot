@@ -1,7 +1,9 @@
-﻿using NekoBot.Interfaces;
+﻿using NekoBot;
+using NekoBot.Interfaces;
 using NekoBot.Types;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Version = NekoBot.Types.Version;
 
 public class GroupDatabase : Database<Group>, IExtension, IDatabase<Group>
@@ -26,14 +28,37 @@ public class GroupDatabase : Database<Group>, IExtension, IDatabase<Group>
             }
         }
     };
+    async void AutoSave()
+    {
+        if (!Core.Config.DbAutoSave)
+            return;
+        var token = isDestroying.Token;
+        while (true)
+        {
+            token.ThrowIfCancellationRequested();
+            if (hasChange)
+            {
+                Debug(DebugType.Info, $"[{Info.Name}] Auto saving...");
+                Save();
+                hasChange = false;
+            }
+            await Task.Delay(Core.Config.AutoSaveInterval * 1000, token);
+        }
+    }
     public override void Init()
     {
         base.Init();
-        database = Load<List<Group>>(yamlSerializer!, Path.Combine(dbPath!, "GroupDatabase.yaml"));
+        _database = Load<List<Group>>(yamlSerializer!, Path.Combine(dbPath!, "GroupDatabase.yaml"));
+        AutoSave();
     }
-    public override void Save()
+    public override void Save() 
     {
-        Save(yamlSerializer!, Path.Combine(dbPath!, "GroupDatabase.yaml"), database);
+        Save(yamlSerializer!, Path.Combine(dbPath!, "GroupDatabase.yaml"), _database);
     }
     public override void Add(Group item) => Update(x => x.Id == item.Id, item);
+    public override void Destroy()
+    {
+        base.Destroy();
+        Save();
+    }
 }

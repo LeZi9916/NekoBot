@@ -4,6 +4,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NekoBot.Types
 {
@@ -12,8 +14,23 @@ namespace NekoBot.Types
         protected string? dbPath;
         protected ISerializer? jsonSerializer;
         protected ISerializer? yamlSerializer;
-        protected List<T> database = new();
+        protected bool hasChange = false;
+        protected List<T> database 
+        { 
+            get
+            {
+                hasChange = true;
+                return _database;
+            }
+            set
+            {
+                hasChange = true;
+                _database = value;
+            }
+        }
 
+        protected List<T> _database = new();
+        protected CancellationTokenSource isDestroying = new();
         public event System.Action? OnDestroy;
         public int Count => database.Count;
         public bool IsReadOnly => ((ICollection<T>)database).IsReadOnly;
@@ -23,6 +40,7 @@ namespace NekoBot.Types
             set => database[index] = value;
         }
 
+
         public override void Init()
         {
             jsonSerializer = (ISerializer)ScriptManager.GetExtension("JsonSerializer")!;
@@ -31,7 +49,7 @@ namespace NekoBot.Types
         }
         public override void Destroy()
         {
-            Save();
+            isDestroying.Cancel();
             if(OnDestroy is not null)
                 OnDestroy();
         }

@@ -33,6 +33,8 @@ namespace NekoBot.Types
         public static string ConfigPath { get => Path.Combine(AppPath, "NekoBot.conf"); }
 
         public HotpAuthenticator Authenticator { get; set; } = new HotpAuthenticator();
+        public bool DbAutoSave { get; set; } = true;
+        public int AutoSaveInterval { get; set; } = 600;
         public string Token { get; set; } = "";
         public Proxy Proxy { get; set; } = new();
         public Analyzer Analyzer { get; set; } = new();
