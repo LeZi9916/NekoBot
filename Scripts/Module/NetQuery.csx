@@ -15,7 +15,7 @@ using NekoBot.Interfaces;
 using NekoBot.Types;
 using Version = NekoBot.Types.Version;
 #nullable enable
-public class NetQuery: ExtensionCore, IExtension
+public class NetQuery: Extension, IExtension
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {

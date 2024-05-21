@@ -13,7 +13,7 @@ using AquaTools.Requests;
 using AquaTools.Responses;
 using AquaTools;
 
-public class MaiMonitor : ExtensionCore, IExtension, IMonitor<Dictionary<string, string>>
+public class MaiMonitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictionary<string, string>>
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
@@ -46,7 +46,6 @@ public class MaiMonitor : ExtensionCore, IExtension, IMonitor<Dictionary<string,
     public HttpStatusCode LastResponseStatusCode;
 
     static Mutex mutex = new Mutex();
-    CancellationTokenSource isDestroying = new();
 
     public override void Init()
     {
@@ -54,6 +53,7 @@ public class MaiMonitor : ExtensionCore, IExtension, IMonitor<Dictionary<string,
     }
     public override void Destroy()
     {
+        base.Destroy();
         isDestroying.Cancel();
     }
     async void Proc()

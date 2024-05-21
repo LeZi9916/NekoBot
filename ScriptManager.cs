@@ -230,7 +230,10 @@ namespace NekoBot
             foreach(var cmd in ext.Info.Commands)
                 commands.Remove(cmd);
             loadedScripts.Remove(ext);
-            ext.Destroy();
+            
+            if(ext is IDestroyable _ext)
+                _ext.Destroy();
+
             Core.Debug(DebugType.Info, $"Unloaded script : {ext.Info.Name}");
         }
 

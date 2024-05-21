@@ -15,7 +15,7 @@ using Version = NekoBot.Types.Version;
 using Message = NekoBot.Types.Message;
 using File = System.IO.File;
 #pragma warning disable CS4014
-public partial class ScriptHelper : ExtensionCore, IExtension
+public partial class ScriptHelper : Extension, IExtension
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {

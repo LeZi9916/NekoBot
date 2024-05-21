@@ -2,6 +2,7 @@
 using NekoBot.Exceptions;
 using NekoBot.Interfaces;
 using NekoBot.Types;
+using NekoBot.Types.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +14,7 @@ using Message = NekoBot.Types.Message;
 using User = NekoBot.Types.User;
 using Version = NekoBot.Types.Version;
 
-public class MessageHandler: ExtensionCore, IExtension, IHandler
+public class MessageHandler: Extension, IExtension, IHandler
 {
     IDatabase<User>? userDatabase;
     IDatabase<Group>? groupDatabase;

@@ -24,7 +24,7 @@ using File = System.IO.File;
 using MaiAccount = NekoBot.Types.MaiAccount;
 using NekoBot.Exceptions;
 #pragma warning disable CS4014
-public partial class Mai : ExtensionCore, IExtension
+public partial class Mai : Destroyable, IExtension , IDestroyable
 {
     IDatabase<MaiAccount> maiDatabase
     {

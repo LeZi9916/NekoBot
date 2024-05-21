@@ -17,7 +17,7 @@ using System.Text.Unicode;
 using NekoBot;
 using Version = NekoBot.Types.Version;
 
-public class MaiScanner : ExtensionCore, IExtension
+public class MaiScanner : Extension, IExtension
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {

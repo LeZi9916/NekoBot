@@ -13,8 +13,9 @@ using Message = NekoBot.Types.Message;
 using User = NekoBot.Types.User;
 using Group = NekoBot.Types.Group;
 using NekoBot.Exceptions;
+
 #pragma warning disable CS4014
-public partial class Generic : ExtensionCore, IExtension
+public partial class Generic : Destroyable, IExtension, IDestroyable
 {
     IDatabase<User> userDatabase 
     { 
@@ -146,6 +147,7 @@ public partial class Generic : ExtensionCore, IExtension
     }
     public override void Destroy()
     {
+        base.Destroy();
         _userDatabase = null;
         _groupDatabase = null;
     }
@@ -549,7 +551,7 @@ public partial class Generic : ExtensionCore, IExtension
         else
             userMsg.Reply("Internal error: Module\"Monitor\" not found");
     }
-    async void GetBotLog(Message userMsg)
+    void GetBotLog(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
@@ -616,54 +618,19 @@ public partial class Generic : ExtensionCore, IExtension
                 return;
             }
         }
-
         var logs = LogManager.GetLog(count, (DebugType)level);
 
         if (logs.IsEmpty())
             userMsg.Reply("No logs");
         else
         {
-            var logText = string.Join("", logs).Replace("\\", "\\\\");
-            if (logText.Length > 4000)
-            {
-                //int index = 0;
-                //string[] msgGroup = new string[(int)Math.Ceiling((double)logText.Length / 4000)];
-                //while(index * 4000 < logText.Length)
-                //{
-                //    msgGroup[index] = logText.Substring(index * 4000, Math.Min(4000,logText.Length - 1 - index * 4000));
-                //    index++;
-                //}
-
-                //foreach(var s in msgGroup)
-                //    await SendMessage("```csharp\n" +
-                //         $"{Program.StringHandle(s)}\n" +
-                //         $"```", update, true, ParseMode.MarkdownV2);
-
-                List<string> msgGroup = new();
-                string msg = "";
-
-                foreach (var s in logs)
-                {
-                    if (($"{msg}{s.Replace("\\", "\\\\")}").Length > 4000)
-                    {
-                        msgGroup.Add(msg);
-                        msg = $"{s.Replace("\\", "\\\\")}";
-                    }
-                    else
-                        msg += $"{s.Replace("\\", "\\\\")}";
-                }
-                msgGroup.Add(msg);
-                foreach (var s in msgGroup)
-                    await userMsg.Reply("```csharp\n" +
-                         $"{StringHandle(s)}\n" +
-                         $"```",ParseMode.MarkdownV2);
-            }
-            else
-                await userMsg.Reply("```csharp\n" +
-                         $"{StringHandle(logText)}\n" +
-                         $"```",ParseMode.MarkdownV2);
+            userMsg.Reply(
+                $"""
+                ```csharp
+                {StringHandle(string.Join("\n", logs.Select(x => x.ToString())))}
+                ```
+                """, ParseMode.MarkdownV2);
         }
-        //await UploadFile(Config.LogFile,chat.Id);
     }
     void BotConfig(Message userMsg)
     {

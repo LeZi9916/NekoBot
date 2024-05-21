@@ -1,7 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace NekoBot.Types
 {
@@ -39,6 +40,23 @@ namespace NekoBot.Types
         public Proxy Proxy { get; set; } = new();
         public Analyzer Analyzer { get; set; } = new();
 
+        [YamlIgnore]
+        bool isRunning = false;
+
+        internal async void AutoSave()
+        {
+            if (!Core.Config.DbAutoSave || isRunning)
+                return;
+            while (true)
+            {
+                isRunning = true;
+                var fileStream = File.Open(ConfigPath, FileMode.Create);
+                await fileStream.WriteAsync(Encoding.UTF8.GetBytes(Serializer.Yaml.Serialize(this)));
+                fileStream.Close();
+                Core.Debug(DebugType.Info, "Config saved");
+                await Task.Delay(Core.Config.AutoSaveInterval * 1000);
+            }
+        }
         public static void Check()
         {
             if (!Directory.Exists(LogsPath))
@@ -47,16 +65,6 @@ namespace NekoBot.Types
                 Directory.CreateDirectory(DatabasePath);
             if (!Directory.Exists(TempPath))
                 Directory.CreateDirectory(TempPath);
-        }
-        public string Serialize<T>(T obj)
-        {
-            var serializer = new SerializerBuilder().Build();
-            return serializer.Serialize(obj);
-        }
-        public T? Deserialize<T>(string yaml)
-        {
-            var deserializer = new DeserializerBuilder().Build();
-            return deserializer.Deserialize<T>(yaml);
         }
     }
 }

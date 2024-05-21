@@ -9,7 +9,7 @@ using NekoBot.Interfaces;
 using NekoBot.Types;
 using Version = NekoBot.Types.Version;
 
-public class Monitor : ExtensionCore, IExtension, IMonitor<Dictionary<string,long>>
+public class Monitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictionary<string,long>>
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
@@ -18,7 +18,6 @@ public class Monitor : ExtensionCore, IExtension, IMonitor<Dictionary<string,lon
         Type = ExtensionType.Module
     };
 
-    CancellationTokenSource isDestroying = new ();
     public int ProcessorCount = 0;
     public int CPULoad = 0;
     public int _5CPULoad = 0;

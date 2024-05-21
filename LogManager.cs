@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using YamlDotNet.Serialization;
 
 namespace NekoBot
 {
@@ -15,10 +15,13 @@ namespace NekoBot
         static string LogFile { get => Config.LogFile; }
         static string LogsPath { get => Config.LogsPath; }
         public static int LogCount { get; private set; } = 0;
-        public static void WriteLog(string s)
+
+        static List<Log> logs = new();
+        public static void WriteLog(Log l)
         {
             mutex.WaitOne();
-            File.AppendAllTextAsync(LogFile, $"{s}\n", Encoding.UTF8);
+            logs.Add(l);
+            File.WriteAllText(LogFile, Serializer.Yaml.Serialize(logs), Encoding.UTF8);
             LogCount++;
             mutex.ReleaseMutex();
         }
@@ -33,31 +36,14 @@ namespace NekoBot
             else
                 return DebugType.Error;
         }
-        public static string[] GetLog(int count, DebugType logLevel = DebugType.Error)
+        public static Log[] GetLog(int count, DebugType logLevel = DebugType.Error)
         {
-            string[] logs = File.ReadAllLines(LogFile);
-            List<string> result = new();
-            string s = "";
+            var logs = File.ReadAllText(LogFile);
+            var result = Serializer.Yaml.Deserialize<Log[]>(logs) ?? Array.Empty<Log>();
 
-            for (int index = logs.Length - 1; index >= 0; index--)
-            {
-                if (string.IsNullOrEmpty(logs[index]))
-                    continue;
-                else if (logs[index][0] == '[')
-                {
-                    s = $"{logs[index]}\n{s}";
-                    if (GetLogLevel(s) >= logLevel)
-                        result.Add(s);
-                    s = "";
-                }
-                else
-                    s = $"{logs[index]}\n{s}";
-                if (index <= 0)
-                    break;
-                else if (result.Count >= count)
-                    break;
-            }
-            return result.ToArray();
+            var filtered = result.Where(x => x.Level >= logLevel);
+
+            return filtered.TakeLast(count).ToArray();
         }
     }
 }

@@ -1,10 +1,11 @@
 ﻿using NekoBot.Interfaces;
 using NekoBot.Types;
+using NekoBot.Types.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using ISerializer = NekoBot.Interfaces.ISerializer;
 using Version = NekoBot.Types.Version;
-public class YamlSerializer : ExtensionCore, IExtension, ISerializer
+public class YamlSerializer : Extension, IExtension, ISerializer
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {

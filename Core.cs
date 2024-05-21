@@ -30,12 +30,12 @@ public partial class Core
 
 
         if (File.Exists(Config.ConfigPath))
-            Config = Config.Deserialize<Config>(File.ReadAllText(Config.ConfigPath))!;
+            Config = Serializer.Yaml.Deserialize<Config>(File.ReadAllText(Config.ConfigPath))!;
         else
         {
             Debug(DebugType.Info, "The configuration file has been generated\n" +
                                  $"Path: {Config.ConfigPath}");
-            File.WriteAllText(Config.ConfigPath, Config.Serialize(Config));
+            File.WriteAllText(Config.ConfigPath, Serializer.Yaml.Serialize(Config));
             Console.ReadKey();
             Environment.Exit(0);
         }
@@ -45,7 +45,7 @@ public partial class Core
             Console.ReadKey();
             Environment.Exit(0);
         }
-
+        Config.AutoSave();
         if (Config.Proxy.UseProxy)
         {
             HttpClient httpClient = new(new SocketsHttpHandler
@@ -76,11 +76,11 @@ public partial class Core
             }
         );
 
-        while (BotUsername == "")
+        while (string.IsNullOrEmpty(BotUsername))
         {
             try
             {
-                BotUsername = botClient.GetMeAsync().Result.Username ?? "";
+                BotUsername = botClient.GetMeAsync().Result.Username ?? string.Empty;
                 if (string.IsNullOrEmpty(BotUsername))
                     Debug(DebugType.Info, "Connect failure,retrying...");
                 else
@@ -140,9 +140,14 @@ public partial class Core
 
         if (_type == "Unknow")
             return;
-
-        await Console.Out.WriteLineAsync($"[{time}][{_type}] {message}");
-        LogManager.WriteLog($"[{time}][{_type}] {message}");
+        var log = new Log()
+        { 
+            Timestamp = DateTime.Now,
+            Level = type, 
+            Message = message 
+        };
+        await Console.Out.WriteLineAsync(log.ToString());
+        LogManager.WriteLog(log);
     }
     public static ITelegramBotClient GetClient() => botClient!;
 }

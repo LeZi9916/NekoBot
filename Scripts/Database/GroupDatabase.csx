@@ -6,7 +6,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Version = NekoBot.Types.Version;
 
-public class GroupDatabase : Database<Group>, IExtension, IDatabase<Group>
+public class GroupDatabase : Database<Group>, IExtension, IDatabase<Group>,IDestroyable
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
@@ -28,32 +28,12 @@ public class GroupDatabase : Database<Group>, IExtension, IDatabase<Group>
             }
         }
     };
-    async void AutoSave()
-    {
-        if (!Core.Config.DbAutoSave)
-            return;
-        var token = isDestroying.Token;
-        while (true)
-        {
-            token.ThrowIfCancellationRequested();
-            if (hasChange)
-            {
-                Debug(DebugType.Info, $"[{Info.Name}] Auto saving...");
-                Save();
-                hasChange = false;
-            }
-            await Task.Delay(Core.Config.AutoSaveInterval * 1000, token);
-        }
-    }
     public override void Init()
     {
         base.Init();
-        _database = Load<List<Group>>(yamlSerializer!, Path.Combine(dbPath!, "GroupDatabase.yaml"));
+        dbPath = Path.Combine(Config.DatabasePath, "GroupDatabase.yaml");
+        _database = Load<List<Group>>(yamlSerializer!, dbPath);
         AutoSave();
-    }
-    public override void Save() 
-    {
-        Save(yamlSerializer!, Path.Combine(dbPath!, "GroupDatabase.yaml"), _database);
     }
     public override void Add(Group item) => Update(x => x.Id == item.Id, item);
     public override void Destroy()
