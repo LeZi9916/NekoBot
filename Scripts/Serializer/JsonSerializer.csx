@@ -1,6 +1,5 @@
 ﻿using NekoBot.Interfaces;
 using NekoBot.Types;
-using NekoBot.Types.Core;
 using System.Text.Json;
 using Version = NekoBot.Types.Version;
 public class JsonSerializer : Extension, IExtension, ISerializer

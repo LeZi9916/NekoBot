@@ -2,7 +2,6 @@
 using NekoBot.Exceptions;
 using NekoBot.Interfaces;
 using NekoBot.Types;
-using NekoBot.Types.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;

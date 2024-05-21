@@ -1,6 +1,5 @@
 ﻿using NekoBot.Interfaces;
 using NekoBot.Types;
-using NekoBot.Types.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using ISerializer = NekoBot.Interfaces.ISerializer;
