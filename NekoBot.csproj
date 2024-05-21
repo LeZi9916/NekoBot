@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <StartupObject></StartupObject>
-    <AssemblyVersion>0.11.6</AssemblyVersion>
+    <AssemblyVersion>0.12.beta-1</AssemblyVersion>
     <PublishAot>False</PublishAot>
     <PublishTrimmed>False</PublishTrimmed>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>

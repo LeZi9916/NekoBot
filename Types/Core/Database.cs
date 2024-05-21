@@ -32,7 +32,6 @@ public class Database<T> : Destroyable, IDatabase<T>
     }
 
     protected List<T> _database = new();
-    protected CancellationTokenSource isDestroying = new();
     public int Count => database.Count;
     public bool IsReadOnly => ((ICollection<T>)database).IsReadOnly;
     public T this[int index]

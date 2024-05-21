@@ -9,6 +9,9 @@ public class Destroyable : Extension
     public virtual void Destroy()
     {
         if (OnDestroy is not null)
+        {
             OnDestroy();
+            OnDestroy = null;
+        }
     }
 }

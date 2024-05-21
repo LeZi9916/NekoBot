@@ -1,12 +1,10 @@
-﻿using NekoBot;
-using NekoBot.Interfaces;
+﻿using NekoBot.Interfaces;
 using NekoBot.Types;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Version = NekoBot.Types.Version;
 
-public class MaiDatabase : Database<MaiAccount>, IExtension, IDatabase<MaiAccount>
+public class MaiDatabase : Database<MaiAccount>, IExtension, IDatabase<MaiAccount>, IDestroyable
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {

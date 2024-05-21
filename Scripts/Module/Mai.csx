@@ -24,7 +24,7 @@ using File = System.IO.File;
 using MaiAccount = NekoBot.Types.MaiAccount;
 using NekoBot.Exceptions;
 #pragma warning disable CS4014
-public partial class Mai : Destroyable, IExtension , IDestroyable
+public partial class Mai : Extension, IExtension
 {
     IDatabase<MaiAccount> maiDatabase
     {
@@ -130,10 +130,6 @@ public partial class Mai : Destroyable, IExtension , IDestroyable
                         as IDatabase<MaiAccount>)!;
         _maiDatabase.OnDestroy += () => _maiDatabase = null;
 
-    }
-    public override void Destroy()
-    {
-        _maiDatabase = null;
     }
     public override void Handle(Message userMsg)
     {

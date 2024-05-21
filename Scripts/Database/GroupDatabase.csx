@@ -6,7 +6,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Version = NekoBot.Types.Version;
 
-public class GroupDatabase : Database<Group>, IExtension, IDatabase<Group>,IDestroyable
+public class GroupDatabase : Database<Group>, IExtension, IDatabase<Group>, IDestroyable
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {

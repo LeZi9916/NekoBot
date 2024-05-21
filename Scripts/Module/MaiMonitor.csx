@@ -19,16 +19,7 @@ public class MaiMonitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictio
     {
         Name = "MaiMonitor",
         Version = new Version() { Major = 1, Minor = 0 },
-        Type = ExtensionType.Module,
-        Dependencies = new ExtensionInfo[]
-        {
-            new ExtensionInfo()
-            {
-                Name = "MaiDatabase",
-                Version = new Version() { Major = 1, Minor = 0 },
-                Type = ExtensionType.Database
-            }
-        }
+        Type = ExtensionType.Module
     };
     public long TitleServerDelay = -1;// Title Server
     public long OAuthServerDelay = -1;// WeChat QRCode
@@ -53,8 +44,9 @@ public class MaiMonitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictio
     }
     public override void Destroy()
     {
-        base.Destroy();
         isDestroying.Cancel();
+        base.Destroy();
+        
     }
     async void Proc()
     {

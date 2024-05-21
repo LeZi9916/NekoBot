@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using Version = NekoBot.Types.Version;
 
-public class UserDatabase : Database<User>, IExtension, IDatabase<User>
+public class UserDatabase : Database<User>, IExtension, IDatabase<User>, IDestroyable
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {

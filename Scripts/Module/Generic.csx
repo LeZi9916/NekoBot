@@ -15,7 +15,7 @@ using Group = NekoBot.Types.Group;
 using NekoBot.Exceptions;
 
 #pragma warning disable CS4014
-public partial class Generic : Destroyable, IExtension, IDestroyable
+public partial class Generic : Extension, IExtension
 {
     IDatabase<User> userDatabase 
     { 
@@ -144,12 +144,6 @@ public partial class Generic : Destroyable, IExtension, IDestroyable
 
         _userDatabase.OnDestroy += () => _userDatabase = null;
         _groupDatabase.OnDestroy += () => _groupDatabase = null;
-    }
-    public override void Destroy()
-    {
-        base.Destroy();
-        _userDatabase = null;
-        _groupDatabase = null;
     }
     public override void Handle(Message userMsg)
     {
