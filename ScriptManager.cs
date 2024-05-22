@@ -1,5 +1,5 @@
 ﻿using CSScriptLib;
-using Microsoft.CodeAnalysis.Scripting;
+using CZGL.SystemInfo;
 using NekoBot.Exceptions;
 using NekoBot.Interfaces;
 using NekoBot.Types;
@@ -12,7 +12,6 @@ using System.Security.Cryptography;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using static System.Net.Mime.MediaTypeNames;
 using Message = NekoBot.Types.Message;
 
 namespace NekoBot
@@ -59,7 +58,7 @@ namespace NekoBot
         /// <summary>
         /// 重新加载所有Script
         /// </summary>
-        /// <param name="update"></param>
+        /// <param name="userMsg"></param>
         public static async void Reload(Message userMsg)
         {
             IsCompiling = true;
@@ -184,11 +183,11 @@ namespace NekoBot
         public static async void UpdateCommand()
         {
             var result = commands.Select(x => 
-            new BotCommand 
-            { 
-                Command = x.Command,
-                Description = x.Description,                
-            });
+                new BotCommand 
+                { 
+                    Command = x.Command,
+                    Description = x.Description,                
+                });
             Core.BotCommands = result.ToArray();
             await Core.GetClient().SetMyCommandsAsync(result);
             Core.Debug(DebugType.Info,"Bot commands has been updated");
@@ -200,7 +199,7 @@ namespace NekoBot
         /// <summary>
         /// 根据Name获取Extension
         /// </summary>
-        /// <param name="moduleName"></param>
+        /// <param name="extName"></param>
         /// <returns>IExtension的实例，不存在则返回null</returns>
         public static IExtension? GetExtension(string extName) => loadedScripts.Find(x => x.Info.Name == extName);
         /// <summary>
@@ -230,7 +229,7 @@ namespace NekoBot
         /// <summary>
         /// 卸载该Extension
         /// </summary>
-        /// <param name="ext"></param>
+        /// <param name="extName"></param>
         public static void RemoveExtension(string extName) => RemoveExtension(GetExtension(extName));
         /// <summary>
         /// 卸载该Extension
@@ -259,7 +258,7 @@ namespace NekoBot
         /// <returns></returns>
         public static string[] GetLoadedScript() => loadedScripts.Select(x => $"{x.Info.Name}(v{x.Info.Version})").ToArray();
         static List<IExtension> GetScripts() => GetScripts(s => { });
-        static FileInfo[] ScanFile(string path)
+        public static FileInfo[] GetFiles(string path)
         {
             List<FileInfo> files = new();
             Stack<string> dirs = new();
@@ -275,9 +274,15 @@ namespace NekoBot
             }
             return files.ToArray();
         }
+        public static string? GetScriptPath(string extName)
+        {
+            return GetFiles(ScriptPath).Where(x => x.Extension is ".csx" or ".cs" && x.Name == $"{extName}.csx")
+                                       .Select(x => x.FullName)
+                                       .First();
+        }
         static List<IExtension> GetScripts(Action<string> step)
         {
-            var scriptPaths = ScanFile(ScriptPath).Where(x => x.Extension is ".csx" or ".cs")
+            var scriptPaths = GetFiles(ScriptPath).Where(x => x.Extension is ".csx" or ".cs")
                                                   .Select(x => x.FullName)
                                                   .ToArray();
             var eva = CSScript.Evaluator;
