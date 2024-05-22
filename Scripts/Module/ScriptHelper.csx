@@ -169,13 +169,15 @@ public partial class ScriptHelper : Extension, IExtension
             userMsg.Reply($"Error: Extension \"{extName}\" not found");
             return;
         }
-        else if(extName == Info.Name)
+        else if(extName == Info.Name || ext.Info.Type == ExtensionType.Handler)
         {
             userMsg.Reply($"Error: Cannot unload this extension");
             return;
         }
 
         var msg = await userMsg.Reply($"Unloading \"{extName}\" extension...");
+        if (msg is null)
+            return;
         try
         {
             ScriptManager.RemoveExtension(ext);
@@ -216,7 +218,7 @@ public partial class ScriptHelper : Extension, IExtension
                 if(isUpdate)
                 {
                     await msg.Edit("Overwriting script...(4/4)");
-                    File.Copy(filePath, $"{Path.Combine(ScriptManager.ScriptPath, $"{script.Instance.Info.Name}.csx")}", true);
+                    File.Copy(filePath, $"{Path.Combine(ScriptManager.ScriptPath, $"{script.Instance.Info.Type}/{script.Instance.Info.Name}.csx")}", true);
                 }
                 else
                     await msg.Edit("Clean up...(4/4)");
@@ -234,10 +236,12 @@ public partial class ScriptHelper : Extension, IExtension
         if (userMsg.Document is null)
         {
             var msg = await userMsg.Reply("Searching script...(1/4)");
+            if (msg is null)
+                return;
             var fileName = cmd.Params[1];
-            var filePath = Path.Combine(ScriptManager.ScriptPath, $"{fileName}.csx");
+            var filePath = ScriptManager.GetScriptPath(fileName);
             
-            if(!File.Exists(filePath))
+            if(string.IsNullOrEmpty(filePath))
             {
                 await msg.Edit($"Error: Script file not found({fileName}.csx)");
                 return;
@@ -254,6 +258,9 @@ public partial class ScriptHelper : Extension, IExtension
         {
             var document = userMsg.Document;
             var msg = await userMsg.Reply("Downloading document...(1/4)");
+            if(msg is null)
+                return;
+
             var fileName = $"{DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss")}_{document.FileName}";
             var filePath = Path.Combine(Config.TempPath, fileName);
             if (await userMsg.GetDocument(filePath))
