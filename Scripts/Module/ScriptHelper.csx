@@ -20,7 +20,7 @@ public partial class ScriptHelper : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "ScriptHelper",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version() { Major = 1, Minor = 0, Revision = 1 },
         Type = ExtensionType.Module,
         Commands = new BotCommand[]
         {
@@ -76,7 +76,7 @@ public partial class ScriptHelper : Extension, IExtension
             return;
         else
         {
-            string[] bannedNs = { "System.Net", "System.IO", "System.Diagnostics", "System.Runtime", "TelegramBot", "AquaTools" };
+            string[] bannedNs = { "System.Net", "System.IO", "System.Diagnostics", "System.Runtime", "NekoBot", "AquaTools", "System.Reflection" };
             string[] bannedTypes = { "Environment", "RuntimeEnvironment", "Process" };
             var code = string.Join(" ", cmd.Params);
             var msg = await userMsg.Reply("Compiling code...");

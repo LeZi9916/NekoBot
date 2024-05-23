@@ -27,8 +27,6 @@ namespace NekoBot
         public static bool IsCompiling { get; private set; } = false;
 
         static List<IExtension> loadedScripts = new();
-        static List<BotCommand> commands = new();
-        static Dictionary<string,IExtension> handlers = new();
         static IEvaluator evaluator = CSScript.RoslynEvaluator.Clone();
     
         static void LoadAssembly()
@@ -212,12 +210,7 @@ namespace NekoBot
         /// </summary>
         public static async void UpdateCommand()
         {
-            var result = commands.Select(x => 
-                new BotCommand 
-                { 
-                    Command = x.Command,
-                    Description = x.Description,                
-                });
+            var result = loadedScripts.SelectMany(x => x.Info.Commands);
             Core.BotCommands = result.ToArray();
             await Core.GetClient().SetMyCommandsAsync(result);
             Core.Debug(DebugType.Info,"Bot commands has been updated");
@@ -244,16 +237,21 @@ namespace NekoBot
         public static void AddExtension(IExtension? ext)
         {
             if (ext is null) return;
-
+            bool isConflict = false;
             foreach (var item in ext.Info.Commands)
             {
-                if (handlers.ContainsKey(item.Command))
-                    continue;
-                handlers.Add(item.Command, ext);
-                commands.Add(item);
+                var loadedCmds = loadedScripts.SelectMany(x => x.Info.Commands);
+                if (loadedCmds.Any( x => x.Command == item.Command))
+                {
+                    Core.Debug(DebugType.Warning, $"Module \"{ext.Info.Name}(v{ext.Info.Version})\" command list conflicts with had been loaded module: \"{item.Command}\"");
+                    isConflict = true;
+                }
             }
+            if (isConflict)
+                return;
             loadedScripts.Add(ext);
             ext.Init();
+            GC.Collect(2, GCCollectionMode.Forced);
             Core.Debug(DebugType.Info, $"Loaded script : {ext.Info.Name}");
         }
         /// <summary>
@@ -268,18 +266,13 @@ namespace NekoBot
         public static void RemoveExtension(IExtension? ext)
         {
             if (ext is null || !loadedScripts.Contains(ext)) return;
-
-            var oldKeys = handlers.Where(x => x.Value == ext).Select(x => x.Key);
-            foreach (var key in oldKeys)
-                handlers.Remove(key);
-            foreach(var cmd in ext.Info.Commands)
-                commands.Remove(cmd);
+            var name = ext.Info.Name;
             loadedScripts.Remove(ext);
             
             if(ext is IDestroyable _ext)
                 _ext.Destroy();
-
-            Core.Debug(DebugType.Info, $"Unloaded script : {ext.Info.Name}");
+            GC.Collect();
+            Core.Debug(DebugType.Info, $"Unloaded script : {name}");
         }
 
         /// <summary>

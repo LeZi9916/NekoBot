@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Text;
-using System.Collections.Generic;
 using CSScripting;
 using DnsClient;
 using DnsClient.Protocol;
@@ -14,6 +12,8 @@ using Message = NekoBot.Types.Message;
 using NekoBot.Interfaces;
 using NekoBot.Types;
 using Version = NekoBot.Types.Version;
+using System.Diagnostics;
+using System.Net.Sockets;
 #nullable enable
 public class NetQuery: Extension, IExtension
 {
@@ -169,6 +169,30 @@ public class NetQuery: Extension, IExtension
         {
             return null;
         }
+    }
+    public long TCPing(string host, int port)
+    {
+        Stopwatch stopwatch = new();
+        stopwatch.Start();
+        try
+        {
+            TcpClient client = new TcpClient();
+            client.SendTimeout = 2000;
+            client.ReceiveTimeout = 2000;
+            client.Connect(host, port);
+            client.Close();
+            stopwatch.Stop();
+            return stopwatch.ElapsedMilliseconds;
+        }
+        catch
+        {
+            return -1;
+        }
+        finally
+        {
+            stopwatch.Stop();
+        }
+
     }
     readonly static IPEndPoint DefaultNS1 = IPEndPoint.Parse("192.168.31.11:53");
     readonly static IPEndPoint DefaultNS2 = IPEndPoint.Parse("192.168.31.4:53");

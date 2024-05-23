@@ -49,7 +49,7 @@ public partial class Generic : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo() 
     { 
         Name = "Generic",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version() { Major = 1, Minor = 0,Revision = 3 },
         Type = ExtensionType.Module,
         Commands = new BotCommand[] 
         {
@@ -517,10 +517,10 @@ public partial class Generic : Extension, IExtension
         {
             var result = monitor.GetResult();
             string _ = $"""
-                        - Bot info: 
+                        - NekoBot info 
                           Version  : v{ScriptManager.GetVersion()}
                           MemUsage : {Process.GetCurrentProcess().WorkingSet64 / (1024 * 1024)} MB
-                          Latency  : {analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount} ms
+                          Latency  : {Math.Round(analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount,2)} ms
                           Processed Msg : {analyzer.TotalHandleCount}
                         - HW info
                           - CPU
