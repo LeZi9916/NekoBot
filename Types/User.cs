@@ -1,40 +1,38 @@
 ﻿using Telegram.Bot.Types;
 using System.Text.Json.Serialization;
-using TelegramBot.Interfaces;
+using NekoBot.Interfaces;
+using YamlDotNet.Serialization;
 
-namespace TelegramBot.Types
+namespace NekoBot.Types
 {
     public class User : IAccount
     {
         public long Id { get; set; }
-        public string Username { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
+        public string? Username { get; set; }
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
         public string Name
         {
             get => FirstName + " " + LastName;
+            set { }
         }
         public Permission Level { get; set; } = Permission.Common;
         public int? MaiUserId { get; set; } = null;
-        public bool IsBanned => Level <= Permission.Ban;
-        public bool IsUnknown => Level == Permission.Unknown;
-        public bool IsNormal => !(Id is 136817688 or 1087968824);
+        public bool IsBanned { get => Level <= Permission.Ban; set { } }
+        public bool IsUnknown { get => Level == Permission.Unknown; set { } }
+        public bool IsNormal { get => !(Id is 136817688 or 1087968824); set { } }
         public bool IsBot { get; private set; } = false;
         public bool? IsPremium { get; set; }
         [JsonIgnore]
-        public MaiAccount Account { get; set; }
+        public MaiAccount? Account { get; set; }
         public bool CheckPermission(Permission targetLevel) => Level >= targetLevel;
-        public bool CheckPermission(Permission targetLevel, Group group)
+        public bool CheckPermission(Permission targetLevel, Group? group)
         {
             if (group is not null && group.CheckPermission(targetLevel))
                 return Level >= Permission.Common;
             return Level >= targetLevel;
         }
-        public void SetPermission(Permission targetLevel)
-        {
-            Level = targetLevel;
-            Config.SaveData();
-        }
+        public void SetPermission(Permission targetLevel) => Level = targetLevel;
         /// <summary>
         /// Use new infomation to update this instance
         /// </summary>
@@ -51,35 +49,6 @@ namespace TelegramBot.Types
             IsPremium = newUser.IsPremium;
 
             return true;
-        }
-        /// <summary>
-        /// Update all user in <paramref name="update"/> instance
-        /// </summary>
-        /// <param name="update">The update instance</param>
-        public static void Update(Update update)
-        {
-            var users = GetUsers(update);
-
-            foreach (var user in users)
-            {
-                if (user is null)
-                    continue;
-
-                var target = Config.SearchUser(user.Id);
-
-                if (target is null)
-                    continue;
-                else if (!target.Update(user))
-                    continue;
-                else
-                {
-                    Program.Debug(DebugType.Info, $"User info had been updated:\n" +
-                    $"Name: {user.FirstName} {user.LastName}\n" +
-                    $"isBot: {user.IsBot}\n" +
-                    $"Username: {user.Username}\n" +
-                    $"isPremium: {user.IsPremium}");
-                }
-            }
         }
         /// <summary>
         /// Get all user in <paramref name="update"/> instance
@@ -113,9 +82,9 @@ namespace TelegramBot.Types
         /// </summary>
         /// <param name="user"></param>
         /// <returns>if equals,return true</returns>
-        public bool Equals(User user) => user.Username == Username && 
-                                         user.FirstName == FirstName && 
-                                         user.LastName == LastName && 
+        public bool Equals(User user) => user.Username == Username &&
+                                         user.FirstName == FirstName &&
+                                         user.LastName == LastName &&
                                          user.IsPremium == IsPremium &&
                                          user.Id == Id;
 

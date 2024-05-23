@@ -1,28 +1,17 @@
-﻿using System.Reflection;
-using Telegram.Bot.Types;
-using TelegramBot.Types;
-using Message = TelegramBot.Types.Message;
+﻿using NekoBot.Types;
+using System.Reflection;
+using Message = NekoBot.Types.Message;
 
-namespace TelegramBot.Interfaces
+namespace NekoBot.Interfaces;
+public interface IExtension
 {
-    public interface IExtension
-    {
-        /// <summary>
-        /// Return a assembly
-        /// </summary>
-        Assembly ExtAssembly { get; }
-        /// <summary>
-        /// Command list which extension can support
-        /// </summary>
-        BotCommand[] Commands { get; }
-        /// <summary>
-        /// Extension Name
-        /// </summary>
-        string Name { get; }
-        void Handle(Message msg);
-        void Init();
-        void Save();
-        void Destroy();
-        MethodInfo GetMethod(string methodName);
-    }
+    /// <summary>
+    /// Extension Info
+    /// <para>include name,version,commands,dependencies and assembly</para>
+    /// </summary>
+    public ExtensionInfo Info { get; }
+    void Handle(Message msg);
+    void Init();
+    void Save();
+    MethodInfo? GetMethod(string methodName);
 }

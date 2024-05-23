@@ -1,24 +1,21 @@
-﻿using CSScripting;
-using CSScriptLib;
+﻿using CSScriptLib;
+using CZGL.SystemInfo;
+using NekoBot.Exceptions;
+using NekoBot.Interfaces;
+using NekoBot.Types;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security;
 using System.Security.Cryptography;
-using System.Security.Permissions;
-using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot.Interfaces;
-using TelegramBot.Types;
 using File = System.IO.File;
-using Message = TelegramBot.Types.Message;
+using Message = NekoBot.Types.Message;
 
-#nullable enable
-namespace TelegramBot
+namespace NekoBot
 {
     public class Script<T>
     {
@@ -29,110 +26,129 @@ namespace TelegramBot
     {
         public static bool IsCompiling { get; private set; } = false;
 
-        static List<IExtension> objs = new();
+        static List<IExtension> loadedScripts = new();
         static List<BotCommand> commands = new();
         static Dictionary<string,IExtension> handlers = new();
-        public static string ScriptPath { get => Path.Combine(Config.AppPath, "Scripts"); }
+        static IEvaluator evaluator = CSScript.RoslynEvaluator.Clone();
+    
+        static void LoadAssembly()
+        {
+            var libPath = Path.Combine(Config.ScriptPath, "Library");
+            if (Directory.Exists(libPath))
+            {
+                foreach (var depend in Core.Config.Assembly)
+                {
+                    var path = Path.Combine(libPath, depend);
+                    if (!File.Exists(path))
+                    {
+                        Core.Debug(DebugType.Warning, $"Assembly \"{depend}\" not found");
+                        continue;
+                    }    
+                    try
+                    {
+                        evaluator.ReferenceAssembly(Assembly.LoadFrom(path));
+                        Core.Debug(DebugType.Info, $"Loaded assembly: {path}");
+                    }
+                    catch(Exception e)
+                    {
+                        Core.Debug(DebugType.Error, $"Loading assembly failure: {e}");
+                    }
+                }
+            }
+        }
         public static void Init()
         {
-            if (!Directory.Exists(ScriptPath))
+            evaluator.Reset();
+            
+            if (!Directory.Exists(Config.ScriptPath))
                 return;
-
-            var scripts = new DirectoryInfo(ScriptPath).GetFiles()
-                                           .Where(x => x.Extension is ".csx" or ".cs")
-                                           .Select(x => x.FullName)
-                                           .ToArray();
-            foreach (var filepath in scripts)
-                Load(filepath);
-        }
-        public static void Load(string filePath)
-        {
             try
             {
-                var eva = CSScript.Evaluator;
-                var obj = eva.LoadFile<IExtension>(filePath);
-                var name = obj.Name;
-
-                AddExtension(obj);                
+                LoadAssembly();
+                var scripts = GetScripts();
+                var loader = new ScriptLoader(scripts.Select(x => x.Info).ToList());
+                var loadOrder = loader.GetLoadOrder();
+                loadOrder.Reverse();
+                foreach (var name in loadOrder)
+                {
+                    var obj = scripts.Find(x => x.Info.Name == name);
+                    AddExtension(obj);
+                }
             }
             catch (Exception e)
             {
-                Program.Debug(DebugType.Error, $"Loading script failure ({filePath}):\n{e}");
+                Core.Debug(DebugType.Error, $"Loading script failure:\n{e}");
             }
         }
         public static void Save()
         {
-            foreach (var obj in objs)
+            foreach (var obj in loadedScripts)
                 obj.Save();
         }
         /// <summary>
         /// 重新加载所有Script
         /// </summary>
-        /// <param name="update"></param>
+        /// <param name="userMsg"></param>
         public static async void Reload(Message userMsg)
         {
             IsCompiling = true;
             var msg = (await userMsg.Reply("Reloading Script..."))!;
             try
-            {                
-                List<IExtension> newObjs = new();
-                var scripts = new DirectoryInfo(ScriptPath).GetFiles()
-                                               .Where(x => x.Extension is ".csx" or ".cs")
-                                               .Select(x => x.FullName);
-                foreach (var filePath in scripts)
-                {
-                    var fileName = new FileInfo(filePath).Name;
-                    await msg.Edit($"Compiling \"{fileName}\"...");
-                    try
-                    {
-                        var ext = CompileScript<IExtension>(filePath);
-                        if (ext.Instance is null)
-                            throw new Exception();
-                        newObjs.Add(ext.Instance);
-                    }
-                    catch (Exception e)
-                    {
-                        await msg.Edit(
-                            $"Loading \"{fileName}\" failure:\n" +
-                            "```csharp\n" +
-                            Program.StringHandle(e.ToString()) +
-                            "\n```",
-                            ParseMode.MarkdownV2);
-                    }
-                }
+            {
+                List<IExtension> newScripts = GetScripts(s => msg.Edit(s));
+                var oldScripts = new List<IExtension>(loadedScripts);
+                var loader = new ScriptLoader(newScripts.Select(x => x.Info).ToList());
+                var loadOrder = loader.GetLoadOrder();
+                loadOrder.Reverse();
 
-                var _objs = objs.ToArray();
-                var needUpdate = _objs.Where(x => newObjs.Any(y => y.Name == x.Name))
-                                      .Select(x => x.Name);
 
-                foreach (var oldExt in _objs.Where(x => needUpdate.Any(y => x.Name == y)))
-                    RemoveExtension(oldExt);
-
-                foreach (var ext in newObjs.Where(x => needUpdate.Any(y => x.Name == y)))
-                    AddExtension(ext);
+                foreach (var old in oldScripts)
+                    RemoveExtension(old);
+                foreach (var newScript in loadOrder)
+                    AddExtension(newScripts.Find(x => x.Info.Name == newScript));
 
                 UpdateCommand();
+                var scripts = string.Join("\n- ", GetLoadedScript());
+                var _ = 
+                    $"""
+                     Scripts have been loaded:
+                     - {scripts}
+                     """;
                 await msg.Edit(
-                    "Scripts have been loaded:\n" +
-                    $"-{string.Join("\n-", objs.Select(x => x.Name))}");
+                    $"""
+                     ```python
+                     {Extension.StringHandle(_)}
+                     ```
+                     """
+                    ,ParseMode.MarkdownV2);
                 GC.Collect();
             }
             catch(Exception e)
             {
                 await msg.Edit("Reload script failure");
-                Program.Debug(DebugType.Error, $"Reload script failure:\n{e}");
+                Core.Debug(DebugType.Error, $"Reload script failure:\n{e}");
             }
             IsCompiling = false;
         }
-        public static void CommandHandle(Message msg)
+        public static void MessageHandle(in ITelegramBotClient client,Update update)
         {
-            var prefix = ((Command)msg.Command!).Prefix;
-            if(prefix == "nslookup")
-                new NetQuery().Handle(msg);
-            if (handlers.ContainsKey(prefix))
-                handlers[prefix].Handle(msg);
+            var type = update.Type;
+            var handlerName = $"{type}Handler";
+            var index = loadedScripts.FindIndex(x => x.Info.Name == handlerName);
+            if (index != -1)
+            {
+                var ext = loadedScripts[index];
+                if (ext is IHandler handler)
+                {
+                    var foo = handler.Handle(client, loadedScripts, update);
+                    if (foo is not null)
+                        foo();
+                }
+                else
+                    Core.Debug(DebugType.Warning, $"Unknown handler module \"{ext.Info.Name}\",maybe you didn't inherit and implement IHandler?");
+            }
             else
-                return;
+                Core.Debug(DebugType.Warning, $"No handler found for handling message type \"{type}\",this message will not be handled");
         }
         /// <summary>
         /// 更新指定Script
@@ -141,7 +157,7 @@ namespace TelegramBot
         public static void UpdateScript(IExtension ext)
         {
             IsCompiling = true;
-            var loadedExt = GetExtension(ext.Name);
+            var loadedExt = GetExtension(ext.Info.Name);
             if(loadedExt is not null)
                 RemoveExtension(loadedExt);
             AddExtension(ext);            
@@ -197,14 +213,14 @@ namespace TelegramBot
         public static async void UpdateCommand()
         {
             var result = commands.Select(x => 
-            new BotCommand 
-            { 
-                Command = x.Command,
-                Description = x.Description,                
-            });
-            Program.BotCommands = result.ToArray();
-            await Program.botClient.SetMyCommandsAsync(result);
-            Program.Debug(DebugType.Info,"Bot commands has been updated");
+                new BotCommand 
+                { 
+                    Command = x.Command,
+                    Description = x.Description,                
+                });
+            Core.BotCommands = result.ToArray();
+            await Core.GetClient().SetMyCommandsAsync(result);
+            Core.Debug(DebugType.Info,"Bot commands has been updated");
         }
         
     }
@@ -213,16 +229,9 @@ namespace TelegramBot
         /// <summary>
         /// 根据Name获取Extension
         /// </summary>
-        /// <param name="moduleName"></param>
+        /// <param name="extName"></param>
         /// <returns>IExtension的实例，不存在则返回null</returns>
-        public static IExtension? GetExtension(string extName)
-        {
-            var result = objs.Where(x => x.Name == extName).ToArray();
-            if (result.Length > 0)
-                return result.First();
-            else
-                return null;
-        }
+        public static IExtension? GetExtension(string extName) => loadedScripts.Find(x => x.Info.Name == extName);
         /// <summary>
         /// 加载并初始化该Extension
         /// </summary>
@@ -236,21 +245,21 @@ namespace TelegramBot
         {
             if (ext is null) return;
 
-            foreach (var item in ext.Commands)
+            foreach (var item in ext.Info.Commands)
             {
                 if (handlers.ContainsKey(item.Command))
                     continue;
                 handlers.Add(item.Command, ext);
                 commands.Add(item);
             }
-            objs.Add(ext);
+            loadedScripts.Add(ext);
             ext.Init();
-            Program.Debug(DebugType.Info, $"Loaded script : {ext.Name}");
+            Core.Debug(DebugType.Info, $"Loaded script : {ext.Info.Name}");
         }
         /// <summary>
         /// 卸载该Extension
         /// </summary>
-        /// <param name="ext"></param>
+        /// <param name="extName"></param>
         public static void RemoveExtension(string extName) => RemoveExtension(GetExtension(extName));
         /// <summary>
         /// 卸载该Extension
@@ -258,28 +267,139 @@ namespace TelegramBot
         /// <param name="ext"></param>
         public static void RemoveExtension(IExtension? ext)
         {
-            if (ext is null || !objs.Contains(ext)) return;
+            if (ext is null || !loadedScripts.Contains(ext)) return;
 
             var oldKeys = handlers.Where(x => x.Value == ext).Select(x => x.Key);
             foreach (var key in oldKeys)
                 handlers.Remove(key);
-            foreach(var cmd in ext.Commands)
+            foreach(var cmd in ext.Info.Commands)
                 commands.Remove(cmd);
-            objs.Remove(ext);
-            ext.Destroy();
-            Program.Debug(DebugType.Info, $"Unloaded script : {ext.Name}");
+            loadedScripts.Remove(ext);
+            
+            if(ext is IDestroyable _ext)
+                _ext.Destroy();
+
+            Core.Debug(DebugType.Info, $"Unloaded script : {ext.Info.Name}");
         }
 
         /// <summary>
         /// 获取已加载Script的Name
         /// </summary>
         /// <returns></returns>
-        public static string[] GetLoadedScript() => objs.Select(x => x.Name).ToArray();
+        public static string[] GetLoadedScript() => loadedScripts.Select(x => $"{x.Info.Name}(v{x.Info.Version})").ToArray();
+        static List<IExtension> GetScripts() => GetScripts(s => { });
+        public static FileInfo[] GetFiles(string path)
+        {
+            List<FileInfo> files = new();
+            Stack<string> dirs = new();
+            dirs.Push(path);
+
+            while(dirs.Count > 0)
+            {
+                var dirPath = dirs.Pop();
+                files.AddRange(Directory.GetFiles(dirPath).Select(x => new FileInfo(x)));
+
+                foreach (var dir in Directory.GetDirectories(dirPath))
+                    dirs.Push(dir);
+            }
+            return files.ToArray();
+        }
+        public static string? GetScriptPath(string extName)
+        {
+            return GetFiles(Config.ScriptPath).Where(x => x.Extension is ".csx" or ".cs" && x.Name == $"{extName}.csx")
+                                       .Select(x => x.FullName)
+                                       .First();
+        }
+        static List<IExtension> GetScripts(Action<string> step)
+        {
+            var scriptPaths = GetFiles(Config.ScriptPath).Where(x => x.Extension is ".csx" or ".cs")
+                                                  .Select(x => x.FullName)
+                                                  .ToArray();
+            List<IExtension> uninitObjs = new();
+            foreach (var path in scriptPaths)
+            {
+                try
+                {
+                    step($"Compiling \"{new FileInfo(path).Name}\"...");
+                    var obj = evaluator.LoadFile<IExtension>(path);
+                    var info = obj.Info;
+                    var conflictObj = uninitObjs.Find(x => x.Info.Name == info.Name);
+                    if (conflictObj is not null)
+                    {
+                        if (conflictObj.Info.Version < info.Version)
+                        {
+                            uninitObjs.Remove(conflictObj);
+                            Core.Debug(DebugType.Info, $"Conflicting scripts, removing: {conflictObj.Info.Name}(v{conflictObj.Info.Version})");
+                        }
+                        else
+                            continue;
+                    }
+                    uninitObjs.Add(obj);
+                    Core.Debug(DebugType.Info, $"Compiled script: {info.Name}(v{info.Version})");
+                }
+                catch (Exception e)
+                {
+                    var name = new FileInfo(path).Name;
+                    Core.Debug(DebugType.Error, $"Compiling script failure ({name}):\n{e}");
+                    step($"Compiling script failure ({name})");
+
+                }
+            }
+            return uninitObjs;
+        }
         /// <summary>
         /// 获取主Assembly的版本号
         /// </summary>
         /// <returns></returns>
-        public static Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
+        public static System.Version? GetVersion() => Assembly.GetExecutingAssembly().GetName().Version;
         static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
+    }
+    public class ScriptLoader
+    {
+        Dictionary<string, ExtensionInfo> scriptInfos;
+        HashSet<string> visited = new();
+        HashSet<string> visiting = new();
+        Stack<string> sortedScripts = new();
+
+        public ScriptLoader(List<ExtensionInfo> scriptsList)
+        {
+            scriptInfos = scriptsList.ToDictionary(x => x.Name);
+        }
+        public List<string> GetLoadOrder()
+        {
+            foreach (var scriptInfo in scriptInfos.Values)
+            {
+                if (!visited.Contains(scriptInfo.Name))
+                {
+                    if (!Sort(scriptInfo))
+                        throw new InvalidOperationException("Circular dependency detected");
+                }
+            }
+            return sortedScripts.ToList();
+        }
+        bool Sort(ExtensionInfo info)
+        {
+            if (visited.Contains(info.Name))
+                return true;
+
+            if (visiting.Contains(info.Name))
+                return false;
+
+            visiting.Add(info.Name);
+
+            foreach (var depend in info.Dependencies)
+            {
+                if (!scriptInfos.ContainsKey(depend.Name))
+                    throw new DependNotFoundException($"Script \"{info.Name}\" depends on \"{depend.Name}\",but \"{depend.Name}\" is not found");
+                if (!Sort(scriptInfos[depend.Name]))
+                    return false;
+            }
+
+            visiting.Remove(info.Name);
+            visited.Add(info.Name);
+            sortedScripts.Push(info.Name);
+
+            return true;
+        }
     }
 }

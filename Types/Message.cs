@@ -5,14 +5,13 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using static TelegramBot.Program;
+using static NekoBot.Core;
 
-#nullable enable
-namespace TelegramBot.Types;
+namespace NekoBot.Types;
 public class Message
 {
     public required int Id { get; init; }
-    public required User From { get; init; }
+    public required User From { get; set; }
     public required Chat Chat { get; init; }
     public required MessageType Type { get; init; }
     public Message? ReplyTo { get; init; } = null;
@@ -21,10 +20,12 @@ public class Message
     public bool IsGroup { get => Chat.Type is ChatType.Group or ChatType.Supergroup; }
     public Audio? Audio { get; set; }
     public Document? Document { get; set; }
-    public PhotoSize[]? Photo {  get; set; }
+    public PhotoSize[]? Photo { get; set; }
     public Command? Command { get; set; }
     public required ITelegramBotClient Client { get; init; }
-    public Group? GetGroup() => IsGroup ? Config.SearchGroup(Chat.Id) : null;
+    public Group? Group { get; set; }
+    public Update? Raw { get; set; }
+
     public async Task<bool> GetDocument(string dPath)
     {
         try
@@ -32,7 +33,7 @@ public class Message
             if (Document is null)
                 return false;
 
-            return await DownloadFile(dPath,Document.FileId);
+            return await DownloadFile(dPath, Document.FileId);
         }
         catch
         {
@@ -67,7 +68,7 @@ public class Message
             return false;
         }
     }
-    public async Task<bool> DownloadFile(string dPath,string fileId)
+    public async Task<bool> DownloadFile(string dPath, string fileId)
     {
         try
         {
@@ -83,7 +84,7 @@ public class Message
             return false;
         }
     }
-    public async Task<Message?> Send(string text,ParseMode? parseMode = null)
+    public async Task<Message?> Send(string text, ParseMode? parseMode = null)
     {
         try
         {
@@ -103,7 +104,7 @@ public class Message
     {
         try
         {
-            await botClient.DeleteMessageAsync(
+            await Client.DeleteMessageAsync(
                 chatId: Chat.Id,
                 messageId: Id
                 );
@@ -146,16 +147,12 @@ public class Message
             return null;
         }
     }
-
-    public static Message? Parse(ITelegramBotClient client, Telegram.Bot.Types.Message? msg)
+    public static Message? Parse(in ITelegramBotClient client, Telegram.Bot.Types.Message? msg)
     {
         if (msg is null || msg.From is null) return null;
 
         var id = msg.MessageId;
-        var from = Config.SearchUser(msg.From!.Id);
-        if (from is null)
-            from = msg.From;
-        
+        var from = msg.From;
         var content = (msg.Text ?? msg.Caption) ?? string.Empty;
         var cmd = Types.Command.Parse(content);
 
@@ -165,7 +162,7 @@ public class Message
             From = from,
             Chat = msg.Chat,
             Type = msg.Type,
-            ReplyTo = Parse(client,msg.ReplyToMessage),
+            ReplyTo = Parse(client, msg.ReplyToMessage),
             Audio = msg.Audio,
             Document = msg.Document,
             Photo = msg.Photo,
@@ -173,6 +170,6 @@ public class Message
             Client = client,
             Content = content,
         };
-        
+
     }
 }

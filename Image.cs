@@ -5,7 +5,7 @@ using ZXing.SkiaSharp;
 using System.IO;
 using System.Linq;
 
-namespace TelegramBot
+namespace NekoBot
 {
     public class ChartHelper
     {
@@ -32,13 +32,13 @@ namespace TelegramBot
             /// </summary>
             public float Close { get; set; }
         }
-        public class CandlestickChartHelper<TX,TY> where TY:struct where TX:struct
+        public class CandlestickChartHelper<TX, TY> where TY : struct where TX : struct
         {
-            
+
             /// <summary>
             /// Top、Buttom、Left、Right
             /// </summary>
-            public int[] Margin { get; private set; } = { 50,50,50,50 };
+            public int[] Margin { get; private set; } = { 50, 50, 50, 50 };
             /// <summary>
             /// 画幅横向长度
             /// </summary>
@@ -90,10 +90,10 @@ namespace TelegramBot
                 int YLength = YSize - (Margin[0] + Margin[1]);
 
                 var pen = new SKPaint { Color = SKColors.Black, StrokeWidth = lineWidth };
-                var textPen = new SKPaint 
-                { 
-                    Color = SKColors.Black, 
-                    StrokeWidth = 2 ,
+                var textPen = new SKPaint
+                {
+                    Color = SKColors.Black,
+                    StrokeWidth = 2,
                     IsAntialias = true,
                     TextSize = 16,
                     TextAlign = SKTextAlign.Center
@@ -110,7 +110,7 @@ namespace TelegramBot
                 canvas.DrawLine(Margin[2], YSize - Margin[1], XSize - Margin[3], YSize - Margin[1], pen); // X轴
                 canvas.DrawLine(Margin[2], YSize - Margin[1], Margin[2], Margin[0], pen); // Y轴
 
-                if(XSamples is not null)
+                if (XSamples is not null)
                 {
                     var yPos = YSize - Margin[1];
 
@@ -118,13 +118,13 @@ namespace TelegramBot
                     int distance = 14; // 文本与刻度线的距离
                     for (int i = 1; i <= XSamples.Count; i++) XPos.Add(i * _XLength);
 
-                    for(int i =0;i <XSamples.Count;i++)
+                    for (int i = 0; i < XSamples.Count; i++)
                     {
                         //canvas.DrawLine(XPos[i], Margin[1], XPos[i], YSize - Margin[0], scalePen);
-                        canvas.DrawText(XSamples[i].ToString(), XPos[i] , yPos + distance, textPen);
-                    }                    
+                        canvas.DrawText(XSamples[i].ToString(), XPos[i], yPos + distance, textPen);
+                    }
                 }
-                if(YSamples is not null)
+                if (YSamples is not null)
                 {
                     var _YLength = (float)YLength / (YSamples.Count + 1); // 刻度之间的间隔
                     int distance = 20; // 文本与刻度线的距离
@@ -154,9 +154,9 @@ namespace TelegramBot
                 else
                     xIncrement = XSize;
 
-                
 
-                for(int i = 0;i < Nodes.Count;i++)
+
+                for (int i = 0; i < Nodes.Count; i++)
                 {
                     var item = Nodes[i];
                     float xPosition = XPos[i];
@@ -169,11 +169,11 @@ namespace TelegramBot
                     {
                         Color = item.Close > item.Open ? SKColors.Green : SKColors.Red,// 绿升红跌模式
                         IsStroke = true,
-                       
+
                     };
                     var length = Math.Abs(openY - closeY);
                     var width = xIncrement * 0.8f;
-                    canvas.DrawRect(xPosition - width /2, Math.Min(openY, closeY),width ,length, paint);
+                    canvas.DrawRect(xPosition - width / 2, Math.Min(openY, closeY), width, length, paint);
                     canvas.DrawLine(xPosition, highY, xPosition, lowY, paint);
 
                 }
@@ -210,7 +210,7 @@ namespace TelegramBot
                 Margin = new int[] { tMargin, bMargin, lMargin, rMargin };
             }
         }
-        
+
     }
     public static class Image
     {

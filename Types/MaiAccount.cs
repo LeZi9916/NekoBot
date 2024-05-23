@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TelegramBot.Types;
+namespace NekoBot.Types;
 
 public class MaiAccount
 {

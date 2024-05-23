@@ -9,39 +9,36 @@ using DnsClient;
 using DnsClient.Protocol;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot;
-using TelegramBot.Interfaces;
-using TelegramBot.Types;
-using Message = TelegramBot.Types.Message;
-
-public class NetQuery: IExtension
+using NekoBot;
+using Message = NekoBot.Types.Message;
+using NekoBot.Interfaces;
+using NekoBot.Types;
+using Version = NekoBot.Types.Version;
+#nullable enable
+public class NetQuery: Extension, IExtension
 {
-    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public BotCommand[] Commands { get; } =
+    public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
-        new BotCommand()
+        Name = "NetQuery",
+        Version = new Version() { Major = 1, Minor = 0 },
+        Type = ExtensionType.Module,
+        Commands = new BotCommand[]
         {
-             Command = "nslookup",
-             Description = "域名解析"
+            new BotCommand()
+            {
+                Command = "nslookup",
+                Description = "域名解析"
+            }
+        },
+        SupportUpdate = new UpdateType[]
+        {
+            UpdateType.Message,
+            UpdateType.EditedMessage
         }
     };
-    public string Name { get; } = "NetQuery";
-    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
-    public void Init()
+    public override void Handle(Message userMsg)
     {
-
-    }
-    public void Save()
-    {
-
-    }
-    public void Destroy()
-    {
-
-    }
-    public void Handle(Message userMsg)
-    {
-        var cmd = (Command)userMsg.Command;
+        var cmd = (Command)userMsg.Command!;
         switch(cmd.Prefix)
         {
             case "nslookup":
@@ -54,7 +51,7 @@ public class NetQuery: IExtension
         // /nslookup [host]
         // /nslookup [protocol] [host] [NS]
         // /nslookup [protocol] [host] [NS] [queryType]
-        var param = ((Command)userMsg.Command).Params;
+        var param = ((Command)userMsg.Command!).Params;
         var lookuper = new LookupClient(new IPEndPoint[] { DefaultNS1, DefaultNS2 });
         string host = "";
         QueryType qType = QueryType.A;
@@ -109,7 +106,7 @@ public class NetQuery: IExtension
 
             if (result.HasError)
             {
-                rsp = $"{rspHeader}" + Program.StringHandle(
+                rsp = $"{rspHeader}" + StringHandle(
                       $"{nsInfo}\n" +
                       $"From \"{result.NameServer}\" message: {result.ErrorMessage}") +
                       $"{rspTailer}";
@@ -132,7 +129,7 @@ public class NetQuery: IExtension
                                $"Ttl: {r.TimeToLive}\n\n";
                 });
             }
-            await userMsg.Reply($"{rspHeader}" + Program.StringHandle(
+            await userMsg.Reply($"{rspHeader}" + StringHandle(
                                 $"{nsInfo}\n" +
                                 $"{rsp}") +
                                 $"{rspTailer}", ParseMode.MarkdownV2);
@@ -140,7 +137,7 @@ public class NetQuery: IExtension
         catch(Exception e)
         {
             await userMsg.Reply("```csharp\n" +
-                               $"{Program.StringHandle(e.ToString())}\n" +
+                               $"{StringHandle(e.ToString())}\n" +
                                $"```",ParseMode.MarkdownV2);
         }
     }

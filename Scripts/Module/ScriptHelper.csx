@@ -2,57 +2,51 @@
 using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
-using System.Reflection;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types;
-
-using TelegramBot;
-using TelegramBot.Interfaces;
-using TelegramBot.Types;
-
 using CSScripting;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis;
-using Message = TelegramBot.Types.Message;
+using NekoBot.Interfaces;
+using NekoBot.Types;
+using NekoBot;
+using Version = NekoBot.Types.Version;
+using Message = NekoBot.Types.Message;
 using File = System.IO.File;
 #pragma warning disable CS4014
-public partial class ScriptHelper : IExtension
+public partial class ScriptHelper : Extension, IExtension
 {
-    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public BotCommand[] Commands { get; } =
+    public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
-        new BotCommand()
+        Name = "ScriptHelper",
+        Version = new Version() { Major = 1, Minor = 0 },
+        Type = ExtensionType.Module,
+        Commands = new BotCommand[]
         {
-            Command = "script",
-           Description = "Script管理"
+            new BotCommand()
+            {
+                Command = "script",
+                Description = "Script管理"
+            },
+            new BotCommand()
+            {
+                Command = "reload",
+                Description = "重新加载Script"
+            },
+            new BotCommand()
+            {
+                Command = "eval",
+                Description = "CS 解析器"
+            }
         },
-        new BotCommand()
+        SupportUpdate = new UpdateType[]
         {
-           Command = "reload",
-            Description = "重新加载Script"
-        },
-        new BotCommand()
-        {
-           Command = "eval",
-           Description = "CS 解析器"
+            UpdateType.Message,
+            UpdateType.EditedMessage
         }
     };
-    public string Name { get; } = "ScriptHelper";
-    public void Init()
-    {
-
-    }
-    public void Save()
-    {
-
-    }
-    public void Destroy()
-    {
-
-    }
-    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
-    public void Handle(Message userMsg)
+    public override void Handle(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         switch (cmd.Prefix)
@@ -72,7 +66,7 @@ public partial class ScriptHelper : IExtension
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var group = userMsg.GetGroup();
+        var group = userMsg.Group;
         if (!querier.CheckPermission(Permission.Advanced, group))
         {
             await userMsg.Reply("Permission Denied");
@@ -91,7 +85,7 @@ public partial class ScriptHelper : IExtension
                 var result = ScriptManager.EvalCode(code) ?? "null";
                 var _result = string.IsNullOrEmpty(result) ? "empty" : result;
                 msg.Edit("```csharp\n" +
-                        $"{Program.StringHandle(result)}\n" +
+                        $"{StringHandle(result)}\n" +
                         $"```",ParseMode.MarkdownV2);
             }
             else
@@ -175,13 +169,15 @@ public partial class ScriptHelper : IExtension
             userMsg.Reply($"Error: Extension \"{extName}\" not found");
             return;
         }
-        else if(extName == Name)
+        else if(extName == Info.Name || ext.Info.Type == ExtensionType.Handler)
         {
             userMsg.Reply($"Error: Cannot unload this extension");
             return;
         }
 
         var msg = await userMsg.Reply($"Unloading \"{extName}\" extension...");
+        if (msg is null)
+            return;
         try
         {
             ScriptManager.RemoveExtension(ext);
@@ -213,7 +209,7 @@ public partial class ScriptHelper : IExtension
             var script = ScriptManager.CompileScript<IExtension>(filePath);
             if (script.Instance is not null)
             {
-                var loadedScript = ScriptManager.GetExtension(script.Instance.Name);
+                var loadedScript = ScriptManager.GetExtension(script.Instance.Info.Name);
                 if (loadedScript is not null)
                     await msg.Edit("Updating script...(3/4)");
                 else
@@ -222,7 +218,7 @@ public partial class ScriptHelper : IExtension
                 if(isUpdate)
                 {
                     await msg.Edit("Overwriting script...(4/4)");
-                    File.Copy(filePath, $"{Path.Combine(ScriptManager.ScriptPath, $"{script.Instance.Name}.csx")}", true);
+                    File.Copy(filePath, $"{Path.Combine(Config.ScriptPath, $"{script.Instance.Info.Type}/{script.Instance.Info.Name}.csx")}", true);
                 }
                 else
                     await msg.Edit("Clean up...(4/4)");
@@ -232,7 +228,7 @@ public partial class ScriptHelper : IExtension
             {
                 await msg.Edit("Error: Compile script failure\n" +
                     "```csharp\n" +
-                    $"{Program.StringHandle(script.Exception.ToString())}" +
+                    $"{StringHandle(script.Exception.ToString())}" +
                     "\n```",ParseMode.MarkdownV2);
                 return;
             }
@@ -240,10 +236,12 @@ public partial class ScriptHelper : IExtension
         if (userMsg.Document is null)
         {
             var msg = await userMsg.Reply("Searching script...(1/4)");
+            if (msg is null)
+                return;
             var fileName = cmd.Params[1];
-            var filePath = Path.Combine(ScriptManager.ScriptPath, $"{fileName}.csx");
+            var filePath = ScriptManager.GetScriptPath(fileName);
             
-            if(!File.Exists(filePath))
+            if(string.IsNullOrEmpty(filePath))
             {
                 await msg.Edit($"Error: Script file not found({fileName}.csx)");
                 return;
@@ -260,6 +258,9 @@ public partial class ScriptHelper : IExtension
         {
             var document = userMsg.Document;
             var msg = await userMsg.Reply("Downloading document...(1/4)");
+            if(msg is null)
+                return;
+
             var fileName = $"{DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss")}_{document.FileName}";
             var filePath = Path.Combine(Config.TempPath, fileName);
             if (await userMsg.GetDocument(filePath))

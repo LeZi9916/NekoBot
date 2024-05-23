@@ -2,87 +2,159 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Security.Cryptography;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelegramBot.Interfaces;
-using TelegramBot;
-using System.IO;
-using System.Threading.Tasks;
-using TelegramBot.Types;
-using Action = TelegramBot.Types.Action;
-using Message = TelegramBot.Types.Message;
-using User = TelegramBot.Types.User;
-using System.Text.RegularExpressions;
-using Group = TelegramBot.Types.Group;
-using AquaTools.Users;
+using NekoBot.Interfaces;
+using NekoBot;
+using NekoBot.Types;
+using Version = NekoBot.Types.Version;
+using Message = NekoBot.Types.Message;
+using User = NekoBot.Types.User;
+using Group = NekoBot.Types.Group;
+using NekoBot.Exceptions;
+using System.Diagnostics;
+
 #pragma warning disable CS4014
-public partial class Generic : IExtension
+public partial class Generic : Extension, IExtension
 {
-    public Assembly ExtAssembly { get => Assembly.GetExecutingAssembly(); }
-    public BotCommand[] Commands { get; } =
-{
-        new BotCommand()
+    IDatabase<User> userDatabase 
+    { 
+        get
         {
-            Command = "start",
-            Description = "简介"
-        },
-        new BotCommand()
-        {
-            Command = "add",
-            Description = "允许指定用户访问bot"
-        },
-        new BotCommand()
-        {
-            Command = "ban",
-            Description = "禁止指定用户访问bot"
-        },
-        new BotCommand()
-        {
-            Command = "info",
-            Description = "获取指定用户信息"
-        },
-        new BotCommand()
-        {
-            Command = "promote",
-            Description = "提升指定用户权限"
-        },
-        new BotCommand()
-        {
-            Command = "demote",
-            Description = "降低指定用户权限"
-        },
-        new BotCommand()
-        {
-            Command = "status",
-            Description = "显示bot服务器状态"
-        },
-        new BotCommand()
-        {
-            Command = "logs",
-            Description = "获取本次运行日志"
-        },
-        new BotCommand()
-        {
-            Command = "config",
-            Description = "修改bot在Group的设置"
-        },
-        new BotCommand()
-        {
-            Command = "set",
-            Description = "权限狗专用"
-        },
-        new BotCommand()
-        {
-            Command = "help",
-            Description = "显示帮助信息"
+            var newDB = ScriptManager.GetExtension("UserDatabase");
+            if(newDB is not null and IDatabase<User> db && 
+               db != _userDatabase)
+            {
+                _userDatabase = db;
+            }
+            return _userDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
         }
-};
-    public string Name { get; } = "Generic";
-    public void Handle(Message userMsg)
+    }
+    IDatabase<Group> groupDatabase
     {
-        var cmd = (Command)userMsg.Command;
+        get
+        {
+            var newDB = ScriptManager.GetExtension("GroupDatabase");
+            if (newDB is not null and IDatabase<Group> db && 
+                db != _groupDatabase)
+            {
+                _groupDatabase = db;
+            }
+            return _groupDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
+        }
+    }
+    IDatabase<User>? _userDatabase = new Database<User>();
+    IDatabase<Group>? _groupDatabase = new Database<Group>();
+    public new ExtensionInfo Info { get; } = new ExtensionInfo() 
+    { 
+        Name = "Generic",
+        Version = new Version() { Major = 1, Minor = 0 },
+        Type = ExtensionType.Module,
+        Commands = new BotCommand[] 
+        {
+            new BotCommand()
+            {
+                Command = "start",
+                Description = "简介"
+            },
+            new BotCommand()
+            {
+                Command = "add",
+                Description = "允许指定用户访问bot"
+            },
+            new BotCommand()
+            {
+                Command = "ban",
+                Description = "禁止指定用户访问bot"
+            },
+            new BotCommand()
+            {
+                Command = "info",
+                Description = "获取指定用户信息"
+            },
+            new BotCommand()
+            {
+                Command = "promote",
+                Description = "提升指定用户权限"
+            },
+            new BotCommand()
+            {
+                Command = "demote",
+                Description = "降低指定用户权限"
+            },
+            new BotCommand()
+            {
+                Command = "status",
+                Description = "显示bot服务器状态"
+            },
+            new BotCommand()
+            {
+                Command = "logs",
+                Description = "获取本次运行日志"
+            },
+            new BotCommand()
+            {
+                Command = "config",
+                Description = "修改bot在Group的设置"
+            },
+            new BotCommand()
+            {
+                Command = "set",
+                Description = "权限狗专用"
+            },
+            new BotCommand()
+            {
+                Command = "help",
+                Description = "显示帮助信息"
+            }
+        },
+        Dependencies = new ExtensionInfo[]{
+            new ExtensionInfo()
+            {
+                Name = "UserDatabase",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Database
+            },
+            new ExtensionInfo()
+            {
+                Name = "GroupDatabase",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Database
+            },
+            new ExtensionInfo()
+            {
+                Name = "Monitor",
+                Version = new Version() { Major = 1, Minor = 0 },
+                Type = ExtensionType.Module
+            }
+        },
+        SupportUpdate = new UpdateType[] 
+        {
+            UpdateType.Message,
+            UpdateType.EditedMessage
+        }
+
+    };
+    public override void Init()
+    {
+        _userDatabase = ((ScriptManager.GetExtension("UserDatabase") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize")) 
+                        as IDatabase<User>)!;
+        _groupDatabase = ((ScriptManager.GetExtension("GroupDatabase") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize")) 
+                        as IDatabase<Group>)!;
+
+        _userDatabase.OnDestroy += () => _userDatabase = null;
+        _groupDatabase.OnDestroy += () => _groupDatabase = null;
+    }
+    public override void Handle(Message userMsg)
+    {
+        if(_userDatabase is null || _groupDatabase is null)
+        {
+            userMsg.Reply("Internal error: Module\"UserDatabase\" or \"GroupDatabase\" not found");
+            return;
+        }
+
+        var cmd = (Command)userMsg.Command!;
         if (cmd.Prefix is "help")
         {
             GetHelpInfo((Command)userMsg.Command,userMsg);
@@ -126,19 +198,6 @@ public partial class Generic : IExtension
                 break;
         }
     }
-    public void Init()
-    {
-
-    }
-    public void Save()
-    {
-
-    }
-    public void Destroy()
-    {
-
-    }
-    public MethodInfo GetMethod(string methodName) => ExtAssembly.GetType().GetMethod(methodName);
     //bool MessageFilter(string content, Update update, TelegramBot.Types.User querier, Group group)
     //{
     //    if (group is null)
@@ -179,7 +238,7 @@ public partial class Generic : IExtension
         var param = cmd.Params.Skip(1).ToArray();
 
         var replyTo = userMsg.ReplyTo;
-        User target = null;
+        User? target = null;
 
         if (param.IsEmpty())
         {
@@ -188,14 +247,14 @@ public partial class Generic : IExtension
                 GetHelpInfo(cmd,userMsg);
                 return;
             }
-            target = Config.SearchUser(replyTo.From.Id);
+            target = userDatabase.Find(x => x.Id ==replyTo.From.Id);
         }
         else
         {
             long id = -1;
 
             if (long.TryParse(param.First(), out id))
-                target = Config.SearchUser(id);
+                target = userDatabase.Find(x => x.Id ==id);
             else
             {
                 userMsg.Reply("Invild userId");
@@ -232,7 +291,7 @@ public partial class Generic : IExtension
         var param = cmd.Params.Skip(1).ToArray();
 
         var replyTo = userMsg.ReplyTo;
-        User target = null;
+        User? target = null;
 
         if (param.IsEmpty())
         {
@@ -241,14 +300,14 @@ public partial class Generic : IExtension
                 GetHelpInfo(cmd,userMsg);
                 return;
             }
-            target = Config.SearchUser(replyTo.From.Id);
+            target = userDatabase.Find(x => x.Id ==replyTo.From.Id);
         }
         else
         {
             long id = -1;
 
             if (long.TryParse(param.First(), out id))
-                target = Config.SearchUser(id);
+                target = userDatabase.Find(x => x.Id ==id);
             else
             {
                 userMsg.Reply("Invild userId");
@@ -279,13 +338,13 @@ public partial class Generic : IExtension
         var param = cmd.Params.ToArray();
 
         var replyTo = userMsg.ReplyTo;
-        User target = null;
+        User? target = null;
 
         if (!param.IsEmpty())
         {
             if (long.TryParse(param.First(), out long i))
             {
-                target = Config.SearchUser(i);
+                target = userDatabase.Find(x => x.Id ==i);
             }
             else if (param.First().ToLower() == "group")
             {
@@ -308,7 +367,7 @@ public partial class Generic : IExtension
         else if (target.Id != querier.Id && !querier.CheckPermission(Permission.Admin))
             userMsg.Reply("Permission denied.");
         else
-            userMsg.Reply($"User Infomation:\n```copy\n" + Program.StringHandle(
+            userMsg.Reply($"User Infomation:\n```copy\n" + StringHandle(
                           $"Name      : {target.Name}\n" +
                           $"Id        : {target.Id}\n" +
                           $"Permission: {target.Level}\n" +
@@ -325,10 +384,10 @@ public partial class Generic : IExtension
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
         var param = cmd.Params.Skip(1).ToArray();
-        var group = userMsg.GetGroup();
+        var group = userMsg.Group;
 
         var replyTo = userMsg.ReplyTo;
-        Group target = null;
+        Group? target = null;
 
         if(!userMsg.IsGroup)
         {
@@ -338,7 +397,7 @@ public partial class Generic : IExtension
         else if (!param.IsEmpty())
         {
             if (long.TryParse(param.First(), out long i))
-               target = Config.SearchGroup(i);
+               target = groupDatabase.Find(x => x.Id == i);
             else
             {
                 GetHelpInfo(cmd, userMsg);
@@ -346,14 +405,14 @@ public partial class Generic : IExtension
             }
         }
         else
-            target = userMsg.GetGroup();
+            target = userMsg.Group;
 
         if (target is null)
             userMsg.Reply("User not found at database");
-        else if (target.Id != group.Id && !querier.CheckPermission(Permission.Admin))
+        else if (target.Id != group!.Id && !querier.CheckPermission(Permission.Admin))
             userMsg.Reply("Permission denied.");
         else
-            userMsg.Reply($"User Infomation:\n```copy\n" + Program.StringHandle(
+            userMsg.Reply($"User Infomation:\n```copy\n" + StringHandle(
                           $"Name      : {target.Name}\n" +
                           $"Id        : {target.Id}\n" +
                           $"Permission: {target.Level}\n\n" +
@@ -392,8 +451,8 @@ public partial class Generic : IExtension
                 return;
             }
 
-            var target = Config.SearchUser(id);
-            var targetLevel = target.Level + diff;
+            var target = userDatabase.Find(x => x.Id ==id);
+            var targetLevel = target!.Level + diff;
 
             if (target is null)
             {
@@ -424,7 +483,7 @@ public partial class Generic : IExtension
                     return;
                 }
                 target.SetPermission(targetLevel);
-                userMsg.Reply($"Success change*{Program.StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2);
+                userMsg.Reply($"Success change*{StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2);
             }
             else
             {
@@ -449,29 +508,45 @@ public partial class Generic : IExtension
     }
     async void GetSystemInfo(Message userMsg)
     {
-        var uptime = DateTime.Now - Program.startTime;
-        var scripts = string.Join("\n-", ScriptManager.GetLoadedScript());
+        var uptime = DateTime.Now - Config.Up;
+        var scripts = string.Join("\n  - ", ScriptManager.GetLoadedScript());
+        var analyzer = Core.Config.Analyzer;
+        var extension = ScriptManager.GetExtension("Monitor");
 
-        await userMsg.Reply(Program.StringHandle(
-            $"当前版本: v{ScriptManager.GetVersion()}\n\n" +
-             "硬件信息:\n" +
-            $"-核心数: {Monitor.ProcessorCount}\n" +
-            $"-使用率: {Monitor.CPULoad}%\n" +
-            $"-进程占用: {GC.GetTotalMemory(false) / (1024 * 1024)} MiB\n" +
-            $"-剩余内存: {Monitor.FreeMemory / 1000000} MiB\n" +
-            $"-已用内存: {Monitor.UsedMemory / 1000000} MiB ({Monitor.UsedMemory * 100 / Monitor.TotalMemory}%)\n" +
-            $"-总内存: {Monitor.TotalMemory / 1000000} MiB\n" +
-            $"-在线时间: {uptime.Hours}h{uptime.Minutes}m{uptime.Seconds}s\n\n" +
-            $"统计器:\n" +
-            $"-总计处理消息数: {Config.TotalHandleCount}\n" +
-            $"-平均耗时: {(Config.TotalHandleCount is 0 ? 0 : Config.TimeSpentList.Sum() / Config.TotalHandleCount)}ms\n" +
-            $"-5分钟平均CPU占用率: {Monitor._5CPULoad}%\n" +
-            $"-10分钟平均CPU占用率: {Monitor._10CPULoad}%\n" +
-            $"-15分钟平均CPU占用率: {Monitor._15CPULoad}%\n\n" +
-            $"已加载的Script:\n" +
-            $"-{scripts}"),ParseMode.MarkdownV2);
+        if (extension is IMonitor<Dictionary<string, long>> monitor)
+        {
+            var result = monitor.GetResult();
+            string _ = $"""
+                        - Bot info: 
+                          Version  : v{ScriptManager.GetVersion()}
+                          MemUsage : {Process.GetCurrentProcess().WorkingSet64 / (1024 * 1024)} MB
+                          Latency  : {analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount} ms
+                          Processed Msg : {analyzer.TotalHandleCount}
+                        - HW info
+                          - CPU
+                            Core : {result["ProcessorCount"]}
+                            Usage: {result["CPULoad"]}%
+                            - Avg
+                              5m: {result["_5CPULoad"]}%
+                             10m: {result["_10CPULoad"]}%
+                             15m: {result["_15CPULoad"]}%
+                          - Memory
+                            Total: {result["TotalMemory"] / 1000000} MB
+                            Free : {result["FreeMemory"] / 1000000} MB
+                            Usage: {result["UsedMemory"] / 1000000} MB ({result["UsedMemory"] * 100 / result["TotalMemory"]}%)
+                        - Scripts
+                          - {scripts}
+                        """;
+            await userMsg.Reply($"""
+                                 ```python
+                                 {StringHandle(_)}
+                                 ```
+                                 """, ParseMode.MarkdownV2);
+        }
+        else
+            userMsg.Reply("Internal error: Module\"Monitor\" not found");
     }
-    async void GetBotLog(Message userMsg)
+    void GetBotLog(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
@@ -538,61 +613,26 @@ public partial class Generic : IExtension
                 return;
             }
         }
-
         var logs = LogManager.GetLog(count, (DebugType)level);
 
         if (logs.IsEmpty())
             userMsg.Reply("No logs");
         else
         {
-            var logText = string.Join("", logs).Replace("\\", "\\\\");
-            if (logText.Length > 4000)
-            {
-                //int index = 0;
-                //string[] msgGroup = new string[(int)Math.Ceiling((double)logText.Length / 4000)];
-                //while(index * 4000 < logText.Length)
-                //{
-                //    msgGroup[index] = logText.Substring(index * 4000, Math.Min(4000,logText.Length - 1 - index * 4000));
-                //    index++;
-                //}
-
-                //foreach(var s in msgGroup)
-                //    await SendMessage("```csharp\n" +
-                //         $"{Program.StringHandle(s)}\n" +
-                //         $"```", update, true, ParseMode.MarkdownV2);
-
-                List<string> msgGroup = new();
-                string msg = "";
-
-                foreach (var s in logs)
-                {
-                    if (($"{msg}{s.Replace("\\", "\\\\")}").Length > 4000)
-                    {
-                        msgGroup.Add(msg);
-                        msg = $"{s.Replace("\\", "\\\\")}";
-                    }
-                    else
-                        msg += $"{s.Replace("\\", "\\\\")}";
-                }
-                msgGroup.Add(msg);
-                foreach (var s in msgGroup)
-                    await userMsg.Reply("```csharp\n" +
-                         $"{Program.StringHandle(s)}\n" +
-                         $"```",ParseMode.MarkdownV2);
-            }
-            else
-                await userMsg.Reply("```csharp\n" +
-                         $"{Program.StringHandle(logText)}\n" +
-                         $"```",ParseMode.MarkdownV2);
+            userMsg.Reply(
+                $"""
+                ```csharp
+                {StringHandle(string.Join("\n", logs.Select(x => x.ToString())))}
+                ```
+                """, ParseMode.MarkdownV2);
         }
-        //await UploadFile(Config.LogFile,chat.Id);
     }
     void BotConfig(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
         var param = cmd.Params;
-        var group = userMsg.GetGroup();
+        var group = userMsg.Group;
 
         if (!userMsg.IsGroup)
         {
@@ -617,9 +657,9 @@ public partial class Generic : IExtension
             case "forcecheckreference":
                 if (bool.TryParse(param[1], out boolValue))
                 {
-                    group.Setting.ForceCheckReference = boolValue;
+                    group!.Setting.ForceCheckReference = boolValue;
                     userMsg.Reply($"ForceCheckReference: *{boolValue}*",ParseMode.MarkdownV2);
-                    Config.SaveData();
+                    //Config.SaveData();
                 }
                 else
                     GetHelpInfo(cmd,userMsg);
@@ -632,37 +672,37 @@ public partial class Generic : IExtension
         switch (cmd.Prefix)
         {
             case "add":
-                helpStr += Program.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/add        允许reply对象访问bot" +
                     "\n/add [int]  允许指定用户访问bot");
                 break;
             case "ban":
-                helpStr += Program.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/ban        封禁reply对象" +
                     "\n/ban [int]  封禁指定用户");
                 break;
             case "info":
-                helpStr += Program.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/info        获取reply对象的用户信息" +
                     "\n/info [int]  获取指定用户的用户信息");
                 break;
             case "promote":
-                helpStr += Program.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/promote        提升reply对象的权限等级" +
                     "\n/promote [int]  提升指定用户的权限等级");
                 break;
             case "demote":
-                helpStr += Program.StringHandle(
+                helpStr += StringHandle(
                     "命令用法:\n" +
                     "\n/demote        降低reply对象的权限等级" +
                     "\n/demote [int]  降低指定用户的权限等级");
                 break;
             case "help":
-                helpStr += Program.StringHandle(
+                helpStr += StringHandle(
                     "\n相关命令：\n" +
                     "\n/add        允许指定用户访问bot" +
                     "\n/ban        禁止指定用户访问bot" +
@@ -677,7 +717,7 @@ public partial class Generic : IExtension
                     "\n更详细的信息请输入\"/{command} help\"");
                 break;
             case "logs":
-                helpStr += Program.StringHandle(
+                helpStr += StringHandle(
                         "命令用法：\n" +
                         "\n/logs            获取最近15条等级为Error或以上的日志信息" +
                         "\n/logs [Lv|int]   获取自定义数量或等级的日志信息" +
@@ -754,7 +794,7 @@ public partial class Generic
                 return;
             }
 
-            Group group = Config.SearchGroup(id);
+            Group? group = groupDatabase.Find(x => x.Id == id);
             if(group is null)
             {
                 userMsg.Reply("Group not found at database");
@@ -768,7 +808,7 @@ public partial class Generic
                 return;
             }
             group.SetPermission(targetLevel);
-            userMsg.Reply($"Success change*{Program.StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
+            userMsg.Reply($"Success change*{StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
         }
         else if(param.Length == 2)
         {
@@ -779,7 +819,7 @@ public partial class Generic
                 return;
             }
 
-            User user = Config.SearchUser(id);
+            User? user = userDatabase.Find(x => x.Id == id);
             if (user is null)
             {
                 userMsg.Reply("User not found at database");
@@ -799,7 +839,7 @@ public partial class Generic
             }
 
             user.SetPermission(targetLevel);
-            userMsg.Reply($"Success change*{Program.StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
+            userMsg.Reply($"Success change*{StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
         }
         else
             GetHelpInfo(cmd, userMsg);

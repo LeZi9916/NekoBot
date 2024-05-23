@@ -3,19 +3,18 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
+using YamlDotNet.Serialization;
 
-namespace TelegramBot.Types;
+namespace NekoBot.Types;
 
 public class HotpAuthenticator
 {
-    [JsonInclude]
-    long counter = 0;
-    [JsonInclude]
-    int digits = 8;
-    [JsonInclude]
-    string secretKey = "";
+    public long Counter { get; set; } = 0;
+    public int Digits { get; private set; } = 8;
+    public string SecretKey { get; private set; } = "";
     static string Base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     public int FailureCount { get; private set; }
+    [YamlIgnore]
     public string Code { get => GetCode(); }
 
     public HotpAuthenticator()
@@ -23,13 +22,13 @@ public class HotpAuthenticator
         byte[] randomKey = new byte[16];
         RandomNumberGenerator.Create().GetBytes(randomKey);
 
-        secretKey = ToBase32String(randomKey);
+        SecretKey = ToBase32String(randomKey);
     }
     public HotpAuthenticator(string sKey, long counter, int digits)
     {
-        this.counter = counter;
-        this.digits = digits;
-        secretKey = sKey;
+        this.Counter = counter;
+        this.Digits = digits;
+        SecretKey = sKey;
     }
     public string GetCode(long counter)
     {
@@ -37,7 +36,7 @@ public class HotpAuthenticator
         if (BitConverter.IsLittleEndian)
             Array.Reverse(counterBytes);
 
-        var hmac = new HMACSHA1(FromBase32String(secretKey));
+        var hmac = new HMACSHA1(FromBase32String(SecretKey));
         var hash = hmac.ComputeHash(counterBytes);
         int offset = hash[hash.Length - 1] & 0xf;
         int binary = (hash[offset] & 0x7f) << 24 |
@@ -45,10 +44,10 @@ public class HotpAuthenticator
                      (hash[offset + 2] & 0xff) << 8 |
                      hash[offset + 3] & 0xff;
 
-        int otp = binary % (int)Math.Pow(10, digits);
-        return otp.ToString(new string('0', digits));
+        int otp = binary % (int)Math.Pow(10, Digits);
+        return otp.ToString(new string('0', Digits));
     }
-    public string GetCode() => GetCode(counter);
+    public string GetCode() => GetCode(Counter);
     public bool Compare(string code)
     {
         if (FailureCount >= 4)
@@ -56,11 +55,10 @@ public class HotpAuthenticator
 
         for (int index = -1; index < 1; index++)
         {
-            if (GetCode(counter + index) == code)
+            if (GetCode(Counter + index) == code)
             {
-                counter++;
+                Counter++;
                 FailureCount = 0;
-                Config.Save(Path.Combine(Config.DatabasePath, "HotpAuthenticator.data"), this);
                 return true;
             }
         }
