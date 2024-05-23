@@ -10,8 +10,8 @@ Hello! 这里是 NekoBot    ^ >ω< ^
 您可以将repo clone到本地，自行构建
 
 ```bash
-git clone https://github.com/LeZi9916/NekoBot.Core
-cd NekoBot.Core
+git clone https://github.com/LeZi9916/NekoBot
+cd NekoBot
 dotnet build
 ```
 
@@ -37,7 +37,7 @@ Proxy:
 Analyzer:             # 统计器
     TotalHandleCount: 0
     TotalHandleTime: 0
-Assembly:[]           # 引用的外部程序集
+Assembly: []          # 引用的外部程序集
                       # e.g. ExampleAssembly.dll
 ```
 
