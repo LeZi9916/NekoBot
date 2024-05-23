@@ -25,9 +25,6 @@ public partial class Core
     {
         Config.Up = DateTime.Now;
         Config.Check();
-        ScriptManager.Init();
-
-
         if (File.Exists(Config.ConfigPath))
             Config = Serializer.Yaml.Deserialize<Config>(File.ReadAllText(Config.ConfigPath))!;
         else
@@ -38,6 +35,7 @@ public partial class Core
             Console.ReadKey();
             Environment.Exit(0);
         }
+        ScriptManager.Init();
         if (string.IsNullOrEmpty(Config.Token))
         {
             Debug(DebugType.Error, "Bot token not found");

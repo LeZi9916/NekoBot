@@ -12,6 +12,7 @@ using System.Security.Cryptography;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using File = System.IO.File;
 using Message = NekoBot.Types.Message;
 
 namespace NekoBot
@@ -35,12 +36,17 @@ namespace NekoBot
             var libPath = Path.Combine(Config.ScriptPath, "Library");
             if (Directory.Exists(libPath))
             {
-                var libs = Directory.GetFiles(libPath);
-                foreach (var path in libs)
+                foreach (var depend in Core.Config.Assembly)
                 {
+                    var path = Path.Combine(libPath, depend);
+                    if (!File.Exists(path))
+                    {
+                        Core.Debug(DebugType.Warning, $"Assembly \"{depend}\" not found");
+                        continue;
+                    }    
                     try
                     {
-                        evaluator.ReferenceAssembly(path);
+                        evaluator.ReferenceAssembly(Assembly.LoadFrom(path));
                         Core.Debug(DebugType.Info, $"Loaded assembly: {path}");
                     }
                     catch(Exception e)
@@ -309,14 +315,13 @@ namespace NekoBot
             var scriptPaths = GetFiles(Config.ScriptPath).Where(x => x.Extension is ".csx" or ".cs")
                                                   .Select(x => x.FullName)
                                                   .ToArray();
-            var eva = CSScript.Evaluator;
             List<IExtension> uninitObjs = new();
             foreach (var path in scriptPaths)
             {
                 try
                 {
                     step($"Compiling \"{new FileInfo(path).Name}\"...");
-                    var obj = eva.LoadFile<IExtension>(path);
+                    var obj = evaluator.LoadFile<IExtension>(path);
                     var info = obj.Info;
                     var conflictObj = uninitObjs.Find(x => x.Info.Name == info.Name);
                     if (conflictObj is not null)

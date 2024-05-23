@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
     <StartupObject></StartupObject>
-    <AssemblyVersion>0.12.4</AssemblyVersion>
+    <AssemblyVersion>0.12.6</AssemblyVersion>
     <PublishAot>False</PublishAot>
     <PublishTrimmed>False</PublishTrimmed>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Scripts\Module\MaiScanner.cs" />
     <Compile Remove="Scripts\Script.cs" />
   </ItemGroup>
 
@@ -23,8 +24,6 @@
     <None Remove="Scripts\MaiDatabase.csx" />
     <None Remove="Scripts\MessageHandler.csx" />
     <None Remove="Scripts\Module\Generic.csx" />
-    <None Remove="Scripts\Module\Mai.csx" />
-    <None Remove="Scripts\Module\MaiMonitor.csx" />
     <None Remove="Scripts\Module\Monitor.csx" />
     <None Remove="Scripts\Module\NetQuery.csx" />
     <None Remove="Scripts\Module\ScriptHelper.csx" />
@@ -44,19 +43,13 @@
     <Compile Include="Scripts\Handler\MessageHandler.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Scripts\Module\MaiMonitor.csx">
+    <Compile Include="Scripts\Module\Generic.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Serializer\JsonSerializer.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Database\UserDatabase.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Module\Generic.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Module\Mai.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Module\Monitor.csx">
@@ -74,6 +67,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Scripts\Module\MaiScanner.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CS-Script" Version="4.8.14" />
     <PackageReference Include="CZGL.SystemInfo" Version="2.2.0" />
     <PackageReference Include="DnsClient" Version="1.7.0" />
@@ -85,11 +82,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AquaTools\AquaTools.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Scripts\Library\" />
+    <None Update="Scripts\Module\Mai.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Scripts\Module\MaiMonitor.csx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -218,7 +218,7 @@ public partial class ScriptHelper : Extension, IExtension
                 if(isUpdate)
                 {
                     await msg.Edit("Overwriting script...(4/4)");
-                    File.Copy(filePath, $"{Path.Combine(ScriptManager.ScriptPath, $"{script.Instance.Info.Type}/{script.Instance.Info.Name}.csx")}", true);
+                    File.Copy(filePath, $"{Path.Combine(Config.ScriptPath, $"{script.Instance.Info.Type}/{script.Instance.Info.Name}.csx")}", true);
                 }
                 else
                     await msg.Edit("Clean up...(4/4)");

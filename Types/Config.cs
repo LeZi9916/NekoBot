@@ -41,7 +41,7 @@ namespace NekoBot.Types
         public string Token { get; set; } = "";
         public Proxy Proxy { get; set; } = new();
         public Analyzer Analyzer { get; set; } = new();
-
+        public string[] Assembly { get; set; } = Array.Empty<string>();
         [YamlIgnore]
         bool isRunning = false;
 
