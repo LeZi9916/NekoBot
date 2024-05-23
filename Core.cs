@@ -21,7 +21,6 @@ public partial class Core
     public static string BotUsername { get; private set; } = "";
     public static BotCommand[] BotCommands { get; set; } = Array.Empty<BotCommand>();
     public static Config Config { get; set; } = new Config();
-
     static void Main(string[] args)
     {
         Config.Up = DateTime.Now;

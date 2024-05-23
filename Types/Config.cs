@@ -29,6 +29,8 @@ namespace NekoBot.Types
         [YamlIgnore]
         public static string TempPath { get => Path.Combine(AppPath, "Temp"); }
         [YamlIgnore]
+        public static string ScriptPath { get => Path.Combine(AppPath, "Scripts"); }
+        [YamlIgnore]
         public static string LogFile { get => Path.Combine(LogsPath, $"{Up.ToString("yyyy-MM-dd HH-mm-ss")}.log"); }
         [YamlIgnore]
         public static string ConfigPath { get => Path.Combine(AppPath, "NekoBot.conf"); }
@@ -59,12 +61,21 @@ namespace NekoBot.Types
         }
         public static void Check()
         {
+            var subScript = new string[] { "Database","Module","Handler", "Serializer", "Library" };
             if (!Directory.Exists(LogsPath))
                 Directory.CreateDirectory(LogsPath);
             if (!Directory.Exists(DatabasePath))
                 Directory.CreateDirectory(DatabasePath);
             if (!Directory.Exists(TempPath))
                 Directory.CreateDirectory(TempPath);
+            if (!Directory.Exists(ScriptPath))
+                Directory.CreateDirectory(ScriptPath);
+
+            foreach (var dir in subScript)
+            {
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(Path.Combine(ScriptPath,dir));
+            }
         }
     }
 }

@@ -28,13 +28,37 @@ namespace NekoBot
         static List<IExtension> loadedScripts = new();
         static List<BotCommand> commands = new();
         static Dictionary<string,IExtension> handlers = new();
-        public static string ScriptPath { get => Path.Combine(Config.AppPath, "Scripts"); }
+        static IEvaluator evaluator = CSScript.RoslynEvaluator.Clone();
+    
+        static void LoadAssembly()
+        {
+            var libPath = Path.Combine(Config.ScriptPath, "Library");
+            if (Directory.Exists(libPath))
+            {
+                var libs = Directory.GetFiles(libPath);
+                foreach (var path in libs)
+                {
+                    try
+                    {
+                        evaluator.ReferenceAssembly(path);
+                        Core.Debug(DebugType.Info, $"Loaded assembly: {path}");
+                    }
+                    catch(Exception e)
+                    {
+                        Core.Debug(DebugType.Error, $"Loading assembly failure: {e}");
+                    }
+                }
+            }
+        }
         public static void Init()
         {
-            if (!Directory.Exists(ScriptPath))
+            evaluator.Reset();
+            
+            if (!Directory.Exists(Config.ScriptPath))
                 return;
             try
             {
+                LoadAssembly();
                 var scripts = GetScripts();
                 var loader = new ScriptLoader(scripts.Select(x => x.Info).ToList());
                 var loadOrder = loader.GetLoadOrder();
@@ -276,13 +300,13 @@ namespace NekoBot
         }
         public static string? GetScriptPath(string extName)
         {
-            return GetFiles(ScriptPath).Where(x => x.Extension is ".csx" or ".cs" && x.Name == $"{extName}.csx")
+            return GetFiles(Config.ScriptPath).Where(x => x.Extension is ".csx" or ".cs" && x.Name == $"{extName}.csx")
                                        .Select(x => x.FullName)
                                        .First();
         }
         static List<IExtension> GetScripts(Action<string> step)
         {
-            var scriptPaths = GetFiles(ScriptPath).Where(x => x.Extension is ".csx" or ".cs")
+            var scriptPaths = GetFiles(Config.ScriptPath).Where(x => x.Extension is ".csx" or ".cs")
                                                   .Select(x => x.FullName)
                                                   .ToArray();
             var eva = CSScript.Evaluator;

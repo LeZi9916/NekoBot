@@ -1082,7 +1082,6 @@ public partial class Mai : Extension, IExtension
 }
 public partial class Mai
 {
-    
     public struct DateTimeRange
     {
         public DateTime Start { get; set; }

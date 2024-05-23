@@ -88,4 +88,8 @@
     <ProjectReference Include="..\AquaTools\AquaTools.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Scripts\Library\" />
+  </ItemGroup>
+
 </Project>
