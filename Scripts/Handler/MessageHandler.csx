@@ -99,7 +99,7 @@ public class MessageHandler: Extension, IExtension, IHandler
         }
         if (cmd.Prefix.Contains("@"))
         {
-            cmd.Prefix = cmd.Prefix.Split("@", StringSplitOptions.RemoveEmptyEntries).First();
+            cmd.Prefix = cmd.Prefix.Split("@", StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
             userMsg.Command = cmd;
         }
 

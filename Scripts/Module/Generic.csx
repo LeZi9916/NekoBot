@@ -49,7 +49,7 @@ public partial class Generic : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo() 
     { 
         Name = "Generic",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version() { Major = 1, Minor = 0,Revision = 4 },
         Type = ExtensionType.Module,
         Commands = new BotCommand[] 
         {
@@ -253,7 +253,7 @@ public partial class Generic : Extension, IExtension
         {
             long id = -1;
 
-            if (long.TryParse(param.First(), out id))
+            if (long.TryParse(param.FirstOrDefault(), out id))
                 target = userDatabase.Find(x => x.Id ==id);
             else
             {
@@ -306,7 +306,7 @@ public partial class Generic : Extension, IExtension
         {
             long id = -1;
 
-            if (long.TryParse(param.First(), out id))
+            if (long.TryParse(param.FirstOrDefault(), out id))
                 target = userDatabase.Find(x => x.Id ==id);
             else
             {
@@ -342,11 +342,11 @@ public partial class Generic : Extension, IExtension
 
         if (!param.IsEmpty())
         {
-            if (long.TryParse(param.First(), out long i))
+            if (long.TryParse(param.FirstOrDefault(), out long i))
             {
                 target = userDatabase.Find(x => x.Id ==i);
             }
-            else if (param.First().ToLower() == "group")
+            else if (param.FirstOrDefault().ToLower() == "group")
             {
                 GetGroupInfo(userMsg);
                 return;
@@ -396,7 +396,7 @@ public partial class Generic : Extension, IExtension
         }
         else if (!param.IsEmpty())
         {
-            if (long.TryParse(param.First(), out long i))
+            if (long.TryParse(param.FirstOrDefault(), out long i))
                target = groupDatabase.Find(x => x.Id == i);
             else
             {
@@ -498,7 +498,7 @@ public partial class Generic : Extension, IExtension
         {
             long id = -1;
 
-            if (long.TryParse(param.First(), out id))
+            if (long.TryParse(param.FirstOrDefault(), out id))
                 setPermission(id);
             else
                 userMsg.Reply("Invaild userId");
@@ -517,10 +517,10 @@ public partial class Generic : Extension, IExtension
         {
             var result = monitor.GetResult();
             string _ = $"""
-                        - Bot info: 
+                        - NekoBot info 
                           Version  : v{ScriptManager.GetVersion()}
                           MemUsage : {Process.GetCurrentProcess().WorkingSet64 / (1024 * 1024)} MB
-                          Latency  : {analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount} ms
+                          Latency  : {Math.Round(analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount,2)} ms
                           Processed Msg : {analyzer.TotalHandleCount}
                         - HW info
                           - CPU
@@ -564,7 +564,7 @@ public partial class Generic : Extension, IExtension
             case 0:
                 break;
             case 1:
-                level = param.First() switch
+                level = param.FirstOrDefault() switch
                 {
                     "debug" => DebugType.Debug,
                     "info" => DebugType.Info,
@@ -574,16 +574,16 @@ public partial class Generic : Extension, IExtension
                 };
                 if (level is null)
                 {
-                    if (!int.TryParse(param.First(), out count))
+                    if (!int.TryParse(param.FirstOrDefault(), out count))
                     {
-                        userMsg.Reply($"Invaild param: \"{param.First()}\"");
+                        userMsg.Reply($"Invaild param: \"{param.FirstOrDefault()}\"");
                         return;
                     }
                     level = DebugType.Error;
                 }
                 break;
             case 2:
-                level = param.First() switch
+                level = param.FirstOrDefault() switch
                 {
                     "debug" => DebugType.Debug,
                     "info" => DebugType.Info,
@@ -650,7 +650,7 @@ public partial class Generic : Extension, IExtension
             return;
         }
 
-        string prefix = param.First().ToLower();
+        string prefix = param.FirstOrDefault().ToLower();
         bool boolValue;
         switch (prefix)
         {
@@ -753,7 +753,7 @@ public partial class Generic
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var suffix = cmd.Params.First();
+        var suffix = cmd.Params.FirstOrDefault();
         var param = cmd.Params.Skip(1).ToArray();
 
         if (!querier.CheckPermission(Permission.Root))
@@ -779,7 +779,7 @@ public partial class Generic
         // /set permission [id] [level] 
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var suffix = cmd.Params.First();
+        var suffix = cmd.Params.FirstOrDefault();
         var param = cmd.Params.Skip(1).ToArray();
         string[] permission = { "unknown","ban","common","advanced","admin","root" };
 

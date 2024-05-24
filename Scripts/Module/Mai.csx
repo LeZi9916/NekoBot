@@ -66,7 +66,7 @@ public partial class Mai : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "Mai",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version() { Major = 1, Minor = 0, Revision = 1 },
         Type = ExtensionType.Module,
         Commands = new BotCommand[]
         {
@@ -153,7 +153,7 @@ public partial class Mai : Extension, IExtension
             return;
         }
 
-        var suffix = cmd.Params.First();
+        var suffix = cmd.Params.FirstOrDefault();
         if (suffix is not ("bind" or "status" or "rank") && querier.MaiUserId is null)
         {
             userMsg.Send("你还没有绑定账号喵x");
@@ -249,7 +249,7 @@ public partial class Mai : Extension, IExtension
                     userMsg.Send("Access denied");
                     return;
                 }
-                else if (!int.TryParse(param.First(), out id))
+                else if (!int.TryParse(param.FirstOrDefault(), out id))
                 {
                     userMsg.Send("请确认参数是Int32~");
                     return;
@@ -323,7 +323,7 @@ public partial class Mai : Extension, IExtension
                 userMsg.Send("Permission Denied");
                 return;
             }
-            else if (int.TryParse(param.First(), out userId))
+            else if (int.TryParse(param.FirstOrDefault(), out userId))
                 request.Object.userId = userId;
             else
             {
@@ -398,7 +398,7 @@ public partial class Mai : Extension, IExtension
                 return;
             }
 
-            if (param.First().ToLower() == "image")
+            if (param.FirstOrDefault().ToLower() == "image")
             {
                 if (userMsg.Photo is null)
                 {
@@ -429,12 +429,12 @@ public partial class Mai : Extension, IExtension
                     return;
                 }
             }
-            else if (QRCode.IsWeChatId(param.First()))
+            else if (QRCode.IsWeChatId(param.FirstOrDefault()))
             {
                 var request = new QRCodeRequest()
                 {
                     KeyChip = keyChips[0],
-                    QrCode = param.First()
+                    QrCode = param.FirstOrDefault()
                 };
                 maiUserId = QRCode.ToUserId(request).Object.userID;
             }
@@ -508,7 +508,7 @@ public partial class Mai : Extension, IExtension
                 await userMsg.Reply("Permission denied");
                 return;
             }
-            if (!int.TryParse(param.First(), out userid))
+            if (!int.TryParse(param.FirstOrDefault(), out userid))
             {
                 await userMsg.Reply("缺少参数喵x");
                 return;
@@ -574,7 +574,7 @@ public partial class Mai : Extension, IExtension
                 await msg.Edit("Access denied");
                 return;
             }
-            else if (!int.TryParse(param.First(), out userId))
+            else if (!int.TryParse(param.FirstOrDefault(), out userId))
             {
                 await msg.Edit("Invaild params");
                 return;
@@ -803,7 +803,7 @@ public partial class Mai : Extension, IExtension
                 return;
             }
             else
-                int.TryParse(param.First(),out userId);
+                int.TryParse(param.FirstOrDefault(),out userId);
         }
 
         var request = new Request<UserLogoutRequest>(new UserLogoutRequest() { userId = userId });
@@ -835,7 +835,7 @@ public partial class Mai : Extension, IExtension
 
         if (!param.IsEmpty())
         {
-            if (param.First() == "refresh")
+            if (param.FirstOrDefault() == "refresh")
             {
                 CalRating();
                 userMsg.Reply("Mai rank have been updated ~");
@@ -916,7 +916,7 @@ public partial class Mai : Extension, IExtension
                          $"\n") +
                           "```";
             }
-            else if (param.First() is "full")
+            else if (param.FirstOrDefault() is "full")
             {
                 text = "maimai服务器状态:\n" +
                           "```python" +

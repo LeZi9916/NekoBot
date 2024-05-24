@@ -22,7 +22,7 @@ public class MaiScanner : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "MaiScanner",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version() { Major = 1, Minor = 0, Revision = 1 },
         Type = ExtensionType.Module,
         Dependencies = new ExtensionInfo[]{
                 new ExtensionInfo()
@@ -299,7 +299,7 @@ public class MaiScanner : Extension, IExtension
     //    }
 
     //    var result = accounts.GroupBy(x => x.userId)
-    //                         .Select(x => x.First())
+    //                         .Select(x => x.FirstOrDefault())
     //                         .Where(x => x.userName is not null);
 
     //    database.MaiAccountList.AddRange(result);
