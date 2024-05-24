@@ -137,9 +137,16 @@ namespace NekoBot
                 var ext = loadedScripts[index];
                 if (ext is IHandler handler)
                 {
-                    var foo = handler.Handle(client, loadedScripts, update);
-                    if (foo is not null)
-                        foo();
+                    try
+                    {
+                        var foo = handler.Handle(client, loadedScripts, update);
+                        if (foo is not null)
+                            foo();
+                    }
+                    catch(Exception e)
+                    {
+                        Core.Debug(DebugType.Error, $"Module inner exception:\n{e}");
+                    }
                 }
                 else
                     Core.Debug(DebugType.Warning, $"Unknown handler module \"{ext.Info.Name}\",maybe you didn't inherit and implement IHandler?");

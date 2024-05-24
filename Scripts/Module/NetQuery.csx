@@ -7,7 +7,6 @@ using DnsClient;
 using DnsClient.Protocol;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using NekoBot;
 using Message = NekoBot.Types.Message;
 using NekoBot.Interfaces;
 using NekoBot.Types;
@@ -16,12 +15,13 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 public class NetQuery: Extension, IExtension
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "NetQuery",
-        Version = new Version() { Major = 1, Minor = 0,Revision = 13 },
+        Version = new Version() { Major = 1, Minor = 0,Revision = 15 },
         Type = ExtensionType.Module,
         Commands = new BotCommand[]
         {
@@ -69,6 +69,7 @@ public class NetQuery: Extension, IExtension
         var ipOrdomain = param.FirstOrDefault();
         IPAddress? address;
         int port = 80;
+        int count = 4;
         if (param.IsEmpty() || ipOrdomain is null)
             return;
 
@@ -79,8 +80,12 @@ public class NetQuery: Extension, IExtension
             if(_s.Length > 1)
             {
                 if(!int.TryParse(portStr, out port))
+                {
                     port = 80;
-                ipOrdomain = string.Join(":", _s.SkipLast(1));
+                    ipOrdomain = string.Join(":", _s);
+                }
+                else
+                    ipOrdomain = string.Join(":", _s.SkipLast(1));
             }                
             else
                 ipOrdomain = _s.FirstOrDefault();
@@ -111,8 +116,10 @@ public class NetQuery: Extension, IExtension
         if (msg is null)
             return;
         try
-        { 
-            for (int i = 0; i < 4; i++)
+        {
+            int error = 0;
+            List<double> rtt = new();
+            for (int i = 0; i < count; i++)
             {
                 if(!useTCP)
                 {
@@ -133,18 +140,32 @@ public class NetQuery: Extension, IExtension
                             s += $"\nUnreachable";
                             break;
                     }
+                    if (reply.Status != IPStatus.Success)
+                        error++;
+                    rtt.Add(reply.RoundtripTime);
                 }
                 else
                 {
                     var time = TCPing(address.ToString(), port);
-                    if(time  != -1)
+                    if(time  >= 0)
                         s += $"\nFrom {address} Seq={i + 1} Time={Math.Round(time / 1000000 ,4)}ms";
                     else
+                    {
                         s += "\nTimeOut";
+                        error++;
+                    }
+                    rtt.Add(Math.Abs(Math.Round(time / 1000000, 4)));
                 }
                 await msg.Edit(sHead + StringHandle(s) + sTail,ParseMode.MarkdownV2);
                 await Task.Delay(1000);
             }
+            s += $"""
+
+                  --- {ipOrdomain} {(useTCP ? "TCPing" : "Ping")} statistics ---
+                     {Math.Round(error / (double)count * 100,2)}% packet loss, time {rtt.Sum()}ms
+                  rtt min/avg/max = {rtt.Min()}/{Math.Round(rtt.Sum() / count,4)}/{rtt.Max()} ms
+                  """;
+            await msg.Edit(sHead + StringHandle(s) + sTail, ParseMode.MarkdownV2);
         }
         catch
         {
@@ -289,16 +310,37 @@ public class NetQuery: Extension, IExtension
             client.Close();
             stopwatch.Stop();
             return stopwatch.Elapsed.TotalNanoseconds;
+
         }
         catch
         {
-            return -1;
-        }
-        finally
-        {
             stopwatch.Stop();
+            return -stopwatch.Elapsed.TotalNanoseconds;
         }
 
+    }
+    RouteInfo IcmpTrace(IPAddress address, int timeout = 2000, int maxHops = 30)
+    {
+        Ping sender = new();
+        PingOptions opt = new();
+        byte[] buffer = Enumerable.Repeat<byte>(1, 32).ToArray();
+        List<Router?> routers = new();
+
+        for (int i = 1; i <= maxHops; i++)
+        {
+            opt.Ttl = i;
+            var result = sender.Send(address, timeout, buffer, opt);
+            if (result.Status is IPStatus.Success || result.Status is IPStatus.TtlExpired)
+            {
+                var router = Router.Parse(result);
+                routers.Add(router);
+                if ((bool)router?.Address.Equals(address))
+                    break;
+            }
+            else
+                routers.Add(Router.Empty());
+        }
+        return new RouteInfo(address, routers.ToArray());
     }
     readonly static IPEndPoint DefaultNS1 = IPEndPoint.Parse("192.168.31.11:53");
     readonly static IPEndPoint DefaultNS2 = IPEndPoint.Parse("192.168.31.4:53");
@@ -378,4 +420,47 @@ public static class DnsHelper
     {
 
     }
+}
+public class RouteInfo
+{
+    public IPAddress Address { get; }
+    public long RoundtripTime { get; }
+    public Router?[] Routers { get; }
+    public bool IsAchieved()
+    {
+        var lastRouter = Routers.Last();
+        if (lastRouter.IsUnreachable())
+            return false;
+        else
+            return lastRouter.Address == Address;
+    }
+    public RouteInfo(IPAddress address, Router?[] routers)
+    {
+        Address = address;
+        Routers = routers;
+        var lastRouter = routers.Last();
+
+        if (lastRouter.IsUnreachable() || lastRouter.Address != Address)
+            RoundtripTime = -1;
+        else
+            RoundtripTime = lastRouter.RoundtripTime;
+    }
+}
+public class Router
+{
+    public IPAddress? Address { get; }
+    public long RoundtripTime { get; }
+    public bool IsUnreachable() => Address is null;
+    public Router(IPAddress? address, long rrt)
+    {
+        Address = address;
+        RoundtripTime = rrt;
+    }
+    public static Router? Parse(PingReply? pingReply)
+    {
+        if (pingReply == null) return null;
+
+        return new Router(pingReply.Address, pingReply.RoundtripTime);
+    }
+    public static Router Empty() => new Router(null, -1);
 }
