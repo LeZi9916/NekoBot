@@ -14,13 +14,14 @@ using NekoBot.Types;
 using Version = NekoBot.Types.Version;
 using System.Diagnostics;
 using System.Net.Sockets;
-#nullable enable
+using System.Net.NetworkInformation;
+using System.Threading.Tasks;
 public class NetQuery: Extension, IExtension
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "NetQuery",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version() { Major = 1, Minor = 0,Revision = 13 },
         Type = ExtensionType.Module,
         Commands = new BotCommand[]
         {
@@ -28,6 +29,16 @@ public class NetQuery: Extension, IExtension
             {
                 Command = "nslookup",
                 Description = "域名解析"
+            },
+            new BotCommand()
+            {
+                Command = "ping",
+                Description = "对目标主机发送ICMP Echo"
+            },
+            new BotCommand()
+            {
+                Command = "tcping",
+                Description = "对目标主机发送TCP SYN"
             }
         },
         SupportUpdate = new UpdateType[]
@@ -43,7 +54,102 @@ public class NetQuery: Extension, IExtension
         {
             case "nslookup":
                 DnsQuery(userMsg);
+                break;
+            case "ping":
+                PingRequest(userMsg);
+                break;
+            case "tcping":
+                PingRequest(userMsg,true);
+                break;
+        }
+    }
+    async void PingRequest(Message userMsg, bool useTCP = false)
+    {
+        var param = ((Command)userMsg.Command!).Params;
+        var ipOrdomain = param.FirstOrDefault();
+        IPAddress? address;
+        int port = 80;
+        if (param.IsEmpty() || ipOrdomain is null)
             return;
+
+        if(useTCP)
+        {
+            var _s = ipOrdomain.Split(":");
+            var portStr = _s.LastOrDefault();
+            if(_s.Length > 1)
+            {
+                if(!int.TryParse(portStr, out port))
+                    port = 80;
+                ipOrdomain = string.Join(":", _s.SkipLast(1));
+            }                
+            else
+                ipOrdomain = _s.FirstOrDefault();
+
+        }
+
+        if(IPAddress.TryParse(ipOrdomain, out address))
+        {
+            if (address is null)
+                return;
+        }
+        else
+        {
+            var lookuper = new LookupClient(new IPEndPoint[] { DefaultNS1, DefaultNS2 });
+            var question = new DnsQuestion(ipOrdomain, QueryType.A);
+            var result = await lookuper.QueryAsync(question);
+            address = result.Answers.AaaaRecords()?.FirstOrDefault()?.Address ?? result.Answers?.ARecords()?.FirstOrDefault()?.Address;
+            if(address is null)
+            {
+                await userMsg.Reply("Unknown address or host");
+                return;
+            }
+        }
+        string sHead = "```log\n";
+        string sTail = "\n```";
+        string s = useTCP ? $"TCPING {ipOrdomain} ({address}) via port {port}"  : $"PING {ipOrdomain} ({address})";
+        var msg = await userMsg.Reply(sHead + StringHandle(s) + sTail, ParseMode.MarkdownV2);
+        if (msg is null)
+            return;
+        try
+        { 
+            for (int i = 0; i < 4; i++)
+            {
+                if(!useTCP)
+                {
+                    var ping = new Ping();
+                    var reply = await ping.SendPingAsync(address);
+                    switch (reply.Status)
+                    {
+                        case IPStatus.TimedOut:
+                            s += "\nTimeOut";
+                            break;
+                        case IPStatus.Success:
+                            s += $"\nFrom {address} Seq={i + 1} Ttl={(reply.Options is null ? "Null" : reply.Options.Ttl)} Time={reply.RoundtripTime}ms";
+                            break;
+                        case IPStatus.DestinationNetworkUnreachable:
+                        case IPStatus.DestinationProtocolUnreachable:
+                        case IPStatus.DestinationPortUnreachable:
+                        case IPStatus.DestinationHostUnreachable:
+                            s += $"\nUnreachable";
+                            break;
+                    }
+                }
+                else
+                {
+                    var time = TCPing(address.ToString(), port);
+                    if(time  != -1)
+                        s += $"\nFrom {address} Seq={i + 1} Time={Math.Round(time / 1000000 ,4)}ms";
+                    else
+                        s += "\nTimeOut";
+                }
+                await msg.Edit(sHead + StringHandle(s) + sTail,ParseMode.MarkdownV2);
+                await Task.Delay(1000);
+            }
+        }
+        catch
+        {
+            s += "\nOperation Canceled";
+            await msg.Edit(sHead + StringHandle(s) + sTail, ParseMode.MarkdownV2);
         }
     }
     async void DnsQuery(Message userMsg)
@@ -170,7 +276,7 @@ public class NetQuery: Extension, IExtension
             return null;
         }
     }
-    public long TCPing(string host, int port)
+    public double TCPing(string host, int port)
     {
         Stopwatch stopwatch = new();
         stopwatch.Start();
@@ -182,7 +288,7 @@ public class NetQuery: Extension, IExtension
             client.Connect(host, port);
             client.Close();
             stopwatch.Stop();
-            return stopwatch.ElapsedMilliseconds;
+            return stopwatch.Elapsed.TotalNanoseconds;
         }
         catch
         {

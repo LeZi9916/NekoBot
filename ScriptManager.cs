@@ -1,5 +1,4 @@
 ﻿using CSScriptLib;
-using CZGL.SystemInfo;
 using NekoBot.Exceptions;
 using NekoBot.Interfaces;
 using NekoBot.Types;
@@ -301,7 +300,7 @@ namespace NekoBot
         {
             return GetFiles(Config.ScriptPath).Where(x => x.Extension is ".csx" or ".cs" && x.Name == $"{extName}.csx")
                                        .Select(x => x.FullName)
-                                       .First();
+                                       .FirstOrDefault();
         }
         static List<IExtension> GetScripts(Action<string> step)
         {
