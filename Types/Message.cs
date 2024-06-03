@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 using static NekoBot.Core;
 
 namespace NekoBot.Types;
@@ -92,7 +93,9 @@ public class Message
                         chatId: Chat.Id,
                         text: text,
                         replyToMessageId: null,
-                        parseMode: parseMode))!;
+                        parseMode: parseMode,
+                        replyMarkup: new InlineKeyboardMarkup(
+                                        InlineKeyboardButton.WithCallbackData("Yes","y"))))!;
         }
         catch (Exception e)
         {
@@ -139,7 +142,9 @@ public class Message
                         chatId: Chat.Id,
                         text: text,
                         replyToMessageId: Id,
-                        parseMode: parseMode))!;
+                        parseMode: parseMode,
+                        replyMarkup: new InlineKeyboardMarkup(
+                                        InlineKeyboardButton.WithCallbackData("Yes", "y"))))!;
         }
         catch (Exception e)
         {

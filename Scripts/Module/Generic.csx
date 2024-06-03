@@ -49,7 +49,7 @@ public partial class Generic : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo() 
     { 
         Name = "Generic",
-        Version = new Version() { Major = 1, Minor = 0,Revision = 4 },
+        Version = new Version() { Major = 1, Minor = 0,Revision = 7 },
         Type = ExtensionType.Module,
         Commands = new BotCommand[] 
         {
@@ -512,7 +512,7 @@ public partial class Generic : Extension, IExtension
         var scripts = string.Join("\n  - ", ScriptManager.GetLoadedScript());
         var analyzer = Core.Config.Analyzer;
         var extension = ScriptManager.GetExtension("Monitor");
-
+        uptime.ToString("");
         if (extension is IMonitor<Dictionary<string, long>> monitor)
         {
             var result = monitor.GetResult();
@@ -522,6 +522,7 @@ public partial class Generic : Extension, IExtension
                           MemUsage : {Process.GetCurrentProcess().WorkingSet64 / (1024 * 1024)} MB
                           Latency  : {Math.Round(analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount,2)} ms
                           Processed Msg : {analyzer.TotalHandleCount}
+                          Uptime   : {uptime:dd\.hh\:mm\:ss}
                         - HW info
                           - CPU
                             Core : {result["ProcessorCount"]}

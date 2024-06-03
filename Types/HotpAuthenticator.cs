@@ -14,6 +14,7 @@ public class HotpAuthenticator
     public string SecretKey { get; private set; } = "";
     static string Base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     public int FailureCount { get; private set; }
+    [YamlIgnore]
     public string Code { get => GetCode(); }
 
     public HotpAuthenticator()

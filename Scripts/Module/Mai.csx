@@ -66,7 +66,7 @@ public partial class Mai : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "Mai",
-        Version = new Version() { Major = 1, Minor = 0, Revision = 1 },
+        Version = new Version() { Major = 1, Minor = 0, Revision = 2 },
         Type = ExtensionType.Module,
         Commands = new BotCommand[]
         {
@@ -152,6 +152,14 @@ public partial class Mai : Extension, IExtension
             GetHelpInfo(cmd,userMsg);
             return;
         }
+
+        if(maiDatabase is null)
+        {
+            userMsg.Reply("Internal error: Module\"MaiDatabase\" not found");
+            return;
+        }
+        else if(userMsg.From.Account is null)
+            userMsg.From.Account = maiDatabase.Find(x => x.userId == userMsg.From.MaiUserId);
 
         var suffix = cmd.Params.FirstOrDefault();
         if (suffix is not ("bind" or "status" or "rank") && querier.MaiUserId is null)

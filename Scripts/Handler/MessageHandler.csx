@@ -12,7 +12,7 @@ using Action = System.Action;
 using Message = NekoBot.Types.Message;
 using User = NekoBot.Types.User;
 using Version = NekoBot.Types.Version;
-
+#pragma warning disable CS4014
 public class MessageHandler: Extension, IExtension, IHandler
 {
     IDatabase<User>? userDatabase;
@@ -20,7 +20,7 @@ public class MessageHandler: Extension, IExtension, IHandler
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "MessageHandler",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version() { Major = 1, Minor = 0,Revision = 1},
         Type = ExtensionType.Handler,
         SupportUpdate = new UpdateType[] 
         {
@@ -50,8 +50,8 @@ public class MessageHandler: Extension, IExtension, IHandler
         userDatabase = userDB;
         groupDatabase = groupDB;
     }
-    
-    Message PreHandle(in ITelegramBotClient client, Update update)
+
+    Message? PreHandle(in ITelegramBotClient client, Update update)
     {
         var userMsg = Message.Parse(client, update.Message);
         UserDiscover(update);
@@ -62,12 +62,19 @@ public class MessageHandler: Extension, IExtension, IHandler
         userMsg.From = from!;
         userMsg.Group = groupDatabase!.Find(x => x.Id == msg.Chat.Id);
 
-        if(msg.ReplyTo is not null)
+        if (msg.ReplyTo is not null)
         {
             var replyTo = userDatabase!.Find(x => x.Id == msg.ReplyTo.From.Id);
             userMsg.ReplyTo!.From = replyTo!;
         }
-
+        if (userMsg is not null)
+        {
+            Debug(DebugType.Debug, $"Received message:\n" +
+                    $"Sender : {userMsg.From.Name}[@{userMsg.From.Username}]({userMsg.From.Id})\n" +
+                    $"From   : {userMsg.Chat.FirstName} {userMsg.Chat.LastName}({userMsg.Chat.Id}) |{(userMsg.IsGroup ? "Group" : "Private")}\n" +
+                    $"Type   : {userMsg.Type}\n" +
+                    $"Content: {(string.IsNullOrEmpty(userMsg.Content) ? string.Empty : userMsg.Content)}\n");
+        }
         return userMsg;
     }
     // 此处传入的userMsg为待处理的Message
@@ -78,7 +85,7 @@ public class MessageHandler: Extension, IExtension, IHandler
             return default;
         var userMsg = PreHandle(client, update);        
 
-        if (userMsg.Command is null)
+        if (userMsg is null || userMsg.Command is null)
             return default;
 
         var group = userMsg.Group;
@@ -99,7 +106,7 @@ public class MessageHandler: Extension, IExtension, IHandler
         }
         if (cmd.Prefix.Contains("@"))
         {
-            cmd.Prefix = cmd.Prefix.Split("@", StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            cmd.Prefix = cmd.Prefix.Split("@", StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
             userMsg.Command = cmd;
         }
 
@@ -109,7 +116,7 @@ public class MessageHandler: Extension, IExtension, IHandler
             var sArray = string.Join(" ", cmd.Params).Split("-token", StringSplitOptions.RemoveEmptyEntries);
             if (sArray.Length != 2)
             {
-                //SendMessage("Authentication failed:\nGroup or channel anonymous access is not allowed", update);
+                userMsg.Reply("Authentication failed:\nGroup or channel anonymous access is not allowed");
                 Debug(DebugType.Info, "Channel access,rejected");
                 return default;
             }
@@ -117,7 +124,8 @@ public class MessageHandler: Extension, IExtension, IHandler
 
             if (!Core.Config.Authenticator.Compare(token.Trim()))
             {
-                //SendMessage("Authentication failed:\nInvalid HOTP code", update);
+
+                userMsg.Reply("Authentication failed:\nInvalid HOTP code");
                 Debug(DebugType.Info, "HOTP code is invalid,rejected");
                 return default;
             }

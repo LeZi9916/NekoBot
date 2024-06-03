@@ -11,6 +11,7 @@ using Telegram.Bot.Types;
 using Message = NekoBot.Types.Message;
 using File = System.IO.File;
 using NekoBot.Types;
+using System.Diagnostics.Tracing;
 
 
 namespace NekoBot;
@@ -24,6 +25,8 @@ public partial class Core
     static void Main(string[] args)
     {
         Config.Up = DateTime.Now;
+        AppDomain.CurrentDomain.UnhandledException += ExceptionRecord;
+        TaskScheduler.UnobservedTaskException += ExceptionRecord;
         Config.Check();
         if (File.Exists(Config.ConfigPath))
             Config = Serializer.Yaml.Deserialize<Config>(File.ReadAllText(Config.ConfigPath))!;
@@ -92,8 +95,10 @@ public partial class Core
             }
         }
         ScriptManager.UpdateCommand();
+        
         while (true)
             Console.ReadKey();
+        
     }
     static async Task UpdateHandleAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
@@ -102,26 +107,27 @@ public partial class Core
             Stopwatch stopwatch = new();
             stopwatch.Reset();
             stopwatch.Start();
-            try
-            {
-                var msg = Message.Parse(botClient, update.Message);
 
-                Debug(DebugType.Debug, $"Received message:\n" +
-                    $"Sender : {msg.From.Name}[@{msg.From.Username}]({msg.From.Id})\n" +
-                    $"From   : {msg.Chat.FirstName} {msg.Chat.LastName}({msg.Chat.Id}) |{(msg.IsGroup ? "Group" : "Private")}\n" +
-                    $"Type   : {msg.Type}\n" +
-                    $"Content: {(string.IsNullOrEmpty(msg.Content) ? string.Empty : msg.Content)}\n");
+            ScriptManager.MessageHandle(botClient, update);
 
-                ScriptManager.MessageHandle(botClient,update);
-            }
-            catch (Exception e)
-            {
-                Debug(DebugType.Error, $"Failure to receive message : \n{e.Message}\n{e.StackTrace}");
-            }
             stopwatch.Stop();
             Config.Analyzer.TotalHandleCount++;
             Config.Analyzer.TotalHandleTime += stopwatch.ElapsedMilliseconds;
         });
+    }
+    static void ExceptionRecord<TEventArgs>(object? sender, TEventArgs e) where TEventArgs : EventArgs
+    {
+        Exception? ex = null;
+        if (e is UnhandledExceptionEventArgs _e)
+            ex = (Exception)_e.ExceptionObject;
+        else if (e is UnobservedTaskExceptionEventArgs __e)
+            ex = __e.Exception;
+
+        if (ex is null)
+            Debug(DebugType.Error, "Internal exception,but not record");
+        else
+            Debug(DebugType.Error, $"Internal exception: {ex}");
+
     }
     public static async void Debug(DebugType type, string message)
     {
