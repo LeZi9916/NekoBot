@@ -22,11 +22,12 @@ public class MessageHandler: Extension, IExtension, IHandler
         Name = "MessageHandler",
         Version = new Version() { Major = 1, Minor = 0,Revision = 1},
         Type = ExtensionType.Handler,
-        SupportUpdate = new UpdateType[] 
-        {
+        SupportUpdate =
+        [
             UpdateType.Message
-        },
-        Dependencies = new ExtensionInfo[]{
+        ],
+        Dependencies = 
+        [
             new ExtensionInfo()
             {
                 Name = "UserDatabase",
@@ -39,7 +40,7 @@ public class MessageHandler: Extension, IExtension, IHandler
                 Version = new Version() { Major = 1, Minor = 0 },
                 Type = ExtensionType.Database
             }
-        }
+        ]
     };
     public override void Init()
     {
@@ -57,14 +58,13 @@ public class MessageHandler: Extension, IExtension, IHandler
         UserDiscover(update);
         if (userMsg!.IsGroup)
             GroupDiscover(update);
-        var msg = userMsg;
-        var from = userDatabase!.Find(x => x.Id == msg.From.Id);
+        var from = userDatabase!.Find(x => x.Id == userMsg.From.Id);
         userMsg.From = from!;
-        userMsg.Group = groupDatabase!.Find(x => x.Id == msg.Chat.Id);
+        userMsg.Group = groupDatabase!.Find(x => x.Id == userMsg.Chat.Id);
 
-        if (msg.ReplyTo is not null)
+        if (userMsg.ReplyTo is not null)
         {
-            var replyTo = userDatabase!.Find(x => x.Id == msg.ReplyTo.From.Id);
+            var replyTo = userDatabase!.Find(x => x.Id == userMsg.ReplyTo.From.Id);
             userMsg.ReplyTo!.From = replyTo!;
         }
         if (userMsg is not null)

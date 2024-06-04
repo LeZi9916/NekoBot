@@ -2,6 +2,7 @@
 using System.Text.Json.Serialization;
 using NekoBot.Interfaces;
 using YamlDotNet.Serialization;
+using System;
 
 namespace NekoBot.Types
 {
@@ -55,25 +56,22 @@ namespace NekoBot.Types
         /// </summary>
         /// <param name="update"></param>
         /// <returns>Users in <paramref name="update"/></returns>
-        public static User[] GetUsers(Update update)
+        public static User?[] GetUsers(Update update)
         {
             var message = update.Message ?? update.EditedMessage ?? update.ChannelPost ?? update.EditedChannelPost;
             var request = update.ChatJoinRequest;
 
             if (message is null)
-                return null;
+                return Array.Empty<User>();
 
-            User[] userList = new User[5];
-            userList[0] = message.From;
-            userList[1] = message.ForwardFrom;
-            userList[2] = message?.ReplyToMessage?.From;
-            userList[3] = message?.ReplyToMessage?.ForwardFrom;
-            userList[4] = request?.From;
-            //if (message.ReplyToMessage is not null)
-            //{
-            //    userList[2] = message?.ReplyToMessage?.From;
-            //    userList[3] = message.ReplyToMessage.ForwardFrom;
-            //}
+            User?[] userList =
+            [
+                message.From,
+                message.ForwardFrom,
+                message?.ReplyToMessage?.From,
+                message?.ReplyToMessage?.ForwardFrom,
+                request?.From,
+            ];
 
             return userList;
         }
@@ -88,7 +86,7 @@ namespace NekoBot.Types
                                          user.IsPremium == IsPremium &&
                                          user.Id == Id;
 
-        public static implicit operator User(Telegram.Bot.Types.User u)
+        public static implicit operator User?(Telegram.Bot.Types.User? u)
         {
             if (u is null) return null;
             return new User()

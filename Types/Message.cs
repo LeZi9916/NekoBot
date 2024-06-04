@@ -1,12 +1,14 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using static NekoBot.Core;
+using YamlDotNet.Core;
 
 namespace NekoBot.Types;
 public class Message
@@ -26,6 +28,7 @@ public class Message
     public required ITelegramBotClient Client { get; init; }
     public Group? Group { get; set; }
     public Update? Raw { get; set; }
+    public InlineKeyboardMarkup? InlineMarkup { get; set; }
 
     public async Task<bool> GetDocument(string dPath)
     {
@@ -85,7 +88,7 @@ public class Message
             return false;
         }
     }
-    public async Task<Message?> Send(string text, ParseMode? parseMode = null)
+    public async Task<Message?> Send(string text, ParseMode? parseMode = null, InlineKeyboardMarkup? inlineMarkup = null)
     {
         try
         {
@@ -94,8 +97,7 @@ public class Message
                         text: text,
                         replyToMessageId: null,
                         parseMode: parseMode,
-                        replyMarkup: new InlineKeyboardMarkup(
-                                        InlineKeyboardButton.WithCallbackData("Yes","y"))))!;
+                        replyMarkup: inlineMarkup))!;
         }
         catch (Exception e)
         {
@@ -119,14 +121,16 @@ public class Message
             return false;
         }
     }
-    public async Task<Message?> Edit(string text, ParseMode? parseMode = null)
+    public async Task<Message?> Edit(string? text, ParseMode? parseMode = null, InlineKeyboardMarkup? inlineMarkup = null)
     {
         try
         {
             return Parse(Client!, await Client!.EditMessageTextAsync(
                     chatId: Chat.Id,
                     messageId: Id,
-                    text: text, parseMode: parseMode));
+                    text: text ?? Content!, 
+                    parseMode: parseMode,
+                    replyMarkup: inlineMarkup));
         }
         catch (Exception e)
         {
@@ -134,7 +138,7 @@ public class Message
             return null;
         }
     }
-    public async Task<Message?> Reply(string text, ParseMode? parseMode = null)
+    public async Task<Message?> Reply(string text, ParseMode? parseMode = null,InlineKeyboardMarkup? inlineMarkup = null)
     {
         try
         {
@@ -143,14 +147,36 @@ public class Message
                         text: text,
                         replyToMessageId: Id,
                         parseMode: parseMode,
-                        replyMarkup: new InlineKeyboardMarkup(
-                                        InlineKeyboardButton.WithCallbackData("Yes", "y"))))!;
+                        replyMarkup: inlineMarkup))!;
         }
         catch (Exception e)
         {
             Debug(DebugType.Error, $"Failure to send message : \n{e.Message}\n{e.StackTrace}");
             return null;
         }
+    }
+    public async Task<Message?> AddButton(InlineKeyboardButton button)
+    {
+        var markup = InlineMarkup;
+        if (markup is null)
+            markup = CreateButtons([button]);
+        else
+        {
+            var buttons = markup.InlineKeyboard.SelectMany(x => x);
+            var newButtons = buttons.Where(x => x.Text != button.Text).ToList();
+            newButtons.Add(button);
+            markup = CreateButtons(newButtons);
+        }
+        return await Edit(null, inlineMarkup: markup);
+    }
+    public async Task<Message?> DelButton(Func<InlineKeyboardButton, bool> match)
+    {
+        
+        if (InlineMarkup is null)
+            return this;
+        var oldButtons = InlineMarkup.InlineKeyboard.SelectMany(x => x);
+        var newButtons = oldButtons.Where(x => !match(x));
+        return await Edit(null, inlineMarkup: CreateButtons(newButtons));
     }
     public static Message? Parse(in ITelegramBotClient client, Telegram.Bot.Types.Message? msg)
     {
@@ -164,7 +190,7 @@ public class Message
         return new Message()
         {
             Id = id,
-            From = from,
+            From = from!,
             Chat = msg.Chat,
             Type = msg.Type,
             ReplyTo = Parse(client, msg.ReplyToMessage),
@@ -174,7 +200,10 @@ public class Message
             Command = cmd,
             Client = client,
             Content = content,
+            InlineMarkup = msg.ReplyMarkup,
         };
 
     }
+    public static InlineKeyboardMarkup CreateButtons(IEnumerable<InlineKeyboardButton> buttons) => new InlineKeyboardMarkup(buttons);
+    public static InlineKeyboardMarkup CreateButton(InlineKeyboardButton button) => CreateButtons([button]);
 }

@@ -12,6 +12,5 @@ public interface IHandler: IExtension
 }
 public interface IHandler<T> : IHandler
 {
-    event Action<Message> OnCallback;
-    void AddCallbackHandler();
+    event Action<T> OnCallback;
 }
