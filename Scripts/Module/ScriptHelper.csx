@@ -14,16 +14,18 @@ using NekoBot;
 using Version = NekoBot.Types.Version;
 using Message = NekoBot.Types.Message;
 using File = System.IO.File;
+using Telegram.Bot.Types.ReplyMarkups;
+using Telegram.Bot;
 #pragma warning disable CS4014
 public partial class ScriptHelper : Extension, IExtension
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "ScriptHelper",
-        Version = new Version() { Major = 1, Minor = 0, Revision = 2 },
+        Version = new Version() { Major = 1, Minor = 1, Revision = 2 },
         Type = ExtensionType.Module,
-        Commands = new BotCommand[]
-        {
+        Commands =
+        [
             new BotCommand()
             {
                 Command = "script",
@@ -39,12 +41,12 @@ public partial class ScriptHelper : Extension, IExtension
                 Command = "eval",
                 Description = "CS 解析器"
             }
-        },
-        SupportUpdate = new UpdateType[]
-        {
+        ],
+        SupportUpdate =
+        [
             UpdateType.Message,
             UpdateType.EditedMessage
-        }
+        ]
     };
     public override void Handle(Message userMsg)
     {
@@ -121,7 +123,7 @@ public partial class ScriptHelper : Extension, IExtension
         }
         else if (cmd.Params.Length == 0 || cmd.Params.FirstOrDefault() is "help")
         {
-            //GetHelpInfo(command, update, querier, group);
+            GetHelpInfo((Command)userMsg.Command, userMsg);
             return;
         }
 
@@ -174,18 +176,66 @@ public partial class ScriptHelper : Extension, IExtension
             userMsg.Reply($"Error: Cannot unload this extension");
             return;
         }
+        var handler = ScriptManager.GetExtension("CallbackQueryHandler");
+        
+        if(handler is ICallbackHandler callbackHandler)
+        {
+            var buttons = Message.CreateButtons(
+                [
+                    InlineKeyboardButton.WithCallbackData("Yes","y"),
+                    InlineKeyboardButton.WithCallbackData("No","n")
+                ]);
+            var msg = await userMsg.Reply($"Are you sure to uninstall \"{extName}\"?",inlineMarkup:buttons);
+            callbackHandler.AddCallbackFunc(new CallbackHandler<CallbackMsg>(
+                cbMsg => 
+                {
+                    var origin = msg;
+                    var targetModule = ext;
+                    if (cbMsg.From.Id != userMsg.From.Id)
+                    {
+                        cbMsg.Client.AnswerCallbackQueryAsync(cbMsg.Id, "Sorry\n You aren't the origin", true);
+                        return false;
+                    }
+                    else if (origin?.Id != cbMsg.Origin.Id)
+                        return false;
 
-        var msg = await userMsg.Reply($"Unloading \"{extName}\" extension...");
-        if (msg is null)
-            return;
-        try
-        {
-            ScriptManager.RemoveExtension(ext);
-            msg.Edit($"Extension \"{extName}\" has removed");
+                    var _userMsg = cbMsg.Origin;
+                    var delMarkup = Message.CreateButton(InlineKeyboardButton.WithCallbackData("Delete", "delMsg"));
+                    _userMsg.InlineMarkup = null;
+                    if (cbMsg.Data == "n")
+                    {
+                        _userMsg.InlineMarkup = delMarkup;
+                        _userMsg.Edit("Operation canceled").Wait() ;
+                        return true;
+                    }
+                    _userMsg.Edit($"Unloading \"{extName}\" extension...").Wait();
+                    _userMsg.InlineMarkup = delMarkup;
+                    try
+                    {
+                        ScriptManager.RemoveExtension(ext);
+                        _userMsg.Edit($"Extension \"{extName}\" has removed").Wait();
+                    }
+                    catch (Exception e)
+                    {
+                        _userMsg.Edit($"Internal error:\n {e.Message}").Wait();
+                    }
+                    return true;
+                }));
         }
-        catch(Exception e)
+        else
         {
-            msg.Edit($"Internal error:\n {e.Message}");
+            var msg = await userMsg.Reply($"Unloading \"{extName}\" extension...");
+            if (msg is null)
+                return;
+            try
+            {
+                ScriptManager.RemoveExtension(ext);
+                msg.Edit($"Extension \"{extName}\" has removed");
+            }
+            catch (Exception e)
+            {
+                msg.Edit($"Internal error:\n {e.Message}");
+            }
         }
 
     }
@@ -269,5 +319,26 @@ public partial class ScriptHelper : Extension, IExtension
                 await msg.Edit("Error: Download document failure");
         }
 
+    }
+    void GetHelpInfo(Command cmd, Message userMsg)
+    {
+        string helpStr = "```log\n";
+        switch (cmd.Prefix)
+        {
+            case "script":
+                helpStr += StringHandle(
+                    """
+                    Usage:
+                    /script load   [File]   Update or add C# Script
+                    /script unload [string] Unload module by name
+                    /script reload          reload all scripts
+                    """);
+                break;
+            default:
+                userMsg.Reply("No helper");
+                return;
+        }
+        helpStr += "\n```";
+        userMsg.Reply(helpStr, ParseMode.MarkdownV2, true);
     }
 }

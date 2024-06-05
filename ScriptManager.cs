@@ -217,9 +217,12 @@ namespace NekoBot
         public static async void UpdateCommand()
         {
             var result = loadedScripts.SelectMany(x => x.Info.Commands);
-            Core.BotCommands = result.ToArray();
-            await Core.GetClient().SetMyCommandsAsync(result);
-            Core.Debug(DebugType.Info,"Bot commands has been updated");
+            foreach(var bot in Core.OnlineBots)
+            {
+                bot.BotCommands = result.ToArray();
+                await bot.Client.SetMyCommandsAsync(result);
+                Core.Debug(DebugType.Info, $"[Bot${Core.OnlineBots.IndexOf(bot)}]Bot commands has been updated");
+            }
         }
         
     }

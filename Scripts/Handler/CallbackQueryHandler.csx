@@ -73,9 +73,11 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
         }
         return new CallbackMsg()
         {
+            Id = query.Id,
             From = userDatabase!.Find(x => x.Id == query.From.Id)!,
             Origin = userMsg,
             Data = query.Data,
+            Client = client
         };
     }
     public Action? Handle(in ITelegramBotClient client, in List<IExtension> extensions, Update update)
@@ -98,7 +100,7 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
             }
         }
         else
-            OnCallback(msg);
+            OnCallback(client,msg);
         return default;
     }
     void UserDiscover(in Telegram.Bot.Types.User? newUser)
@@ -141,19 +143,23 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
             return;
         submiters.Add(weakRef);
     }
-    public void OnCallback(CallbackMsg msg)
+    public void OnCallback(in ITelegramBotClient client,CallbackMsg msg)
     {
         List<WeakReference<CallbackHandler<CallbackMsg>>> _submiters = new(submiters);
+        bool success = false;
         foreach(var submiter in _submiters)
         {
             CallbackHandler<CallbackMsg>? foo;
             if(submiter.TryGetTarget(out foo))
             {
-                if (foo(msg))
+                success = foo(msg);
+                if (success)
                     submiters.Remove(submiter);
             }
             else
                 submiters.Remove(submiter);
         }
+        if(!success)
+            client.AnswerCallbackQueryAsync(msg.Id, "Query had expired", true).Wait();
     }
 }

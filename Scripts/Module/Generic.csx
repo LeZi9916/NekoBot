@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using NekoBot.Interfaces;
@@ -14,6 +13,7 @@ using User = NekoBot.Types.User;
 using Group = NekoBot.Types.Group;
 using NekoBot.Exceptions;
 using System.Diagnostics;
+using Telegram.Bot;
 
 #pragma warning disable CS4014
 public partial class Generic : Extension, IExtension
@@ -49,7 +49,7 @@ public partial class Generic : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo() 
     { 
         Name = "Generic",
-        Version = new Version() { Major = 1, Minor = 1,Revision = 1 },
+        Version = new Version() { Major = 1, Minor = 1,Revision = 2 },
         Type = ExtensionType.Module,
         Commands =
         [
@@ -102,6 +102,11 @@ public partial class Generic : Extension, IExtension
             {
                 Command = "set",
                 Description = "权限狗专用"
+            },
+            new BotCommand()
+            {
+                Command = "leave",
+                Description = "离开"
             },
             new BotCommand()
             {
@@ -200,46 +205,31 @@ public partial class Generic : Extension, IExtension
             case "set":
                 AdvancedCommandHandle(userMsg);
                 break;
+            case "leave":
+                LeaveChat(userMsg);
+                break;
         }
     }
-    //bool MessageFilter(string content, Update update, TelegramBot.Types.User querier, Group group)
-    //{
-    //    if (group is null)
-    //        return false;
-    //    else if (group.Rules.IsEmpty())
-    //        return false;
-
-    //    bool isMatch = false;
-    //    var genericRules = group.Rules.Where(x => x.Target is null).ToArray();
-    //    var matchedRules = group.Rules.Where(x => x is not null && x.Target.Id == querier.Id).ToArray();
-    //    FilterRule[] rules = new FilterRule[genericRules.Length + matchedRules.Length];
-    //    Array.Copy(genericRules, rules, genericRules.Length);
-    //    Array.Copy(matchedRules, 0, rules, genericRules.Length, matchedRules.Length);
-
-    //    foreach (var rule in rules)
-    //    {
-    //        if (rule.Action is Action.Ban)
-    //            continue;
-    //        else if (rule.MessageType is MessageType.Unknown || rule.MessageType == update.Message.Type)
-    //        {
-    //            switch (rule.Action)
-    //            {
-    //                case Action.Reply:
-    //                    break;
-    //                case Action.Delete:
-    //                    break;
-    //            }
-    //        }
-    //        else
-    //            continue;
-    //    }
-    //    return isMatch;
-    //}
+    async void LeaveChat(Message userMsg)
+    {
+        var querier = userMsg.From;
+        if(!querier.CheckPermission(Permission.Root))
+        {
+            userMsg.Reply("Permission Denied",showDelButton:true);
+            return;
+        }
+        else if(!userMsg.IsGroup)
+        {
+            userMsg.Reply("This command can only be used within a group", showDelButton: true);
+            return;
+        }
+        await userMsg.Client.LeaveChatAsync(userMsg.Chat);
+    }
     void AddUser(Message userMsg)
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var param = cmd.Params.Skip(1).ToArray();
+        var param = cmd.Params;
 
         var replyTo = userMsg.ReplyTo;
         User? target = null;
@@ -292,7 +282,7 @@ public partial class Generic : Extension, IExtension
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var param = cmd.Params.Skip(1).ToArray();
+        var param = cmd.Params;
 
         var replyTo = userMsg.ReplyTo;
         User? target = null;
@@ -339,7 +329,7 @@ public partial class Generic : Extension, IExtension
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var param = cmd.Params.ToArray();
+        var param = cmd.Params;
 
         var replyTo = userMsg.ReplyTo;
         User? target = null;
@@ -428,7 +418,7 @@ public partial class Generic : Extension, IExtension
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var param = cmd.Params.Skip(1).ToArray();
+        var param = cmd.Params;
 
         var replyTo = userMsg.ReplyTo;
         Func<Permission, User, bool> canPromote = (s, user) =>
@@ -556,7 +546,7 @@ public partial class Generic : Extension, IExtension
     {
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
-        var param = cmd.Params.Skip(1).ToArray();
+        var param = cmd.Params;
         int count = 15;
         DebugType? level = DebugType.Error;
 
@@ -672,7 +662,7 @@ public partial class Generic : Extension, IExtension
                 break;
         }
     }
-    internal void GetHelpInfo(Command cmd,Message userMsg)
+    void GetHelpInfo(Command cmd,Message userMsg)
     {
         string helpStr = "```python\n";
         switch (cmd.Prefix)
@@ -741,7 +731,6 @@ public partial class Generic : Extension, IExtension
         helpStr += "\n```";
         userMsg.Reply(helpStr,ParseMode.MarkdownV2,true);
     }
-    static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
     static Permission GetPermission(string s) => 
         s.ToLower() switch
         {
@@ -760,7 +749,7 @@ public partial class Generic
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
         var suffix = cmd.Params.FirstOrDefault();
-        var param = cmd.Params.Skip(1).ToArray();
+        var param = cmd.Params;
 
         if (!querier.CheckPermission(Permission.Root))
         {
@@ -786,7 +775,7 @@ public partial class Generic
         var cmd = (Command)userMsg.Command!;
         var querier = userMsg.From;
         var suffix = cmd.Params.FirstOrDefault();
-        var param = cmd.Params.Skip(1).ToArray();
+        var param = cmd.Params;
         string[] permission = { "unknown","ban","common","advanced","admin","root" };
 
         Permission targetLevel;

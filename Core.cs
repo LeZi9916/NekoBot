@@ -10,6 +10,7 @@ using System.Net;
 using Telegram.Bot.Types;
 using File = System.IO.File;
 using NekoBot.Types;
+using System.Collections.Generic;
 
 
 namespace NekoBot;
@@ -17,10 +18,9 @@ public partial class Core
 {
     static TelegramBotClient? botClient;
 
-    public static string BotUsername { get; private set; } = "";
-    public static BotCommand[] BotCommands { get; set; } = Array.Empty<BotCommand>();
+    public static List<BotInfo> OnlineBots { get; set; } = new();
     public static Config Config { get; set; } = new Config();
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         Config.Up = DateTime.Now;
         AppDomain.CurrentDomain.UnhandledException += ExceptionRecord;
@@ -37,66 +37,79 @@ public partial class Core
             Environment.Exit(0);
         }
         ScriptManager.Init();
-        if (string.IsNullOrEmpty(Config.Token))
-        {
-            Debug(DebugType.Error, "Bot token not found");
-            Console.ReadKey();
-            Environment.Exit(0);
-        }
+        foreach (var botConfig in Config.BotIdentitys)
+            await Login(botConfig);
+
         Config.AutoSave();
-        if (Config.Proxy.UseProxy)
+        ScriptManager.UpdateCommand();
+
+        while (true)
+            Console.ReadKey();
+        
+    }
+    static async Task Login(BotIdentity botConfig)
+    {
+        var index = OnlineBots.Count;
+        if (string.IsNullOrEmpty(botConfig.Token))
+        {
+            Debug(DebugType.Error, $"[Bot#{index}]Bot token not found");
+            Console.ReadKey();
+            return;
+        }
+
+        if (botConfig.Proxy.UseProxy)
         {
             HttpClient httpClient = new(new SocketsHttpHandler
             {
-                Proxy = new WebProxy(Config.Proxy.Address)
+                Proxy = new WebProxy(botConfig.Proxy.Address)
                 {
                     Credentials = new NetworkCredential("", "")
                 },
                 UseProxy = true,
             });
-            botClient = new TelegramBotClient(Config.Token, httpClient);
+            botClient = new TelegramBotClient(botConfig.Token, httpClient);
         }
         else
-            botClient = new TelegramBotClient(Config.Token);
+            botClient = new TelegramBotClient(botConfig.Token);
 
-        Debug(DebugType.Info, "Connecting to telegram...");
+        Debug(DebugType.Info, $"[Bot#{index}]Connecting to telegram...");
         botClient.ReceiveAsync(
             updateHandler: UpdateHandleAsync,
             pollingErrorHandler: (botClient, e, cToken) =>
             {
-                Debug(DebugType.Error, $"From internal exception : \n{e}");
+                Debug(DebugType.Error, $"[Bot#{index}]From internal exception : \n{e}");
                 return Task.CompletedTask;
             },
             receiverOptions: new ReceiverOptions()
             {
                 AllowedUpdates = Array.Empty<UpdateType>(),
-                Limit = 30
+                Limit = 100
             }
         );
-
-        while (string.IsNullOrEmpty(BotUsername))
+        string botUsername = string.Empty;
+        while (string.IsNullOrEmpty(botUsername))
         {
             try
             {
-                BotUsername = botClient.GetMeAsync().Result.Username ?? string.Empty;
-                if (string.IsNullOrEmpty(BotUsername))
-                    Debug(DebugType.Info, "Connect failure,retrying...");
+                botUsername = (await botClient.GetMeAsync()).Username ?? string.Empty;
+                if (string.IsNullOrEmpty(botUsername))
+                    Debug(DebugType.Info, $"[Bot#{index}]Connect failure,retrying...");
                 else
                 {
-                    Debug(DebugType.Info, "Connect Successful");
+                    Debug(DebugType.Info, $"[Bot#{index}]Connect Successful");
                     break;
                 }
             }
             catch
             {
-                Debug(DebugType.Info, "Connect failure,retrying...");
+                Debug(DebugType.Info, $"[Bot#{index}]Connect failure,retrying...");
             }
         }
-        ScriptManager.UpdateCommand();
-        
-        while (true)
-            Console.ReadKey();
-        
+        OnlineBots.Add(new BotInfo()
+        {
+            Client = botClient,
+            Username = botUsername
+        });
     }
     static async Task UpdateHandleAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
@@ -150,5 +163,5 @@ public partial class Core
         await Console.Out.WriteLineAsync(log.ToString());
         LogManager.WriteLog(log);
     }
-    public static ITelegramBotClient GetClient() => botClient!;
+    public static BotInfo? GetBotInfo(ITelegramBotClient bot) => OnlineBots.Find(x => x.Client == bot);
 }

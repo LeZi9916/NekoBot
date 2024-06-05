@@ -101,7 +101,7 @@ public class MessageHandler: Extension, IExtension, IHandler
             var prefix = cmd.Prefix;
             var s = prefix.Split("@", 2, StringSplitOptions.RemoveEmptyEntries);
 
-            if (s.Length != 2 || s[1] != Core.BotUsername)
+            if (s.Length != 2 || s[1] != Core.GetBotInfo(client)!.Username)
                 return default;
         }
         if (cmd.Prefix.Contains("@"))
