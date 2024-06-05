@@ -49,10 +49,10 @@ public partial class Generic : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo() 
     { 
         Name = "Generic",
-        Version = new Version() { Major = 1, Minor = 0,Revision = 7 },
+        Version = new Version() { Major = 1, Minor = 1,Revision = 1 },
         Type = ExtensionType.Module,
-        Commands = new BotCommand[] 
-        {
+        Commands =
+        [
             new BotCommand()
             {
                 Command = "start",
@@ -108,8 +108,8 @@ public partial class Generic : Extension, IExtension
                 Command = "help",
                 Description = "显示帮助信息"
             }
-        },
-        Dependencies = new ExtensionInfo[]{
+        ],
+        Dependencies = [
             new ExtensionInfo()
             {
                 Name = "UserDatabase",
@@ -128,7 +128,7 @@ public partial class Generic : Extension, IExtension
                 Version = new Version() { Major = 1, Minor = 0 },
                 Type = ExtensionType.Module
             }
-        },
+        ],
         SupportUpdate = new UpdateType[] 
         {
             UpdateType.Message,
@@ -150,7 +150,7 @@ public partial class Generic : Extension, IExtension
     {
         if(_userDatabase is null || _groupDatabase is null)
         {
-            userMsg.Reply("Internal error: Module\"UserDatabase\" or \"GroupDatabase\" not found");
+            userMsg.Reply("Internal error: Module\"UserDatabase\" or \"GroupDatabase\" not found", showDelButton: true);
             return;
         }
 
@@ -163,8 +163,12 @@ public partial class Generic : Extension, IExtension
         switch (cmd.Prefix)
         {
             case "start":
-                userMsg.Reply("你好，我是钟致远，我出生于广西壮族自治区南宁市，从小就擅长滥用，有关我的滥用事迹请移步 @hax_server\n" +
-                    "\n请输入 /help 以获得更多信息");
+                userMsg.Reply("""
+                              你好，我是钟致远，我出生于广西壮族自治区南宁市，从小就擅长滥用，有关我的滥用事迹请移步 @hax_server
+
+                              请输入 /help 以获得更多信息
+                              Bot repo: https://github.com/LeZi9916/NekoBot
+                              """, showDelButton:true,disableWebPreview:true);
                 break;
             case "add":
                 AddUser(userMsg);
@@ -257,30 +261,30 @@ public partial class Generic : Extension, IExtension
                 target = userDatabase.Find(x => x.Id ==id);
             else
             {
-                userMsg.Reply("Invild userId");
+                userMsg.Reply("Invild userId", showDelButton: true);
                 return;
             }
         }
 
         if (target is null)
         {
-            userMsg.Reply($"This user is not found at database");
+            userMsg.Reply($"This user is not found at database", showDelButton: true);
             return;
         }
         else if (target.Id == querier.Id)
         {
-            userMsg.Reply($"Not allow operation");
+            userMsg.Reply($"Not allow operation", showDelButton: true);
             return;
         }
         else if (target.Level >= Permission.Common)
         {
-            userMsg.Reply($"This user had been allowed to access the bot");
+            userMsg.Reply($"This user had been allowed to access the bot", showDelButton: true);
             return;
         }
         else
         {
             target.SetPermission(Permission.Common);
-            userMsg.Reply($"This user can access the bot now");
+            userMsg.Reply($"This user can access the bot now", showDelButton: true);
             return;
         }
     }
@@ -310,25 +314,25 @@ public partial class Generic : Extension, IExtension
                 target = userDatabase.Find(x => x.Id ==id);
             else
             {
-                userMsg.Reply("Invild userId");
+                userMsg.Reply("Invild userId", showDelButton: true);
                 return;
             }
         }
 
         if (target is null)
         {
-            userMsg.Reply($"This user is not found at database");
+            userMsg.Reply($"This user is not found at database", showDelButton: true);
             return;
         }
         else if (target.Id == querier.Id || target.Level >= querier.Level)
         {
-            userMsg.Reply($"Not allow operation");
+            userMsg.Reply($"Not allow operation", showDelButton: true);
             return;
         }
         else
         {
             target.SetPermission(Permission.Ban);
-            userMsg.Reply($"This user cannot access the bot now");
+            userMsg.Reply($"This user cannot access the bot now", showDelButton: true);
         }
     }
     void GetUserInfo(Message userMsg)
@@ -363,9 +367,9 @@ public partial class Generic : Extension, IExtension
             target = userMsg.From;
 
         if (target is null)
-            userMsg.Reply("User not found at database");
+            userMsg.Reply("User not found at database", showDelButton: true);
         else if (target.Id != querier.Id && !querier.CheckPermission(Permission.Admin))
-            userMsg.Reply("Permission denied.");
+            userMsg.Reply("Permission denied.", showDelButton: true);
         else
             userMsg.Reply($"User Infomation:\n```copy\n" + StringHandle(
                           $"Name      : {target.Name}\n" +
@@ -373,7 +377,7 @@ public partial class Generic : Extension, IExtension
                           $"Permission: {target.Level}\n" +
                           $"MaiUserId : {(userMsg.IsGroup ? 
                                          (target.MaiUserId is null ? "未绑定" : "喵") : 
-                                         (target.MaiUserId is null ? "未绑定" : target.MaiUserId))}\n")+"```", ParseMode.MarkdownV2);
+                                         (target.MaiUserId is null ? "未绑定" : target.MaiUserId))}\n")+"```", ParseMode.MarkdownV2, true);
 
 
 
@@ -391,7 +395,7 @@ public partial class Generic : Extension, IExtension
 
         if(!userMsg.IsGroup)
         {
-            userMsg.Reply("This function only can use at group");
+            userMsg.Reply("This function only can use at group", showDelButton: true);
             return;
         }
         else if (!param.IsEmpty())
@@ -408,9 +412,9 @@ public partial class Generic : Extension, IExtension
             target = userMsg.Group;
 
         if (target is null)
-            userMsg.Reply("User not found at database");
+            userMsg.Reply("User not found at database",showDelButton: true);
         else if (target.Id != group!.Id && !querier.CheckPermission(Permission.Admin))
-            userMsg.Reply("Permission denied.");
+            userMsg.Reply("Permission denied.", showDelButton: true);
         else
             userMsg.Reply($"User Infomation:\n```copy\n" + StringHandle(
                           $"Name      : {target.Name}\n" +
@@ -418,7 +422,7 @@ public partial class Generic : Extension, IExtension
                           $"Permission: {target.Level}\n\n" +
                           $"Group Setting:\n" +
                           $"Force Check Reference: {target.Setting.ForceCheckReference}\n" +
-                          $"Listening : {target.Setting.Listen}") + "```", ParseMode.MarkdownV2);
+                          $"Listening : {target.Setting.Listen}") + "```", ParseMode.MarkdownV2,true);
     }
     void SetUserPermission(Message userMsg, int diff)
     {
@@ -447,7 +451,7 @@ public partial class Generic : Extension, IExtension
         {
             if (id == querier.Id)
             {
-                userMsg.Reply("Cannot change permission for yourself");
+                userMsg.Reply("Cannot change permission for yourself", null, true);
                 return;
             }
 
@@ -456,38 +460,38 @@ public partial class Generic : Extension, IExtension
 
             if (target is null)
             {
-                userMsg.Reply($"This user is not found at database");
+                userMsg.Reply($"This user is not found at database", null, true);
                 return;
             }
             if (target.IsUnknown)
             {
-                userMsg.Reply($"Cannot change permission for this user");
+                userMsg.Reply($"Cannot change permission for this user", null, true);
                 return;
             }
             if (canPromote(targetLevel, querier))
             {
                 if (targetLevel < Permission.Ban)
                 {
-                    userMsg.Reply($"This user permission is already the lowest");
+                    userMsg.Reply($"This user permission is already the lowest", null, true);
                     return;
                 }
                 else if (targetLevel > Permission.Admin)
                 {
-                    userMsg.Reply($"This user permission is already the highest");
+                    userMsg.Reply($"This user permission is already the highest", null, true);
                     return;
                 }
 
                 if (target.Level >= querier.Level)
                 {
-                    userMsg.Reply($"Permission Denied");
+                    userMsg.Reply($"Permission Denied", null, true);
                     return;
                 }
                 target.SetPermission(targetLevel);
-                userMsg.Reply($"Success change*{StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2);
+                userMsg.Reply($"Success change*{StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2,true);
             }
             else
             {
-                userMsg.Reply("Permission Denied");
+                userMsg.Reply("Permission Denied", null, true);
                 return;
             }
         };
@@ -501,10 +505,10 @@ public partial class Generic : Extension, IExtension
             if (long.TryParse(param.FirstOrDefault(), out id))
                 setPermission(id);
             else
-                userMsg.Reply("Invaild userId");
+                userMsg.Reply("Invaild userId", null, true);
         }
         else
-            userMsg.Reply("Require user");
+            userMsg.Reply("Require user", null, true);
     }
     async void GetSystemInfo(Message userMsg)
     {
@@ -518,11 +522,12 @@ public partial class Generic : Extension, IExtension
             var result = monitor.GetResult();
             string _ = $"""
                         - NekoBot info 
-                          Version  : v{ScriptManager.GetVersion()}
+                          Uptime   : {uptime:dd\.hh\:mm\:ss}
                           MemUsage : {Process.GetCurrentProcess().WorkingSet64 / (1024 * 1024)} MB
                           Latency  : {Math.Round(analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount,2)} ms
                           Processed Msg : {analyzer.TotalHandleCount}
-                          Uptime   : {uptime:dd\.hh\:mm\:ss}
+                          Version  : v{ScriptManager.GetVersion()}
+                          CLR ver  : .NET {Environment.Version:3}
                         - HW info
                           - CPU
                             Core : {result["ProcessorCount"]}
@@ -542,10 +547,10 @@ public partial class Generic : Extension, IExtension
                                  ```python
                                  {StringHandle(_)}
                                  ```
-                                 """, ParseMode.MarkdownV2);
+                                 """, ParseMode.MarkdownV2, true);
         }
         else
-            userMsg.Reply("Internal error: Module\"Monitor\" not found");
+            userMsg.Reply("Internal error: Module\"Monitor\" not found", null, true);
     }
     void GetBotLog(Message userMsg)
     {
@@ -557,7 +562,7 @@ public partial class Generic : Extension, IExtension
 
         if (!querier.CheckPermission(Permission.Root))
         {
-            userMsg.Reply("Permission Denied");
+            userMsg.Reply("Permission Denied",null,true);
             return;
         }
         switch (param.Length)
@@ -577,7 +582,7 @@ public partial class Generic : Extension, IExtension
                 {
                     if (!int.TryParse(param.FirstOrDefault(), out count))
                     {
-                        userMsg.Reply($"Invaild param: \"{param.FirstOrDefault()}\"");
+                        userMsg.Reply($"Invaild param: \"{param.FirstOrDefault()}\"",null,true);
                         return;
                     }
                     level = DebugType.Error;
@@ -594,12 +599,12 @@ public partial class Generic : Extension, IExtension
                 };
                 if (level is null)
                 {
-                    userMsg.Reply($"Invaild param: \"{param[0]}\"");
+                    userMsg.Reply($"Invaild param: \"{param[0]}\"", null, true);
                     return;
                 }
                 else if (!int.TryParse(param[1], out count))
                 {
-                    userMsg.Reply($"Invaild param: \"{param[1]}\"");
+                    userMsg.Reply($"Invaild param: \"{param[1]}\"", null, true);
                     return;
                 }
                 break;
@@ -610,7 +615,7 @@ public partial class Generic : Extension, IExtension
         {
             if (!querier.CheckPermission(Permission.Admin))
             {
-                userMsg.Reply("Permission Denied");
+                userMsg.Reply("Permission Denied", null, true);
                 return;
             }
         }
@@ -625,7 +630,7 @@ public partial class Generic : Extension, IExtension
                 ```csharp
                 {StringHandle(string.Join("\n", logs.Select(x => x.ToString())))}
                 ```
-                """, ParseMode.MarkdownV2);
+                """, ParseMode.MarkdownV2, true);
         }
     }
     void BotConfig(Message userMsg)
@@ -659,7 +664,7 @@ public partial class Generic : Extension, IExtension
                 if (bool.TryParse(param[1], out boolValue))
                 {
                     group!.Setting.ForceCheckReference = boolValue;
-                    userMsg.Reply($"ForceCheckReference: *{boolValue}*",ParseMode.MarkdownV2);
+                    userMsg.Reply($"ForceCheckReference: *{boolValue}*",ParseMode.MarkdownV2, true);
                     //Config.SaveData();
                 }
                 else
@@ -809,7 +814,7 @@ public partial class Generic
                 return;
             }
             group.SetPermission(targetLevel);
-            userMsg.Reply($"Success change*{StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
+            userMsg.Reply($"Success change*{StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2,true);
         }
         else if(param.Length == 2)
         {
@@ -840,7 +845,7 @@ public partial class Generic
             }
 
             user.SetPermission(targetLevel);
-            userMsg.Reply($"Success change*{StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2);
+            userMsg.Reply($"Success change*{StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2, true);
         }
         else
             GetHelpInfo(cmd, userMsg);

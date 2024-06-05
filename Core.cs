@@ -8,10 +8,8 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Net;
 using Telegram.Bot.Types;
-using Message = NekoBot.Types.Message;
 using File = System.IO.File;
 using NekoBot.Types;
-using System.Diagnostics.Tracing;
 
 
 namespace NekoBot;

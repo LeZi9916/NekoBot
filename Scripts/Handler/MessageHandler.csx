@@ -116,7 +116,7 @@ public class MessageHandler: Extension, IExtension, IHandler
             var sArray = string.Join(" ", cmd.Params).Split("-token", StringSplitOptions.RemoveEmptyEntries);
             if (sArray.Length != 2)
             {
-                userMsg.Reply("Authentication failed:\nGroup or channel anonymous access is not allowed");
+                userMsg.Reply("Authentication failed:\nGroup or channel anonymous access is not allowed",null,true);
                 Debug(DebugType.Info, "Channel access,rejected");
                 return default;
             }
@@ -125,7 +125,7 @@ public class MessageHandler: Extension, IExtension, IHandler
             if (!Core.Config.Authenticator.Compare(token.Trim()))
             {
 
-                userMsg.Reply("Authentication failed:\nInvalid HOTP code");
+                userMsg.Reply("Authentication failed:\nInvalid HOTP code", null, true);
                 Debug(DebugType.Info, "HOTP code is invalid,rejected");
                 return default;
             }

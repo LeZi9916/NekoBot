@@ -86,9 +86,10 @@ public class Message
             return false;
         }
     }
-    public async Task<Message?> Send(string text, 
-                                     ParseMode? parseMode = null, 
-                                     bool showDelButton = false ,
+    public async Task<Message?> Send(string text,
+                                     ParseMode? parseMode = null,
+                                     bool showDelButton = false,
+                                     bool disableWebPreview = false,
                                      InlineKeyboardMarkup? inlineMarkup = null)
     {
         try
@@ -119,7 +120,8 @@ public class Message
                          text: text,
                          replyToMessageId: null,
                          parseMode: parseMode,
-                         replyMarkup: inlineMarkup))!;
+                         replyMarkup: inlineMarkup,
+                         disableWebPagePreview: disableWebPreview))!;
         }
         catch (Exception e)
         {
@@ -144,7 +146,8 @@ public class Message
         }
     }
     public async Task<Message?> Edit(string? text, 
-                                     ParseMode? parseMode = null, 
+                                     ParseMode? parseMode = null,
+                                     bool disableWebPreview = false,
                                      InlineKeyboardMarkup? inlineMarkup = null)
     {
         try
@@ -154,7 +157,8 @@ public class Message
                          messageId: Id,
                          text: text ?? Content!, 
                          parseMode: parseMode,
-                         replyMarkup: inlineMarkup ?? InlineMarkup));
+                         replyMarkup: inlineMarkup ?? InlineMarkup,
+                         disableWebPagePreview: disableWebPreview));
         }
         catch (Exception e)
         {
@@ -164,7 +168,8 @@ public class Message
     }
     public async Task<Message?> Reply(string text, 
                                       ParseMode? parseMode = null,
-                                      bool showDelButton = false, 
+                                      bool showDelButton = false,
+                                      bool disableWebPreview = false,
                                       InlineKeyboardMarkup? inlineMarkup = null)
     {
         try
@@ -195,7 +200,8 @@ public class Message
                          text: text,
                          replyToMessageId: Id,
                          parseMode: parseMode,
-                         replyMarkup: inlineMarkup))!;
+                         replyMarkup: inlineMarkup,
+                         disableWebPagePreview: disableWebPreview))!;
         }
         catch (Exception e)
         {

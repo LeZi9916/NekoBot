@@ -82,11 +82,21 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
     {
         if (update.CallbackQuery is null)
             return default;
+        var callbackQuery = update.CallbackQuery;
         var msg = PreHandle(client, update);
         if (msg is null)
             return default;
         else if (msg.Data == "delMsg")
-            msg.Origin.Delete();
+        {
+            try
+            {
+                msg.Origin.Delete();
+            }
+            catch
+            {
+                client.AnswerCallbackQueryAsync(callbackQuery.Id,"Sorry\n Cannot delete this message.",true);
+            }
+        }
         else
             OnCallback(msg);
         return default;

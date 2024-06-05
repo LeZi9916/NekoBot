@@ -15,7 +15,6 @@
     <Compile Remove="Scripts\Module\MaiScanner.cs" />
     <Compile Remove="Scripts\Script.cs" />
   </ItemGroup>
-
   <ItemGroup>
     <None Remove="Scripts\Database\GroupDatabase.csx" />
     <None Remove="Scripts\Generic.csx" />

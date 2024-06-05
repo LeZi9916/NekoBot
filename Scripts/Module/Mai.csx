@@ -66,7 +66,7 @@ public partial class Mai : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "Mai",
-        Version = new Version() { Major = 1, Minor = 0, Revision = 2 },
+        Version = new Version() { Major = 1, Minor = 0, Revision = 3 },
         Type = ExtensionType.Module,
         Commands = new BotCommand[]
         {
@@ -963,10 +963,10 @@ public partial class Mai : Extension, IExtension
             else
                 text = $"\"{string.Join(" ", param)}\"为无效参数喵x";
 
-            await userMsg.Reply(text, ParseMode.MarkdownV2);
+            await userMsg.Reply(text, ParseMode.MarkdownV2, showDelButton: true);
         }
         else
-            userMsg.Reply("Internal error: Module\"MaiMonitor\" not found");
+            userMsg.Reply("Internal error: Module\"MaiMonitor\" not found", showDelButton: true);
     }
     /// <summary>
     /// 获取RegionId对应的地区名
