@@ -734,7 +734,7 @@ public partial class Generic : Extension, IExtension
                 return;
         }
         helpStr += "\n```";
-        userMsg.Reply(helpStr,ParseMode.MarkdownV2);
+        userMsg.Reply(helpStr,ParseMode.MarkdownV2,true);
     }
     static string GetRandomStr() => Convert.ToBase64String(SHA512.HashData(Guid.NewGuid().ToByteArray()));
     static Permission GetPermission(string s) => 

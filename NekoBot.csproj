@@ -82,6 +82,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Scripts\Handler\CallbackQueryHandler.cs">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="Scripts\Module\Mai.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

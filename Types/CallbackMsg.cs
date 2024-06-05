@@ -8,3 +8,4 @@ public class CallbackMsg
     public required Message Origin { get; set; }
     public string? Data { get; set; }
 }
+public delegate bool CallbackHandler<in T>(T msg);

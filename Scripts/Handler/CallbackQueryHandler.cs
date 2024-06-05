@@ -5,8 +5,6 @@ using NekoBot.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
@@ -18,8 +16,7 @@ using User = NekoBot.Types.User;
 #pragma warning disable CS4014
 public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallbackHandler, IDestroyable
 {
-    Dictionary<IExtension, List<Action<CallbackMsg>>> submiters = new();
-    public event Action<CallbackMsg>? OnCallback;
+    List<WeakReference<CallbackHandler<CallbackMsg>>> submiters = new();
 
     IDatabase<User>? userDatabase;
     IDatabase<Group>? groupDatabase;
@@ -90,7 +87,7 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
             return default;
         else if (msg.Data == "delMsg")
             msg.Origin.Delete();
-        else if(OnCallback is not null)
+        else
             OnCallback(msg);
         return default;
     }
@@ -123,30 +120,30 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
     public override void Destroy()
     {
         base.Destroy();
-        OnCallback = null;
+        userDatabase = null;
+        groupDatabase = null;
+        submiters.Clear();
     }
-    public void AddCallbackFunc(IExtension submiter, Action<CallbackMsg> func)
+    public void AddCallbackFunc(in CallbackHandler<CallbackMsg> func)
     {
-        if (!submiters.ContainsKey(submiter))
-            submiters.Add(submiter, new());
-        else if (submiters[submiter].Contains(func))
+        var weakRef = new WeakReference<CallbackHandler<CallbackMsg>>(func);
+        if (submiters.Any(x => x == weakRef))
             return;
-        submiters[submiter].Add(func);
-        OnCallback += func;
+        submiters.Add(weakRef);
     }
-    public void RemoveAllFunc(IExtension submiter)
+    public void OnCallback(CallbackMsg msg)
     {
-        if (!submiters.ContainsKey(submiter))
-            return;
-        foreach(var func in submiters[submiter])
-            OnCallback -= func;
-        submiters.Remove(submiter);
-    }
-    public void RemoveCallbackFunc(IExtension submiter, Action<CallbackMsg> func)
-    {
-        if (!submiters.ContainsKey(submiter))
-            return;
-        submiters[submiter].Remove(func);
-        OnCallback -= func;
+        List<WeakReference<CallbackHandler<CallbackMsg>>> _submiters = new(submiters);
+        foreach(var submiter in _submiters)
+        {
+            CallbackHandler<CallbackMsg>? foo;
+            if(submiter.TryGetTarget(out foo))
+            {
+                if (foo(msg))
+                    submiters.Remove(submiter);
+            }
+            else
+                submiters.Remove(submiter);
+        }
     }
 }
