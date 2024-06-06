@@ -23,7 +23,7 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "CallbackQueryHandler",
-        Version = new Version() { Major = 1, Minor = 0, Revision = 0 },
+        Version = new Version() { Major = 1, Minor = 0, Revision = 1 },
         Type = ExtensionType.Handler,
         SupportUpdate =
         [
