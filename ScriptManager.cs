@@ -173,16 +173,16 @@ namespace NekoBot
         /// </summary>
         /// <param name="code"></param>
         /// <returns></returns>
-        public static string? EvalCode(string code)
+        public static (string?,Exception?) EvalCode(string code)
         {
             try
             {
                 var eval = CSScript.RoslynEvaluator.Clone().Reset(false);
-                return ((object)eval.Eval(code))?.ToString();
+                return (eval.Eval(code).ToString(),null);
             }
             catch(Exception e)
             {
-                return e.ToString();
+                return (null,e);
             }
         }
         /// <summary>

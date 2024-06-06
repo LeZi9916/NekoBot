@@ -143,7 +143,7 @@ public class MessageHandler: Extension, IExtension, IHandler
         Debug(DebugType.Debug, "User Request:\n" +
             $"From: {userMsg.From.Name}({userMsg.From.Id})\n" +
             $"Chat: {userMsg.Chat.Id}\n" +
-            $"Permission: {userMsg.From.Level.ToString()}\n" +
+            $"Permission: {userMsg.From.Level}\n" +
             $"Prefix: /{cmd.Prefix}\n" +
             $"Params: {string.Join(" ", cmd.Params)}");
 

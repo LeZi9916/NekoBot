@@ -7,6 +7,8 @@
     <AssemblyVersion>0.12.7</AssemblyVersion>
     <PublishAot>False</PublishAot>
     <PublishTrimmed>False</PublishTrimmed>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <Nullable>enable</Nullable>
   </PropertyGroup>

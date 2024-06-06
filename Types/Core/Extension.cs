@@ -23,8 +23,9 @@ public class Extension
     }
     public virtual MethodInfo? GetMethod(string methodName) => Info.ExtAssembly.GetType().GetMethod(methodName);
     public static void Debug(DebugType type, string message) => Core.Debug(type, message);
-    public static string StringHandle(string s)
+    public static string StringHandle<T>(T obj)
     {
+        string s = obj?.ToString() ?? string.Empty;
         string[] reservedChar = { "_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!" };
         foreach (var c in reservedChar)
             s = s.Replace(c, $"\\{c}");

@@ -27,6 +27,7 @@ public class Message
     public Group? Group { get; set; }
     public Update? Raw { get; set; }
     public InlineKeyboardMarkup? InlineMarkup { get; set; }
+    public static InlineKeyboardButton DeleteButton { get; } = InlineKeyboardButton.WithCallbackData("Delete", "delMsg");
 
     public async Task<bool> GetDocument(string dPath)
     {
@@ -107,13 +108,13 @@ public class Message
                             continue;
                         else
                         {
-                            row.Append(InlineKeyboardButton.WithCallbackData("Delete", "delMsg"));
+                            row.Append(DeleteButton);
                             break;
                         }
                     }
                 }
                 else
-                    inlineMarkup = CreateButton(InlineKeyboardButton.WithCallbackData("Delete", "delMsg"));
+                    inlineMarkup = CreateButton(DeleteButton);
             }
             return Parse(Client!, await Client!.SendTextMessageAsync(
                          chatId: Chat.Id,
@@ -187,13 +188,13 @@ public class Message
                             continue;
                         else
                         {
-                            row.Append(InlineKeyboardButton.WithCallbackData("Delete", "delMsg"));
+                            row.Append(DeleteButton);
                             break;
                         }
                     }
                 }
                 else
-                    inlineMarkup = CreateButton(InlineKeyboardButton.WithCallbackData("Delete", "delMsg"));
+                    inlineMarkup = CreateButton(DeleteButton);
             }
             return Parse(Client!, await Client!.SendTextMessageAsync(
                          chatId: Chat.Id,

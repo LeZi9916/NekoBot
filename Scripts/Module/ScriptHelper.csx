@@ -16,6 +16,7 @@ using Message = NekoBot.Types.Message;
 using File = System.IO.File;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot;
+using System.Diagnostics;
 #pragma warning disable CS4014
 public partial class ScriptHelper : Extension, IExtension
 {
@@ -81,14 +82,51 @@ public partial class ScriptHelper : Extension, IExtension
             string[] bannedNs = { "System.Net", "System.IO", "System.Diagnostics", "System.Runtime", "NekoBot", "AquaTools", "System.Reflection" };
             string[] bannedTypes = { "Environment", "RuntimeEnvironment", "Process" };
             var code = string.Join(" ", cmd.Params);
-            var msg = await userMsg.Reply("Compiling code...");
+            var msg = await userMsg.Reply("Evaluating code...");
+            Stopwatch sw = new();
+            if (msg is null)
+                return;
             if (CheckCode(code, bannedNs, bannedTypes) || querier.CheckPermission(Permission.Root, null))
             {
-                var result = ScriptManager.EvalCode(code) ?? "null";
-                var _result = string.IsNullOrEmpty(result) ? "empty" : result;
-                msg.Edit("```csharp\n" +
-                        $"{StringHandle(result)}\n" +
-                        $"```",ParseMode.MarkdownV2);
+                sw.Start();
+                var (result, e) = ScriptManager.EvalCode(code);
+                sw.Stop();
+
+                
+                if (ScriptManager.GetExtension("CallbackQueryHandler") is ICallbackHandler callbackHandler)
+                {
+                    msg.InlineMarkup = Message.CreateButton(Message.DeleteButton);
+                    callbackHandler.AddCallbackFunc(new CallbackHandler<CallbackMsg>(
+                        cbMsg => 
+                        {
+                            var origin = msg;
+                            if (origin?.Id != cbMsg.Origin.Id || cbMsg.Data != "getStat")
+                                return false;
+                            var usedTime = sw.ElapsedMilliseconds;
+                            cbMsg.Client.AnswerCallbackQueryAsync(cbMsg.Id, 
+                                                                  $"""
+                                                                   Used Time: {usedTime}ms
+                                                                   Exception: {e?.Message ?? "null"}
+                                                                   """, true);
+                            return false;
+                        }
+                    ));
+                    if (e is not null)
+                    {
+                        msg.AddButton(InlineKeyboardButton.WithCallbackData("Stat","getStat"));
+                        msg.Edit("(Complie error)");
+                    }
+                    else
+                    {
+                        msg.AddButton(InlineKeyboardButton.WithCallbackData("Stat","getStat"));
+                        msg.Edit(
+                            $"""
+                             ```csharp
+                             {StringHandle(string.IsNullOrEmpty(result) ? "(No value)" : result)}
+                             ```
+                             """);
+                    }
+                }
             }
             else
                 userMsg.Reply("Unsupport operate", ParseMode.MarkdownV2);
@@ -166,28 +204,28 @@ public partial class ScriptHelper : Extension, IExtension
         }
         var extName = cmd.Params[1];
         var ext = ScriptManager.GetExtension(extName);
-        if(ext is null)
+        if (ext is null)
         {
             userMsg.Reply($"Error: Extension \"{extName}\" not found");
             return;
         }
-        else if(extName == Info.Name || ext.Info.Type == ExtensionType.Handler)
+        else if (extName == Info.Name || ext.Info.Type == ExtensionType.Handler)
         {
             userMsg.Reply($"Error: Cannot unload this extension");
             return;
         }
         var handler = ScriptManager.GetExtension("CallbackQueryHandler");
-        
-        if(handler is ICallbackHandler callbackHandler)
+
+        if (handler is ICallbackHandler callbackHandler)
         {
             var buttons = Message.CreateButtons(
                 [
                     InlineKeyboardButton.WithCallbackData("Yes","y"),
                     InlineKeyboardButton.WithCallbackData("No","n")
                 ]);
-            var msg = await userMsg.Reply($"Are you sure to uninstall \"{extName}\"?",inlineMarkup:buttons);
+            var msg = await userMsg.Reply($"Are you sure to unload \"{extName}\"?", inlineMarkup: buttons);
             callbackHandler.AddCallbackFunc(new CallbackHandler<CallbackMsg>(
-                cbMsg => 
+                cbMsg =>
                 {
                     var origin = msg;
                     var targetModule = ext;
@@ -200,12 +238,12 @@ public partial class ScriptHelper : Extension, IExtension
                         return false;
 
                     var _userMsg = cbMsg.Origin;
-                    var delMarkup = Message.CreateButton(InlineKeyboardButton.WithCallbackData("Delete", "delMsg"));
+                    var delMarkup = Message.CreateButton(Message.DeleteButton);
                     _userMsg.InlineMarkup = null;
                     if (cbMsg.Data == "n")
                     {
                         _userMsg.InlineMarkup = delMarkup;
-                        _userMsg.Edit("Operation canceled").Wait() ;
+                        _userMsg.Edit("Operation canceled").Wait();
                         return true;
                     }
                     _userMsg.Edit($"Unloading \"{extName}\" extension...").Wait();
@@ -248,12 +286,12 @@ public partial class ScriptHelper : Extension, IExtension
             userMsg.Reply("Error: Please upload a C# Script file");
             return;
         }
-        else if(ScriptManager.IsCompiling)
+        else if (ScriptManager.IsCompiling)
         {
             userMsg.Reply("Error: Script update task is running");
             return;
         }
-        async Task complie(Message msg,string filePath,bool isUpdate = true)
+        async Task complie(Message msg, string filePath, bool isUpdate = true)
         {
             await msg.Edit("Compiling script...(2/4)");
             var script = ScriptManager.CompileScript<IExtension>(filePath);
@@ -265,7 +303,7 @@ public partial class ScriptHelper : Extension, IExtension
                 else
                     await msg.Edit("Initializing script...(3/4)");
                 ScriptManager.UpdateScript(script.Instance);
-                if(isUpdate)
+                if (isUpdate)
                 {
                     await msg.Edit("Overwriting script...(4/4)");
                     File.Copy(filePath, $"{Path.Combine(Config.ScriptPath, $"{script.Instance.Info.Type}/{script.Instance.Info.Name}.csx")}", true);
@@ -278,8 +316,8 @@ public partial class ScriptHelper : Extension, IExtension
             {
                 await msg.Edit("Error: Compile script failure\n" +
                     "```csharp\n" +
-                    $"{StringHandle(script.Exception.ToString())}" +
-                    "\n```",ParseMode.MarkdownV2);
+                    $"{StringHandle(script.Exception)}" +
+                    "\n```", ParseMode.MarkdownV2);
                 return;
             }
         }
@@ -290,25 +328,25 @@ public partial class ScriptHelper : Extension, IExtension
                 return;
             var fileName = cmd.Params[1];
             var filePath = ScriptManager.GetScriptPath(fileName);
-            
-            if(string.IsNullOrEmpty(filePath))
+
+            if (string.IsNullOrEmpty(filePath))
             {
                 await msg.Edit($"Error: Script file not found({fileName}.csx)");
                 return;
             }
-            else if(ScriptManager.GetExtension(fileName) is not null)
+            else if (ScriptManager.GetExtension(fileName) is not null)
             {
                 await msg.Edit($"Error: This extension had been loaded");
                 return;
             }
             else
-                await complie(msg, filePath,false);
+                await complie(msg, filePath, false);
         }
-        else if(userMsg.Document is not null)
+        else if (userMsg.Document is not null)
         {
             var document = userMsg.Document;
             var msg = await userMsg.Reply("Downloading document...(1/4)");
-            if(msg is null)
+            if (msg is null)
                 return;
 
             var fileName = $"{DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss")}_{document.FileName}";
