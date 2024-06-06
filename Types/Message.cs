@@ -167,6 +167,15 @@ public class Message
             return null;
         }
     }
+    public override bool Equals(object? obj)
+    {   
+        if(obj is Message msg)
+        {
+            return msg.Id == Id && 
+                   msg.Chat.Id == Chat.Id;
+        }
+        return false;
+    }
     public async Task<Message?> Reply(string text, 
                                       ParseMode? parseMode = null,
                                       bool showDelButton = false,
@@ -210,7 +219,7 @@ public class Message
             return null;
         }
     }
-    public async Task<Message?> AddButton(InlineKeyboardButton button)
+    public InlineKeyboardMarkup AddButton(InlineKeyboardButton button)
     {
         var markup = InlineMarkup;
         if (markup is null)
@@ -222,16 +231,16 @@ public class Message
             newButtons.Add(button);
             markup = CreateButtons(newButtons.ToArray());
         }
-        return await Edit(null, inlineMarkup: markup);
+        return markup;
     }
-    public async Task<Message?> DelButton(Func<InlineKeyboardButton, bool> match)
+    public InlineKeyboardMarkup? DelButton(Func<InlineKeyboardButton, bool> match)
     {
         
         if (InlineMarkup is null)
-            return this;
+            return null;
         var oldButtons = InlineMarkup.InlineKeyboard.SelectMany(x => x);
         var newButtons = oldButtons.Where(x => !match(x));
-        return await Edit(null, inlineMarkup: CreateButtons(newButtons.ToArray()));
+        return CreateButtons(newButtons.ToArray());
     }
     public static Message? Parse(in ITelegramBotClient client, Telegram.Bot.Types.Message? msg)
     {

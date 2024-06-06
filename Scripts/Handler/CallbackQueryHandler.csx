@@ -152,9 +152,10 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
             CallbackHandler<CallbackMsg>? foo;
             if(submiter.TryGetTarget(out foo))
             {
-                success = foo(msg);
-                if (success)
+                var (isSuccess,isMatch) = foo(msg);
+                if (isSuccess && isMatch)
                     submiters.Remove(submiter);
+                success = isSuccess;
             }
             else
                 submiters.Remove(submiter);
