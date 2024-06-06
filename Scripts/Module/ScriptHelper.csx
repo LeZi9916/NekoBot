@@ -17,13 +17,15 @@ using File = System.IO.File;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot;
 using System.Diagnostics;
+using System.Collections.Generic;
 #pragma warning disable CS4014
 public partial class ScriptHelper : Extension, IExtension
 {
+    Dictionary<Guid, CallbackHandler<CallbackMsg>> tasks = new();
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "ScriptHelper",
-        Version = new Version() { Major = 1, Minor = 1, Revision = 4 },
+        Version = new Version() { Major = 1, Minor = 1, Revision = 6 },
         Type = ExtensionType.Module,
         Commands =
         [
@@ -96,8 +98,9 @@ public partial class ScriptHelper : Extension, IExtension
                 if (ScriptManager.GetExtension("CallbackQueryHandler") is ICallbackHandler callbackHandler)
                 {
                     msg.InlineMarkup = Message.CreateButton(Message.DeleteButton);
-                    callbackHandler.AddCallbackFunc(new CallbackHandler<CallbackMsg>(
-                        cbMsg => 
+                    var id = Guid.NewGuid();
+                    var task = new CallbackHandler<CallbackMsg>(
+                        cbMsg =>
                         {
 
                             if (!msg.Equals(cbMsg.Origin))
@@ -105,14 +108,16 @@ public partial class ScriptHelper : Extension, IExtension
                             else if (cbMsg.Data != "getStat")
                                 return (true, false);
                             var usedTime = sw.ElapsedMilliseconds;
-                            cbMsg.Client.AnswerCallbackQueryAsync(cbMsg.Id, 
+                            cbMsg.Client.AnswerCallbackQueryAsync(cbMsg.Id,
                                                                   $"""
                                                                    Used Time: {usedTime}ms
                                                                    Exception: {e?.Message ?? "null"}
                                                                    """, true);
                             return (true, false);
                         }
-                    ));
+                    );
+                    tasks.Add(id, task);
+                    callbackHandler.AddCallbackFunc(task);
                     if (e is not null)
                     {
                         msg.InlineMarkup = msg.AddButton(InlineKeyboardButton.WithCallbackData("Stat","getStat"));
@@ -226,7 +231,8 @@ public partial class ScriptHelper : Extension, IExtension
                     InlineKeyboardButton.WithCallbackData("No","n")
                 ]);
             var msg = await userMsg.Reply($"Are you sure to unload \"{extName}\"?", inlineMarkup: buttons);
-            callbackHandler.AddCallbackFunc(new CallbackHandler<CallbackMsg>(
+            var id = Guid.NewGuid();
+            var task = new CallbackHandler<CallbackMsg>(
                 cbMsg =>
                 {
                     if (cbMsg.From.Id != userMsg.From.Id)
@@ -235,7 +241,7 @@ public partial class ScriptHelper : Extension, IExtension
                         return (true, false);
                     }
                     else if (!msg!.Equals(cbMsg.Origin))
-                        return (false,false);
+                        return (false, false);
 
                     var _userMsg = cbMsg.Origin;
                     var delMarkup = Message.CreateButton(Message.DeleteButton);
@@ -244,6 +250,7 @@ public partial class ScriptHelper : Extension, IExtension
                     {
                         _userMsg.InlineMarkup = delMarkup;
                         _userMsg.Edit("Operation canceled").Wait();
+                        tasks.Remove(id);
                         return (true, true);
                     }
                     _userMsg.Edit($"Unloading \"{extName}\" extension...").Wait();
@@ -257,8 +264,11 @@ public partial class ScriptHelper : Extension, IExtension
                     {
                         _userMsg.Edit($"Internal error:\n {e.Message}").Wait();
                     }
+                    tasks.Remove(id);
                     return (true, true);
-                }));
+                });
+            tasks.Add(id,task);
+            callbackHandler.AddCallbackFunc(task);
         }
         else
         {
