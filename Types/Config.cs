@@ -30,6 +30,23 @@ public class BotInfo
     public required string Username { get; set; }
     public BotCommand[] BotCommands { get; set; } = Array.Empty<BotCommand>();
 }
+public struct DatabaseInfo
+{
+    /// <summary>
+    /// Path of database file
+    /// <para>FileDatabase Only</para>
+    /// </summary>
+    public string? Path { get; set; }
+    public string? Address { get; set; }
+    public int? Port { get; set; }
+    public string? Username { get; set; }
+    public string? Password { get; set; }
+    public string? Database { get; set; }
+    /// <summary>
+    /// Type of database
+    /// </summary>
+    public required DatabaseType Type { get; set; }
+}
 public class Config
 {
     [YamlIgnore]
@@ -50,6 +67,7 @@ public class Config
     public static string ConfigPath { get => Path.Combine(AppPath, "NekoBot.conf"); }
 
     public HotpAuthenticator Authenticator { get; set; } = new HotpAuthenticator();
+    public DatabaseInfo? Database { get; set; } = null;
     public bool DbAutoSave { get; set; } = true;
     public int AutoSaveInterval { get; set; } = 600;
     public List<BotIdentity> BotIdentitys { get; set; } = new();

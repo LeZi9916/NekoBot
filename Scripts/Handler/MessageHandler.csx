@@ -13,14 +13,42 @@ using Message = NekoBot.Types.Message;
 using User = NekoBot.Types.User;
 using Version = NekoBot.Types.Version;
 #pragma warning disable CS4014
-public class MessageHandler: Extension, IExtension, IHandler
+public class MessageHandler: Destroyable, IExtension, IHandler, IDestroyable
 {
-    IDatabase<User>? userDatabase;
-    IDatabase<Group>? groupDatabase;
+    IDatabase<User> userDatabase
+    {
+        get
+        {
+            var dbManager = ScriptManager.GetExtension("MongoDBManager") as IDBManager;
+            var newDB = dbManager?.GetCollection<User>("User");
+            if (newDB is not null and IDatabase<User> db &&
+               db != _userDatabase)
+            {
+                _userDatabase = db;
+            }
+            return _userDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
+        }
+    }
+    IDatabase<Group> groupDatabase
+    {
+        get
+        {
+            var dbManager = ScriptManager.GetExtension("MongoDBManager") as IDBManager;
+            var newDB = dbManager?.GetCollection<Group>("Group");
+            if (newDB is not null and IDatabase<Group> db &&
+                db != _groupDatabase)
+            {
+                _groupDatabase = db;
+            }
+            return _groupDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
+        }
+    }
+    IDatabase<User>? _userDatabase;
+    IDatabase<Group>? _groupDatabase;
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "MessageHandler",
-        Version = new Version() { Major = 1, Minor = 0,Revision = 1},
+        Version = new Version() { Major = 1, Minor = 1,Revision = 0},
         Type = ExtensionType.Handler,
         SupportUpdate =
         [
@@ -30,13 +58,7 @@ public class MessageHandler: Extension, IExtension, IHandler
         [
             new ExtensionInfo()
             {
-                Name = "UserDatabase",
-                Version = new Version() { Major = 1, Minor = 0 },
-                Type = ExtensionType.Database
-            },
-            new ExtensionInfo()
-            {
-                Name = "GroupDatabase",
+                Name = "MongoDBManager",
                 Version = new Version() { Major = 1, Minor = 0 },
                 Type = ExtensionType.Database
             }
@@ -44,12 +66,13 @@ public class MessageHandler: Extension, IExtension, IHandler
     };
     public override void Init()
     {
-        var userDB = (IDatabase<User>?)ScriptManager.GetExtension("UserDatabase");
-        var groupDB = (IDatabase<Group>?)ScriptManager.GetExtension("GroupDatabase");
-        if (userDB is null || groupDB is null)
-            throw new DatabaseNotFoundException("This script depends on the database to initialize");
-        userDatabase = userDB;
-        groupDatabase = groupDB;
+        var dbManager = ((ScriptManager.GetExtension("MongoDBManager") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize"))
+                        as IDBManager)!;
+        _userDatabase = dbManager.GetCollection<User>("User");
+        _groupDatabase = dbManager.GetCollection<Group>("Group");
+
+        _userDatabase.OnDestroy += () => _userDatabase = null;
+        _groupDatabase.OnDestroy += () => _groupDatabase = null;
     }
 
     Message? PreHandle(in ITelegramBotClient client, Update update)
@@ -183,7 +206,7 @@ public class MessageHandler: Extension, IExtension, IHandler
 
                 if (record is null)
                 {
-                    userDatabase.Add(user);
+                    userDatabase.Insert(user);
                     Debug(DebugType.Info, $"Find New User:\n" +
                     $"Name: {user.FirstName} {user.LastName}\n" +
                     $"isBot: {user.IsBot}\n" +
@@ -225,7 +248,7 @@ public class MessageHandler: Extension, IExtension, IHandler
 
             var groupId = chat.Id;
 
-            if (groupDatabase.FindIndex(x => x.Id == groupId) != -1)
+            if (groupDatabase.Exists(x => x.Id == groupId))
                 return;
 
             var group = new Group()
@@ -234,7 +257,7 @@ public class MessageHandler: Extension, IExtension, IHandler
                 Name = chat.Title ?? "",
                 Username = chat.Username ?? "",
             };
-            groupDatabase.Add(group);
+            groupDatabase.Insert(group);
             Debug(DebugType.Debug, $"Find New Group:\n" +
                 $"Name: {group.Name}\n" +
                 $"Id: {groupId}\n" +
@@ -244,5 +267,11 @@ public class MessageHandler: Extension, IExtension, IHandler
         {
             Debug(DebugType.Error, $"Find a new group,but cannon add to db: \n{e.Message}\n{e.StackTrace}");
         }
+    }
+    public override void Destroy()
+    {
+        base.Destroy();
+        _userDatabase = null;
+        _groupDatabase = null;
     }
 }

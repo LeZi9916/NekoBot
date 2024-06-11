@@ -1,5 +1,11 @@
 ﻿namespace NekoBot.Types;
 
+public enum DatabaseType
+{
+    File,
+    MongoDB,
+    SQL
+}
 public enum DebugType
 {
     Debug,

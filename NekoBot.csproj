@@ -16,9 +16,12 @@
   <ItemGroup>
     <Compile Remove="Scripts\Module\MaiScanner.cs" />
     <Compile Remove="Scripts\Script.cs" />
+    <Compile Remove="Types\Core\Database.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="Scripts\Database\GroupDatabase.csx" />
+    <None Remove="Scripts\Database\MongoDBManager.csx" />
+    <None Remove="Scripts\Database\UserDatabase.csx" />
     <None Remove="Scripts\Generic.csx" />
     <None Remove="Scripts\Handler\CallbackQueryHandler.csx" />
     <None Remove="Scripts\JsonSerializer.csx" />
@@ -37,10 +40,16 @@
 
   <ItemGroup>
     <Compile Include="Scripts\Database\GroupDatabase.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Database\MaiDatabase.csx">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="Scripts\Database\MongoDBManager.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Compile>
+    <Compile Include="Scripts\Database\UserDatabase.csx">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Handler\CallbackQueryHandler.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -52,9 +61,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Serializer\JsonSerializer.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Database\UserDatabase.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Module\Monitor.csx">
@@ -73,12 +79,14 @@
 
   <ItemGroup>
     <None Include="Scripts\Module\MaiScanner.cs" />
+    <None Include="Types\Core\Database.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CS-Script" Version="4.8.14" />
     <PackageReference Include="CZGL.SystemInfo" Version="2.2.0" />
     <PackageReference Include="DnsClient" Version="1.7.0" />
+    <PackageReference Include="MongoDB.Driver" Version="2.25.0" />
     <PackageReference Include="SkiaSharp" Version="2.88.7" />
     <PackageReference Include="Telegram.Bot" Version="19.0.0" />
     <PackageReference Include="YamlDotNet" Version="15.1.4" />

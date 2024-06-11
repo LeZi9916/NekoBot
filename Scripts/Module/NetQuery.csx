@@ -23,8 +23,8 @@ public class NetQuery: Extension, IExtension
         Name = "NetQuery",
         Version = new Version() { Major = 1, Minor = 0,Revision = 15 },
         Type = ExtensionType.Module,
-        Commands = new BotCommand[]
-        {
+        Commands =
+        [
             new BotCommand()
             {
                 Command = "nslookup",
@@ -40,7 +40,7 @@ public class NetQuery: Extension, IExtension
                 Command = "tcping",
                 Description = "对目标主机发送TCP SYN"
             }
-        },
+        ],
         SupportUpdate = new UpdateType[]
         {
             UpdateType.Message,

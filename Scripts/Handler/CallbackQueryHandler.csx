@@ -18,8 +18,36 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
 {
     List<WeakReference<CallbackHandler<CallbackMsg>>> submiters = new();
 
-    IDatabase<User>? userDatabase;
-    IDatabase<Group>? groupDatabase;
+    IDatabase<User> userDatabase
+    {
+        get
+        {
+            var dbManager = ScriptManager.GetExtension("MongoDBManager") as IDBManager;
+            var newDB = dbManager?.GetCollection<User>("User");
+            if (newDB is not null and IDatabase<User> db &&
+               db != _userDatabase)
+            {
+                _userDatabase = db;
+            }
+            return _userDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
+        }
+    }
+    IDatabase<Group> groupDatabase
+    {
+        get
+        {
+            var dbManager = ScriptManager.GetExtension("MongoDBManager") as IDBManager;
+            var newDB = dbManager?.GetCollection<Group>("Group");
+            if (newDB is not null and IDatabase<Group> db &&
+                db != _groupDatabase)
+            {
+                _groupDatabase = db;
+            }
+            return _groupDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
+        }
+    }
+    IDatabase<User>? _userDatabase;
+    IDatabase<Group>? _groupDatabase;
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "CallbackQueryHandler",
@@ -33,13 +61,7 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
         [
             new ExtensionInfo()
             {
-                Name = "UserDatabase",
-                Version = new Version() { Major = 1, Minor = 0 },
-                Type = ExtensionType.Database
-            },
-            new ExtensionInfo()
-            {
-                Name = "GroupDatabase",
+                Name = "MongoDBManager",
                 Version = new Version() { Major = 1, Minor = 0 },
                 Type = ExtensionType.Database
             }
@@ -47,12 +69,13 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
     };
     public override void Init()
     {
-        var userDB = (IDatabase<User>?)ScriptManager.GetExtension("UserDatabase");
-        var groupDB = (IDatabase<Group>?)ScriptManager.GetExtension("GroupDatabase");
-        if (userDB is null || groupDB is null)
-            throw new DatabaseNotFoundException("This script depends on the database to initialize");
-        userDatabase = userDB;
-        groupDatabase = groupDB;
+        var dbManager = ((ScriptManager.GetExtension("MongoDBManager") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize"))
+                        as IDBManager)!;
+        _userDatabase = dbManager.GetCollection<User>("User");
+        _groupDatabase = dbManager.GetCollection<Group>("Group");
+
+        _userDatabase.OnDestroy += () => _userDatabase = null;
+        _groupDatabase.OnDestroy += () => _groupDatabase = null;
     }
     CallbackMsg? PreHandle(in ITelegramBotClient client, Update update)
     {
@@ -112,7 +135,7 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
         var record = userDatabase!.Find(x => x.Id == id);
         if(record is null)
         {
-            userDatabase.Add(newUser!);
+            userDatabase.Insert(newUser!);
             Debug(DebugType.Info, $"Find New User:\n" +
                     $"Name: {newUser.FirstName} {newUser.LastName}\n" +
                     $"isBot: {newUser.IsBot}\n" +
@@ -132,8 +155,8 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
     public override void Destroy()
     {
         base.Destroy();
-        userDatabase = null;
-        groupDatabase = null;
+        _userDatabase = null;
+        _groupDatabase = null;
         submiters.Clear();
     }
     public void AddCallbackFunc(in CallbackHandler<CallbackMsg> func)

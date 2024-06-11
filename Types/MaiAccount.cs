@@ -1,9 +1,16 @@
-﻿using System;
+﻿using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson;
+using System;
+using System.Text.Json.Serialization;
 
 namespace NekoBot.Types;
 
 public class MaiAccount
 {
+    [JsonIgnore]
+    [BsonId]
+    [BsonElement("_id")]
+    ObjectId _id;
     public string userName { get; set; }
     public long playerRating { get; set; }
     public int userId { get; set; }

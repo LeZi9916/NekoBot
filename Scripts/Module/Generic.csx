@@ -22,7 +22,8 @@ public partial class Generic : Extension, IExtension
     { 
         get
         {
-            var newDB = ScriptManager.GetExtension("UserDatabase");
+            var dbManager = ScriptManager.GetExtension("MongoDBManager") as IDBManager;
+            var newDB = dbManager?.GetCollection<User>("User");
             if(newDB is not null and IDatabase<User> db && 
                db != _userDatabase)
             {
@@ -35,7 +36,8 @@ public partial class Generic : Extension, IExtension
     {
         get
         {
-            var newDB = ScriptManager.GetExtension("GroupDatabase");
+            var dbManager = ScriptManager.GetExtension("MongoDBManager") as IDBManager;
+            var newDB = dbManager?.GetCollection<Group>("Group");
             if (newDB is not null and IDatabase<Group> db && 
                 db != _groupDatabase)
             {
@@ -44,8 +46,8 @@ public partial class Generic : Extension, IExtension
             return _groupDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
         }
     }
-    IDatabase<User>? _userDatabase = new Database<User>();
-    IDatabase<Group>? _groupDatabase = new Database<Group>();
+    IDatabase<User>? _userDatabase;
+    IDatabase<Group>? _groupDatabase;
     public new ExtensionInfo Info { get; } = new ExtensionInfo() 
     { 
         Name = "Generic",
@@ -117,13 +119,7 @@ public partial class Generic : Extension, IExtension
         Dependencies = [
             new ExtensionInfo()
             {
-                Name = "UserDatabase",
-                Version = new Version() { Major = 1, Minor = 0 },
-                Type = ExtensionType.Database
-            },
-            new ExtensionInfo()
-            {
-                Name = "GroupDatabase",
+                Name = "MongoDBManager",
                 Version = new Version() { Major = 1, Minor = 0 },
                 Type = ExtensionType.Database
             },
@@ -134,19 +130,19 @@ public partial class Generic : Extension, IExtension
                 Type = ExtensionType.Module
             }
         ],
-        SupportUpdate = new UpdateType[] 
-        {
+        SupportUpdate =
+        [
             UpdateType.Message,
             UpdateType.EditedMessage
-        }
+        ]
 
     };
     public override void Init()
     {
-        _userDatabase = ((ScriptManager.GetExtension("UserDatabase") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize")) 
-                        as IDatabase<User>)!;
-        _groupDatabase = ((ScriptManager.GetExtension("GroupDatabase") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize")) 
-                        as IDatabase<Group>)!;
+        var dbManager = ((ScriptManager.GetExtension("MongoDBManager") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize"))
+                        as IDBManager)!;
+        _userDatabase = dbManager.GetCollection<User>("User");
+        _groupDatabase = dbManager.GetCollection<Group>("Group");
 
         _userDatabase.OnDestroy += () => _userDatabase = null;
         _groupDatabase.OnDestroy += () => _groupDatabase = null;
@@ -241,7 +237,7 @@ public partial class Generic : Extension, IExtension
                 GetHelpInfo(cmd,userMsg);
                 return;
             }
-            target = userDatabase.Find(x => x.Id ==replyTo.From.Id);
+            target = userDatabase.Find(x => x.Id == replyTo.From.Id);
         }
         else
         {
@@ -274,6 +270,7 @@ public partial class Generic : Extension, IExtension
         else
         {
             target.SetPermission(Permission.Common);
+            userDatabase.Update(target.GetMatcher(), target);
             userMsg.Reply($"This user can access the bot now", showDelButton: true);
             return;
         }
@@ -322,6 +319,7 @@ public partial class Generic : Extension, IExtension
         else
         {
             target.SetPermission(Permission.Ban);
+            userDatabase.Update(target.GetMatcher(), target);
             userMsg.Reply($"This user cannot access the bot now", showDelButton: true);
         }
     }
@@ -477,6 +475,7 @@ public partial class Generic : Extension, IExtension
                     return;
                 }
                 target.SetPermission(targetLevel);
+                userDatabase.Update(target.GetMatcher(), target);
                 userMsg.Reply($"Success change*{StringHandle(target.Name)}*\\({target.Id}\\) permission to *{targetLevel}*",parseMode: ParseMode.MarkdownV2,true);
             }
             else
@@ -654,6 +653,7 @@ public partial class Generic : Extension, IExtension
                 if (bool.TryParse(param[1], out boolValue))
                 {
                     group!.Setting.ForceCheckReference = boolValue;
+                    groupDatabase.Update(group.GetMatcher(), group);
                     userMsg.Reply($"ForceCheckReference: *{boolValue}*",ParseMode.MarkdownV2, true);
                     //Config.SaveData();
                 }
@@ -803,6 +803,7 @@ public partial class Generic
                 return;
             }
             group.SetPermission(targetLevel);
+            groupDatabase.Update(group.GetMatcher(), group);
             userMsg.Reply($"Success change*{StringHandle(group.Name)}*\\({group.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2,true);
         }
         else if(param.Length == 2)
@@ -834,12 +835,10 @@ public partial class Generic
             }
 
             user.SetPermission(targetLevel);
+            userDatabase.Update(user.GetMatcher(), user);
             userMsg.Reply($"Success change*{StringHandle(user.Name)}*\\({user.Id}\\) permission to *{targetLevel}*", parseMode: ParseMode.MarkdownV2, true);
         }
         else
             GetHelpInfo(cmd, userMsg);
-
-
-
     }
 }

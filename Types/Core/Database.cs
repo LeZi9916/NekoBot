@@ -97,8 +97,8 @@ public class Database<T> : Destroyable, IDatabase<T>
     public int FindLastIndex(Predicate<T> match) => database.FindLastIndex(match);
     public virtual void Add(T item) => database.Add(item);
     public virtual bool Remove(T item) => database.Remove(item);
-    public virtual void SetAll(T[] collection) => database = new(collection);
-    public virtual T[] All() => database.ToArray();
+    public virtual void Import(T[] collection) => database = new(collection);
+    public virtual T[] Export() => database.ToArray();
     public int IndexOf(T item) => database.IndexOf(item);
     public void Insert(int index, T item) => database.Insert(index, item);
     public void RemoveAt(int index) => database.RemoveAt(index);

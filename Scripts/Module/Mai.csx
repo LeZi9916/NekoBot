@@ -23,6 +23,7 @@ using Message = NekoBot.Types.Message;
 using File = System.IO.File;
 using MaiAccount = NekoBot.Types.MaiAccount;
 using NekoBot.Exceptions;
+using User = NekoBot.Types.User;
 #pragma warning disable CS4014
 public partial class Mai : Extension, IExtension
 {
@@ -30,7 +31,8 @@ public partial class Mai : Extension, IExtension
     {
         get
         {
-            var newDB = ScriptManager.GetExtension("MaiDatabase");
+            var dbManager = ScriptManager.GetExtension("MongoDBManager") as IDBManager;
+            var newDB = dbManager?.GetCollection<MaiAccount>("MaiAccount");
             if (newDB is not null and IDatabase<MaiAccount> db &&
                db != _maiDatabase)
             {
@@ -39,6 +41,21 @@ public partial class Mai : Extension, IExtension
             return _maiDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
         }
     }
+    IDatabase<User> userDatabase
+    {
+        get
+        {
+            var dbManager = ScriptManager.GetExtension("MongoDBManager") as IDBManager;
+            var newDB = dbManager?.GetCollection<User>("User");
+            if (newDB is not null and IDatabase<User> db &&
+               db != _userDatabase)
+            {
+                _userDatabase = db;
+            }
+            return _userDatabase ?? throw new DatabaseNotFoundException("This script depends on the database");
+        }
+    }
+    IDatabase<User>? _userDatabase;
     IDatabase<MaiAccount>? _maiDatabase;
 
     List<MaiAccount>? maiAccountList;
@@ -68,8 +85,8 @@ public partial class Mai : Extension, IExtension
         Name = "Mai",
         Version = new Version() { Major = 1, Minor = 0, Revision = 3 },
         Type = ExtensionType.Module,
-        Commands = new BotCommand[]
-        {
+        Commands =
+        [
             new BotCommand()
             {
                 Command = "mai",
@@ -85,23 +102,11 @@ public partial class Mai : Extension, IExtension
                 Command = "maistatus",
                 Description = "查看土豆服务器状态"
             }
-        },
+        ],
         Dependencies = new ExtensionInfo[]{
             new ExtensionInfo()
             {
-                Name = "UserDatabase",
-                Version = new Version() { Major = 1, Minor = 0 },
-                Type = ExtensionType.Database
-            },
-            new ExtensionInfo()
-            {
-                Name = "GroupDatabase",
-                Version = new Version() { Major = 1, Minor = 0 },
-                Type = ExtensionType.Database
-            },
-            new ExtensionInfo()
-            {
-                Name = "MaiDatabase",
+                Name = "MongoDBManager",
                 Version = new Version() { Major = 1, Minor = 0 },
                 Type = ExtensionType.Database
             },
@@ -126,9 +131,12 @@ public partial class Mai : Extension, IExtension
     };
     public override void Init()
     {
-        _maiDatabase = ((ScriptManager.GetExtension("MaiDatabase") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize"))
-                        as IDatabase<MaiAccount>)!;
+        var dbManager = ((ScriptManager.GetExtension("MongoDBManager") ?? throw new DatabaseNotFoundException("This script depends on the database to initialize"))
+                        as IDBManager)!;
+        _maiDatabase = dbManager.GetCollection<MaiAccount>("MaiAccount");
+        _userDatabase = dbManager.GetCollection<User>("User");
         _maiDatabase.OnDestroy += () => _maiDatabase = null;
+        _userDatabase.OnDestroy += () => _userDatabase = null;
 
     }
     public override void Handle(Message userMsg)
@@ -238,7 +246,7 @@ public partial class Mai : Extension, IExtension
                     maiAccount.banState = response.banState;
                     maiAccount.lastUpdate = DateTime.Now;
 
-                    maiDatabase.Add(maiAccount);
+                    maiDatabase.Insert(maiAccount,x => x.userId == maiAccount.userId);
                     //Config.SaveData();
                     return maiAccount;
                 }
@@ -463,6 +471,7 @@ public partial class Mai : Extension, IExtension
             var response = GetUserPreview((int)maiUserId).Result.Object;
             querier.MaiUserId = maiUserId;
             querier.Account = maiDatabase.Find(x => x.userId == maiUserId);
+            userDatabase.Update(x => x.Id == querier.Id, querier);
             if (response.StatusCode is not HttpStatusCode.OK)
             {
                 await userMsg.Edit("绑定成功，但无法获取用户信息QAQ");
@@ -695,99 +704,6 @@ public partial class Mai : Extension, IExtension
         {
             AquaTools.Users.User.Logout((int)querier.MaiUserId);
         }
-    } */
-    /* internal static async void Upsert(Message userMsg)
-    {
-        var user = await AquaTools.Users.User.Login((int)querier.MaiUserId, keyChips[0], a => { });
-        var playlogs = new List<UserPlaylog>();
-        var musicDetail = user.CreatePlaylog(11422, new Dictionary<string, int>
-    {
-        { "Achievement" , 1008750 },
-        { "ComboStatus" , 3 },
-        { "SyncStatus" , 0 },
-        { "DeluxscoreMax" , 1815 },
-        { "ScoreRank" , 13 },
-    }, MusicLevelType.Master, false);
-
-        NoteInfo[] noteInfo =
-        {
-        new NoteInfo
-            {
-                CriticalPerfect = 382,
-                Perfect = 0,
-                Fast = 0,
-                Late = 0,
-                Good = 0,
-                Great = 0,
-                Miss = 0
-            },
-        new NoteInfo
-            {
-                CriticalPerfect = 38,
-                Perfect = 0,
-                Fast = 0,
-                Late = 0,
-                Good = 0,
-                Great = 0,
-                Miss = 0
-            },
-        new NoteInfo
-            {
-                CriticalPerfect = 135,
-                Perfect = 0,
-                Fast = 0,
-                Late = 0,
-                Good = 0,
-                Great = 0,
-                Miss = 0
-            },
-        new NoteInfo
-            {
-                CriticalPerfect = 44,
-                Perfect = 0,
-                Fast = 0,
-                Late = 0,
-                Good = 0,
-                Great = 0,
-                Miss = 0
-            },
-        new NoteInfo
-            {
-                CriticalPerfect = 4,
-                Perfect = 2,
-                Fast = 2,
-                Late = 0,
-                Good = 0,
-                Great = 0,
-                Miss = 0
-            }
-    };
-
-        playlogs.Add(user.CreateUserPlaylog(musicDetail,
-            new Dictionary<string, int>()
-            {
-            { "isRandom" , 0},
-            { "MaxCombo" , 605}
-            },
-            noteInfo, null, (long)user.LoginId, 1));
-        playlogs.Add(user.CreateUserPlaylog(musicDetail,
-            new Dictionary<string, int>()
-            {
-            { "isRandom" , 0},
-            { "MaxCombo" , 605}
-            },
-            noteInfo, null, (long)user.LoginId, 2));
-        playlogs.Add(user.CreateUserPlaylog(musicDetail,
-            new Dictionary<string, int>()
-            {
-            { "isRandom" , 0},
-            { "MaxCombo" , 605}
-            },
-            noteInfo, null, (long)user.LoginId, 3));
-
-        var result = user.UpsertAll(playlogs.ToArray(), (long)user.LoginId);
-        user.Logout();
-        return;
     } */
     /// <summary>
     /// 逃离小黑屋
@@ -1061,9 +977,7 @@ public partial class Mai : Extension, IExtension
     }
     void CalRating()
     {
-        if (maiAccountList is null)
-            maiAccountList = new (maiDatabase.All());
-        var allRating = maiAccountList.OrderBy(x => x.playerRating);
+        var allRating = maiDatabase.OrderBy(x => x.playerRating);
         ratingList = allRating.OrderByDescending(x => x.playerRating).Select(x => x.playerRating).ToList();
         var top = allRating.Skip(allRating.Count() - 300).OrderByDescending(x => x.playerRating);
         var ratingGroup = top.GroupBy(x => x.playerRating);
@@ -1072,7 +986,7 @@ public partial class Mai : Extension, IExtension
     }
     async Task<long> GetUserRank(long rating)
     {
-        if (maiAccountList is null || ratingList is null || top is null)
+        if (ratingList is null || top is null)
             CalRating();
         return await Task.Run(() =>
         {

@@ -75,6 +75,7 @@ namespace NekoBot
             catch (Exception e)
             {
                 Core.Debug(DebugType.Error, $"Loading script failure:\n{e}");
+                Environment.Exit(-127);
             }
         }
         public static void Save()

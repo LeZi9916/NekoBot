@@ -3,11 +3,18 @@ using System.Text.Json.Serialization;
 using NekoBot.Interfaces;
 using YamlDotNet.Serialization;
 using System;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson;
+using System.Linq.Expressions;
 
 namespace NekoBot.Types
 {
-    public class User : IAccount
+    public class User : IAccount<User>
     {
+        [BsonId]
+        [BsonElement("_id")]
+        ObjectId _id { get; set; }
+        [BsonElement("Id")]
         public long Id { get; set; }
         public string? Username { get; set; }
         public string? FirstName { get; set; }
@@ -99,5 +106,7 @@ namespace NekoBot.Types
                 IsPremium = u.IsPremium
             };
         }
+        //public Func<User, bool> GetMatcher() => x => x.Id == Id;
+        public Expression<Func<User, bool>> GetMatcher() => x => x.Id == Id;
     }
 }

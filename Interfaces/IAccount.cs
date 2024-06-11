@@ -1,7 +1,9 @@
 ﻿using NekoBot.Types;
+using System;
+using System.Linq.Expressions;
 
 namespace NekoBot.Interfaces;
-internal interface IAccount
+internal interface IAccount<T>
 {
     long Id { get; set; }
     string? Username { get; set; }
@@ -9,4 +11,5 @@ internal interface IAccount
     Permission Level { get; set; }
     void SetPermission(Permission targetLevel);
     bool CheckPermission(Permission targetLevel);
+    Expression<Func<T, bool>> GetMatcher();
 }
