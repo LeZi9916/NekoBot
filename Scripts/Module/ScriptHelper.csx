@@ -25,7 +25,7 @@ public partial class ScriptHelper : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "ScriptHelper",
-        Version = new Version() { Major = 1, Minor = 1, Revision = 6 },
+        Version = new Version() { Major = 1, Minor = 2, Revision = 1 },
         Type = ExtensionType.Module,
         Commands =
         [
