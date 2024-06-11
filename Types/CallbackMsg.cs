@@ -11,4 +11,4 @@ public class CallbackMsg
     public string? Data { get; set; }
     public required ITelegramBotClient Client { get; set; }
 }
-public delegate bool CallbackHandler<in T>(T msg);
+public delegate (bool,bool) CallbackHandler<in T>(T msg);

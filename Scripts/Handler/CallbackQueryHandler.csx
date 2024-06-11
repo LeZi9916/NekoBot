@@ -51,7 +51,7 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "CallbackQueryHandler",
-        Version = new Version() { Major = 1, Minor = 0, Revision = 0 },
+        Version = new Version() { Major = 1, Minor = 0, Revision = 1 },
         Type = ExtensionType.Handler,
         SupportUpdate =
         [
@@ -175,9 +175,10 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
             CallbackHandler<CallbackMsg>? foo;
             if(submiter.TryGetTarget(out foo))
             {
-                success = foo(msg);
-                if (success)
+                var (isSuccess,isMatch) = foo(msg);
+                if (isSuccess && isMatch)
                     submiters.Remove(submiter);
+                success = isSuccess;
             }
             else
                 submiters.Remove(submiter);
