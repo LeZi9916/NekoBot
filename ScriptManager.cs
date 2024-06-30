@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -235,6 +236,20 @@ namespace NekoBot
         /// <param name="extName"></param>
         /// <returns>IExtension的实例，不存在则返回null</returns>
         public static IExtension? GetExtension(string extName) => loadedScripts.Find(x => x.Info.Name == extName);
+        public static T? GetExtension<T>(string extName) where T : IExtension => (T?)GetExtension(extName);
+        public static bool TryGetExtension<T>(string extName,out T? ext) where T : IExtension
+        {
+            try
+            {
+                ext = GetExtension<T>(extName);
+                if (ext is null)
+                    return false;
+                return true;
+            }
+            catch { }
+            ext = default;
+            return false;
+        }
         /// <summary>
         /// 加载并初始化该Extension
         /// </summary>

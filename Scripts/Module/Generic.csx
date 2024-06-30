@@ -14,6 +14,7 @@ using Group = NekoBot.Types.Group;
 using NekoBot.Exceptions;
 using System.Diagnostics;
 using Telegram.Bot;
+using System.Threading.Tasks;
 
 #pragma warning disable CS4014
 public partial class Generic : Extension, IExtension
@@ -512,7 +513,7 @@ public partial class Generic : Extension, IExtension
             string _ = $"""
                         - NekoBot info 
                           Uptime   : {uptime:dd\.hh\:mm\:ss}
-                          MemUsage : {Process.GetCurrentProcess().WorkingSet64 / (1024 * 1024)} MB
+                          MemUsage : {Process.GetCurrentProcess().PrivateMemorySize64 / (1024 * 1024)} MB
                           Latency  : {Math.Round(analyzer.TotalHandleTime / (double)analyzer.TotalHandleCount,2)} ms
                           Processed Msg : {analyzer.TotalHandleCount}
                           Version  : v{ScriptManager.GetVersion()}

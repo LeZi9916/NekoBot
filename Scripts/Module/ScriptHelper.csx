@@ -25,7 +25,7 @@ public partial class ScriptHelper : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "ScriptHelper",
-        Version = new Version() { Major = 1, Minor = 2, Revision = 1 },
+        Version = new Version() { Major = 1, Minor = 2, Revision = 3 },
         Type = ExtensionType.Module,
         Commands =
         [
@@ -108,10 +108,16 @@ public partial class ScriptHelper : Extension, IExtension
                             else if (cbMsg.Data != "getStat")
                                 return (true, false);
                             var usedTime = sw.ElapsedMilliseconds;
+                            var errMsg =
+                            $"""
+                            {e?.Message}
+                            {e?.StackTrace}
+                            """;
                             cbMsg.Client.AnswerCallbackQueryAsync(cbMsg.Id,
                                                                   $"""
                                                                    Used Time: {usedTime}ms
-                                                                   Exception: {e?.Message ?? "null"}
+                                                                   Exception: 
+                                                                   {(e?.Message is null ? "null" : errMsg) }
                                                                    """, true);
                             return (true, false);
                         }
@@ -121,17 +127,23 @@ public partial class ScriptHelper : Extension, IExtension
                     if (e is not null)
                     {
                         msg.InlineMarkup = msg.AddButton(InlineKeyboardButton.WithCallbackData("Stat","getStat"));
-                        msg!.Edit("(Complie error)");
+                        msg!.Edit(
+                            $"""
+                            (Complie error)
+                            <pre><code class="language-csharp">
+                            {e.Message}
+                            </code></pre>
+                            """,ParseMode.Html);
                     }
                     else
                     {
                         msg.InlineMarkup = msg.AddButton(InlineKeyboardButton.WithCallbackData("Stat","getStat"));
                         msg.Edit(
                             $"""
-                             ```csharp
-                             {StringHandle(string.IsNullOrEmpty(result) ? "(No value)" : result)}
-                             ```
-                             """,ParseMode.MarkdownV2);
+                             <pre><code class="language-csharp">
+                             {(string.IsNullOrEmpty(result) ? "(No value)" : result)}
+                             </code></pre>
+                             """,ParseMode.Html);
                     }
                 }
             }
