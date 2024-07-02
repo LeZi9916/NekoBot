@@ -52,7 +52,7 @@ public partial class Core
 
         if (botTasks.IsEmpty())
             return;
-        Generic _ = new();
+
         await Task.WhenAll(botTasks); 
     }
     static async Task<Task?> Login(BotIdentity botConfig)
