@@ -8,17 +8,19 @@ using System.Net.Sockets;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Version = NekoBot.Types.Version;
 using AquaTools.Requests;
 using AquaTools.Responses;
 using AquaTools;
+using System.Dynamic;
+using MongoDB.Driver.Core.Servers;
+using Telegram.Bot.Requests.Abstractions;
 
-public class MaiMonitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictionary<string, string>>
+public class MaiMonitor : Destroyable, IExtension, IDestroyable, IMonitor
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "MaiMonitor",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version("1.1"),
         Type = ExtensionType.Module
     };
     public long TitleServerDelay = -1;// Title Server
@@ -51,115 +53,114 @@ public class MaiMonitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictio
     async void Proc()
     {
         var token = isDestroying.Token;
-        await Task.Run(() =>
+        while (!isDestroying.IsCancellationRequested)
         {
-            while (!isDestroying.IsCancellationRequested)
+            try
             {
-                try
+                token.ThrowIfCancellationRequested();
+                if (DateTime.Today.AddHours(4) <= DateTime.Now && DateTime.Now <= DateTime.Today.AddHours(9))
                 {
-                    token.ThrowIfCancellationRequested();
-                    if (DateTime.Today.AddHours(4) <= DateTime.Now && DateTime.Now <= DateTime.Today.AddHours(9))
-                    {
-                        TitleServerDelay = -1;
-                        OAuthServerDelay = -1;
-                        NetServerDelay = -1;
-                        MainServerDelay = -1;
-                        TotalRequestCount = 0;
-                        TimeoutRequestCount = 0;
-                        CompressSkipRate = 0;
-                        OtherErrorCount = 0;
-                        CompressSkipRequestCount = 0;
-                        //CompressSkipLogs.Clear();
-                        PingLogs.Clear();
-                        continue;
-                    }
-
-                    var req = new Request<UserRegionRequest>();
-                    req.Object.userId = 11015484;
-                    var response = Aqua.Post<UserRegionRequest, BaseResponse>(req);
-                    LastResponseStatusCode = response.Object.StatusCode;
-                    TotalRequestCount++;
-                    Task.Run(() =>
-                    {
-                        mutex.WaitOne();
-                        TitleServerDelay = TCPing(MaiServer.URL.Title, 42081);
-                        token.ThrowIfCancellationRequested();
-                        OAuthServerDelay = TCPing(MaiServer.URL.OAuth, 443);
-                        token.ThrowIfCancellationRequested();
-                        NetServerDelay = TCPing(MaiServer.URL.Net, 443);
-                        token.ThrowIfCancellationRequested();
-                        MainServerDelay = TCPing(MaiServer.URL.Main, 80);
-                        token.ThrowIfCancellationRequested();
-
-                        PingLogs.Add(new PingResult() { Type = ServerType.Title, Delay = TitleServerDelay });
-                        PingLogs.Add(new PingResult() { Type = ServerType.OAuth, Delay = OAuthServerDelay });
-                        PingLogs.Add(new PingResult() { Type = ServerType.Net, Delay = NetServerDelay });
-                        PingLogs.Add(new PingResult() { Type = ServerType.Main, Delay = MainServerDelay });
-                        mutex.ReleaseMutex();
-                    });
-
-                    token.ThrowIfCancellationRequested();
-
-                    var lastSkip = GetAvgSkipRate()[0];
-                    if (LastResponseStatusCode == HttpStatusCode.GatewayTimeout)
-                        TimeoutRequestCount++;
-                    else if (LastResponseStatusCode is HttpStatusCode.OK)
-                    {
-                        CompressSkipRequestCount++;
-                        CompressSkipLogs.Add(new SkipLog()
-                        {
-                            Timestamp = DateTime.Now,
-                            IsSkip = response.Object.CompressSkip,
-                            LastSkipRate = lastSkip
-                        });
-                    }
-                    else
-                        OtherErrorCount++;
-
-                    CompressSkipRate = (double)CompressSkipRequestCount / (TotalRequestCount - TimeoutRequestCount - OtherErrorCount);
-
-                    CompressSkipLogs = CompressSkipLogs.Where(x => (DateTime.Now - x.Timestamp).Minutes <= 90).ToList();
-
-                    Thread.Sleep(5000);
+                    TitleServerDelay = -1;
+                    OAuthServerDelay = -1;
+                    NetServerDelay = -1;
+                    MainServerDelay = -1;
+                    TotalRequestCount = 0;
+                    TimeoutRequestCount = 0;
+                    CompressSkipRate = 0;
+                    OtherErrorCount = 0;
+                    CompressSkipRequestCount = 0;
+                    //CompressSkipLogs.Clear();
+                    PingLogs.Clear();
+                    continue;
                 }
-                catch { }
+
+                var req = new Request<UserRegionRequest>();
+                req.Object.userId = 11015484;
+                var response = Aqua.Post<UserRegionRequest, BaseResponse>(req);
+                LastResponseStatusCode = response.Object.StatusCode;
+                TotalRequestCount++;
+                await Task.Run(() =>
+                {
+                    mutex.WaitOne();
+                    TitleServerDelay = TCPing(MaiServer.URL.Title, 42081);
+                    token.ThrowIfCancellationRequested();
+                    OAuthServerDelay = TCPing(MaiServer.URL.OAuth, 443);
+                    token.ThrowIfCancellationRequested();
+                    NetServerDelay = TCPing(MaiServer.URL.Net, 443);
+                    token.ThrowIfCancellationRequested();
+                    MainServerDelay = TCPing(MaiServer.URL.Main, 80);
+                    token.ThrowIfCancellationRequested();
+
+                    PingLogs.Add(new PingResult() { Type = ServerType.Title, Delay = TitleServerDelay });
+                    PingLogs.Add(new PingResult() { Type = ServerType.OAuth, Delay = OAuthServerDelay });
+                    PingLogs.Add(new PingResult() { Type = ServerType.Net, Delay = NetServerDelay });
+                    PingLogs.Add(new PingResult() { Type = ServerType.Main, Delay = MainServerDelay });
+                    mutex.ReleaseMutex();
+                });
+
+                token.ThrowIfCancellationRequested();
+
+                var lastSkip = GetAvgSkipRate()[0];
+                if (LastResponseStatusCode == HttpStatusCode.GatewayTimeout)
+                    TimeoutRequestCount++;
+                else if (LastResponseStatusCode is HttpStatusCode.OK)
+                {
+                    CompressSkipRequestCount++;
+                    CompressSkipLogs.Add(new SkipLog()
+                    {
+                        Timestamp = DateTime.Now,
+                        IsSkip = response.Object.CompressSkip,
+                        LastSkipRate = lastSkip
+                    });
+                }
+                else
+                    OtherErrorCount++;
+
+                CompressSkipRate = (double)CompressSkipRequestCount / (TotalRequestCount - TimeoutRequestCount - OtherErrorCount);
+
+                CompressSkipLogs = CompressSkipLogs.Where(x => (DateTime.Now - x.Timestamp).Minutes <= 90).ToList();
+
+                await Task.Delay(5000);
             }
-        });
+            catch { }
+        }
     }
-    public Dictionary<string,string> GetResult()
+    public ExpandoObject GetReport()
     {
         var tAvgPing = GetAvgPing(ServerType.Title);
         var oAvgPing = GetAvgPing(ServerType.OAuth);
         var nAvgPing = GetAvgPing(ServerType.Net);
         var mAvgPing = GetAvgPing(ServerType.Main);
         var skipRate = GetAvgSkipRate();
-        return new()
-        {
-            { "tAvgPing", $"{TitleServerDelay}"},
-            { "tAvgPing1", $"{tAvgPing[0]}"},
-            { "tAvgPing2", $"{tAvgPing[1]}"},
-            { "tAvgPing3", $"{tAvgPing[2]}"},
-            { "oAvgPing", $"{OAuthServerDelay}"},
-            { "oAvgPing1", $"{oAvgPing[0]}"},
-            { "oAvgPing2", $"{oAvgPing[1]}"},
-            { "oAvgPing3", $"{oAvgPing[2]}"},
-            { "nAvgPing", $"{NetServerDelay}"},
-            { "nAvgPing1", $"{nAvgPing[0]}"},
-            { "nAvgPing2", $"{nAvgPing[1]}"},
-            { "nAvgPing3", $"{nAvgPing[2]}"},
-            { "mAvgPing", $"{MainServerDelay}"},
-            { "mAvgPing1", $"{mAvgPing[0]}"},
-            { "mAvgPing2", $"{mAvgPing[1]}"},
-            { "mAvgPing3", $"{mAvgPing[2]}"},
-            { "totalRequestCount", $"{TotalRequestCount}"},
-            { "timeoutRequestCount", $"{TimeoutRequestCount}"},
-            { "otherErrorCount", $"{OtherErrorCount}"},
-            { "compressSkipRequestCount", $"{TotalRequestCount}"},
-            { "skipRate1", $"{Math.Round(skipRate[0] * 100, 2)}"},
-            { "skipRate2", $"{Math.Round(skipRate[1] * 100, 2)}"},
-            { "skipRate3", $"{Math.Round(skipRate[2] * 100, 2)}"},
-            { "statusCode", $"{LastResponseStatusCode}"},
-        };
+
+        dynamic expando = new ExpandoObject();
+
+        expando.tAvgPing = TitleServerDelay;
+        expando.tAvgPing1 = tAvgPing[0];
+        expando.tAvgPing2 = tAvgPing[1];
+        expando.tAvgPing3 = tAvgPing[2];
+        expando.oAvgPing = OAuthServerDelay;
+        expando.oAvgPing1 = oAvgPing[0];
+        expando.oAvgPing2 = oAvgPing[1];
+        expando.oAvgPing3 = oAvgPing[2];
+        expando.nAvgPing = NetServerDelay;
+        expando.nAvgPing1 = nAvgPing[0];
+        expando.nAvgPing2 = nAvgPing[1];
+        expando.nAvgPing3 = nAvgPing[2];
+        expando.mAvgPing = MainServerDelay;
+        expando.mAvgPing1 = mAvgPing[0];
+        expando.mAvgPing2 = mAvgPing[1];
+        expando.mAvgPing3 = mAvgPing[2];
+        expando.totalRequestCount = TotalRequestCount;
+        expando.timeoutRequestCount = TimeoutRequestCount;
+        expando.otherErrorCount = OtherErrorCount;
+        expando.compressSkipRequestCount = TotalRequestCount;
+        expando.skipRate1 = Math.Round(skipRate[0] * 100, 2);
+        expando.skipRate2 = Math.Round(skipRate[1] * 100, 2);
+        expando.skipRate3 = Math.Round(skipRate[2] * 100, 2);
+        expando.statusCode = LastResponseStatusCode;
+
+        return expando;
     }
 
     public long[] GetAvgPing(ServerType type)

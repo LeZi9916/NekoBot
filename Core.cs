@@ -11,6 +11,7 @@ using Telegram.Bot.Types;
 using File = System.IO.File;
 using NekoBot.Types;
 using System.Collections.Generic;
+using CSScripting;
 
 
 namespace NekoBot;
@@ -22,6 +23,7 @@ public partial class Core
     public static Config Config { get; set; } = new Config();
     static async Task Main(string[] args)
     {
+        List<Task> botTasks = new();
         Config.Up = DateTime.Now;
         AppDomain.CurrentDomain.UnhandledException += ExceptionRecord;
         TaskScheduler.UnobservedTaskException += ExceptionRecord;
@@ -38,23 +40,28 @@ public partial class Core
         }
         ScriptManager.Init();
         foreach (var botConfig in Config.BotIdentitys)
-            await Login(botConfig);
+        {
+            var botTask = await Login(botConfig);
+            if (botTask is null)
+                continue;
+            botTasks.Add(botTask);
+        }
 
         Config.AutoSave();
         ScriptManager.UpdateCommand();
 
-        while (true)
-            Console.ReadKey();
-        
+        if (botTasks.IsEmpty())
+            return;
+        await Task.WhenAll(botTasks);        
     }
-    static async Task Login(BotIdentity botConfig)
+    static async Task<Task?> Login(BotIdentity botConfig)
     {
         var index = OnlineBots.Count;
         if (string.IsNullOrEmpty(botConfig.Token))
         {
             Debug(DebugType.Error, $"[Bot#{index}]Bot token not found");
             Console.ReadKey();
-            return;
+            return null;
         }
 
         if (botConfig.Proxy.UseProxy)
@@ -73,7 +80,7 @@ public partial class Core
             botClient = new TelegramBotClient(botConfig.Token);
 
         Debug(DebugType.Info, $"[Bot#{index}]Connecting to telegram...");
-        botClient.ReceiveAsync(
+        var updateTask = botClient.ReceiveAsync(
             updateHandler: UpdateHandleAsync,
             pollingErrorHandler: (botClient, e, cToken) =>
             {
@@ -110,6 +117,7 @@ public partial class Core
             Client = botClient,
             Username = botUsername
         });
+        return updateTask;
     }
     static async Task UpdateHandleAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {

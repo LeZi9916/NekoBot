@@ -1,5 +1,7 @@
-﻿namespace NekoBot.Interfaces;
-public interface IMonitor<T> : IExtension
+﻿using System.Dynamic;
+
+namespace NekoBot.Interfaces;
+public interface IMonitor : IExtension
 {
-    T GetResult();
+    ExpandoObject GetReport();
 }

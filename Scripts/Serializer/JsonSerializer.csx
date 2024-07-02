@@ -1,13 +1,13 @@
 ﻿using NekoBot.Interfaces;
 using NekoBot.Types;
+using System;
 using System.Text.Json;
-using Version = NekoBot.Types.Version;
 public class JsonSerializer : Extension, IExtension, ISerializer
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "JsonSerializer",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version("1.0"),
         Type = ExtensionType.Serializer
     };
     public string Serialize<T>(T obj) => System.Text.Json.JsonSerializer.Serialize(obj);

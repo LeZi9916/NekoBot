@@ -7,7 +7,6 @@ using Telegram.Bot.Types.Enums;
 using NekoBot.Interfaces;
 using NekoBot;
 using NekoBot.Types;
-using Version = NekoBot.Types.Version;
 using Message = NekoBot.Types.Message;
 using User = NekoBot.Types.User;
 using Group = NekoBot.Types.Group;
@@ -15,6 +14,8 @@ using NekoBot.Exceptions;
 using System.Diagnostics;
 using Telegram.Bot;
 using System.Threading.Tasks;
+using Telegram.Bot.Types.ReplyMarkups;
+using ZXing;
 
 #pragma warning disable CS4014
 public partial class Generic : Extension, IExtension
@@ -52,7 +53,7 @@ public partial class Generic : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo() 
     { 
         Name = "Generic",
-        Version = new Version() { Major = 1, Minor = 1,Revision = 2 },
+        Version = new Version("1.2"),
         Type = ExtensionType.Module,
         Commands =
         [
@@ -121,13 +122,13 @@ public partial class Generic : Extension, IExtension
             new ExtensionInfo()
             {
                 Name = "MongoDBManager",
-                Version = new Version() { Major = 1, Minor = 0 },
+                Version = new Version(),
                 Type = ExtensionType.Database
             },
             new ExtensionInfo()
             {
                 Name = "Monitor",
-                Version = new Version() { Major = 1, Minor = 0 },
+                Version = new Version(),
                 Type = ExtensionType.Module
             }
         ],
@@ -507,9 +508,9 @@ public partial class Generic : Extension, IExtension
         var analyzer = Core.Config.Analyzer;
         var extension = ScriptManager.GetExtension("Monitor");
         uptime.ToString("");
-        if (extension is IMonitor<Dictionary<string, long>> monitor)
+        if (extension is IMonitor monitor)
         {
-            var result = monitor.GetResult();
+            dynamic report = monitor.GetReport();
             string _ = $"""
                         - NekoBot info 
                           Uptime   : {uptime:dd\.hh\:mm\:ss}
@@ -520,24 +521,75 @@ public partial class Generic : Extension, IExtension
                           CLR ver  : .NET {Environment.Version:3}
                         - HW info
                           - CPU
-                            Core : {result["ProcessorCount"]}
-                            Usage: {result["CPULoad"]}%
+                            Core : {report.ProcessorCount}
+                            Usage: {report.CPULoad}%
                             - Avg
-                              5m: {result["_5CPULoad"]}%
-                             10m: {result["_10CPULoad"]}%
-                             15m: {result["_15CPULoad"]}%
+                              5m: {report._5CPULoad}%
+                             10m: {report._10CPULoad}%
+                             15m: {report._15CPULoad}%
                           - Memory
-                            Total: {result["TotalMemory"] / 1000000} MB
-                            Free : {result["FreeMemory"] / 1000000} MB
-                            Usage: {result["UsedMemory"] / 1000000} MB ({result["UsedMemory"] * 100 / result["TotalMemory"]}%)
+                            Total: {report.TotalMemory / 1000000} MB
+                            Free : {report.FreeMemory / 1000000} MB
+                            Usage: {report.UsedMemory / 1000000} MB ({report.UsedMemory * 100 / report.TotalMemory}%)
+                        """;
+            var inlineMarkup = Message.CreateButtons(
+                [
+                    Message.DeleteButton,
+                    InlineKeyboardButton.WithCallbackData("Show Extensions","showExts")
+                ]);
+            var msg = await userMsg.Reply(MakeCodeEntity(_,"log"), ParseMode.Html, true,inlineMarkup:inlineMarkup);
+
+            if (msg is null)
+                return;
+            if (ScriptManager.GetExtension("CallbackQueryHandler") is ICallbackHandler callbackHandler)
+            {
+                var showTaskId = Guid.NewGuid();
+                var hideTaskId = Guid.NewGuid();
+                var showTask = new CallbackHandler<CallbackMsg>(
+                    cbMsg =>
+                    {
+
+                        if (!msg.Equals(cbMsg.Origin))
+                            return (false, cbMsg.Data == "showExts");
+                        else if (cbMsg.Data != "showExts")
+                            return (true, false);
+                        inlineMarkup = Message.CreateButtons(
+                        [
+                            Message.DeleteButton,
+                            InlineKeyboardButton.WithCallbackData("Hide Extensions","hideExts")
+                        ]);
+                        var __ =
+                        $"""
+
                         - Scripts
                           - {scripts}
                         """;
-            await userMsg.Reply($"""
-                                 ```python
-                                 {StringHandle(_)}
-                                 ```
-                                 """, ParseMode.MarkdownV2, true);
+                        msg.Edit(MakeCodeEntity(_ + __, "log"),ParseMode.Html,inlineMarkup:inlineMarkup).Wait();
+                        return (true, false);
+                    }
+                );
+                var hideTask = new CallbackHandler<CallbackMsg>(
+                    cbMsg =>
+                    {
+
+                        if (!msg.Equals(cbMsg.Origin))
+                            return (false, cbMsg.Data == "hideExts");
+                        else if (cbMsg.Data != "hideExts")
+                            return (true, false);
+                        inlineMarkup = Message.CreateButtons(
+                        [
+                            Message.DeleteButton,
+                            InlineKeyboardButton.WithCallbackData("Show Extensions","showExts")
+                        ]);
+                        msg.Edit(MakeCodeEntity(_, "log"), ParseMode.Html, inlineMarkup: inlineMarkup).Wait();
+                        return (true, false);
+                    }
+                );
+                callbackTasks.Add(showTaskId, showTask);
+                callbackTasks.Add(hideTaskId, hideTask);
+                callbackHandler.AddCallbackFunc(showTask);
+                callbackHandler.AddCallbackFunc(hideTask);
+            }
         }
         else
             userMsg.Reply("Internal error: Module\"Monitor\" not found", null, true);

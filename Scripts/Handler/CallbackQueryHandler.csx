@@ -10,7 +10,6 @@ using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using Action = System.Action;
 using Message = NekoBot.Types.Message;
-using Version = NekoBot.Types.Version;
 using User = NekoBot.Types.User;
 
 #pragma warning disable CS4014
@@ -51,7 +50,7 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "CallbackQueryHandler",
-        Version = new Version() { Major = 1, Minor = 0, Revision = 1 },
+        Version = new Version("1.0.1"),
         Type = ExtensionType.Handler,
         SupportUpdate =
         [
@@ -62,7 +61,7 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
             new ExtensionInfo()
             {
                 Name = "MongoDBManager",
-                Version = new Version() { Major = 1, Minor = 0 },
+                Version = new Version(),
                 Type = ExtensionType.Database
             }
         ]
@@ -176,9 +175,12 @@ public class CallbackQueryHandler : Destroyable, IExtension, IHandler, ICallback
             if(submiter.TryGetTarget(out foo))
             {
                 var (isSuccess,isMatch) = foo(msg);
-                if (isSuccess && isMatch)
-                    submiters.Remove(submiter);
                 success = isSuccess;
+                if (isSuccess && isMatch)
+                {
+                    submiters.Remove(submiter);
+                    break;
+                }
             }
             else
                 submiters.Remove(submiter);

@@ -18,7 +18,6 @@ using CSScripting;
 using NekoBot.Interfaces;
 using NekoBot;
 using NekoBot.Types;
-using Version = NekoBot.Types.Version;
 using Message = NekoBot.Types.Message;
 using File = System.IO.File;
 using MaiAccount = NekoBot.Types.MaiAccount;
@@ -83,7 +82,7 @@ public partial class Mai : Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "Mai",
-        Version = new Version() { Major = 1, Minor = 0, Revision = 3 },
+        Version = new Version("1.0.3"),
         Type = ExtensionType.Module,
         Commands =
         [
@@ -107,19 +106,19 @@ public partial class Mai : Extension, IExtension
             new ExtensionInfo()
             {
                 Name = "MongoDBManager",
-                Version = new Version() { Major = 1, Minor = 0 },
+                Version = new Version(),
                 Type = ExtensionType.Database
             },
             new ExtensionInfo()
             {
                 Name = "JsonSerializer",
-                Version = new Version() { Major = 1, Minor = 0 },
+                Version = new Version(),
                 Type = ExtensionType.Serializer
             },
             new ExtensionInfo()
             {
                 Name = "YamlSerializer",
-                Version = new Version() { Major = 1, Minor = 0 },
+                Version = new Version(),
                 Type = ExtensionType.Serializer
             }
         },
@@ -810,7 +809,7 @@ public partial class Mai : Extension, IExtension
         var extension = ScriptManager.GetExtension("MaiMonitor");
 
 
-        if(extension is IMonitor<Dictionary<string,string>> monitor)
+        if(extension is IMonitor monitor)
         {
             var cmd = (Command)userMsg.Command!;
             var querier = userMsg.From;
@@ -818,68 +817,73 @@ public partial class Mai : Extension, IExtension
             if (cmd.Prefix == "maistatus")
                 param = cmd.Params;
 
-            var result = monitor.GetResult();
+            dynamic result = monitor.GetReport();
 
 
             string text = "";
             if (param.IsEmpty())
             {
-                text = "maimai服务器状态:\n" +
-                          "```python" +
-                         StringHandle(
-                          "\nTcping延迟:" +
-                         $"\n  - Title服务器  : {result["tAvgPing"]}ms" +
-                         $"\n  - OAuth服务器  : {result["oAvgPing"]}ms" +
-                         $"\n  - DXNet服务器  : {result["nAvgPing"]}ms" +
-                         $"\n  - Main 服务器  : {result["mAvgPing"]}ms" +
-                         $"\n" +
-                         $"响应包跳过率 : \n" +
-                         $"  - 30min  : {result["skipRate1"]}%\n" +
-                         $"  - 60min  : {result["skipRate2"]}%\n" +
-                         $"  - 90min  : {result["skipRate3"]}%\n" +
-                         $"\n") +
-                          "```";
+                text = $$"""
+                        maimai服务器状态:
+                        {{MakeCodeEntity(
+                        $"""
+                        Tcping延迟:
+                            - Title服务器  : {result.tAvgPing}ms
+                            - OAuth服务器  : {result.oAvgPing}ms
+                            - DXNet服务器  : {result.nAvgPing}ms
+                            - Main 服务器  : {result.mAvgPing}ms
+
+                        响应包跳过率 :
+                            - 30min  : {result.skipRate1}%
+                            - 60min  : {result.skipRate2}%
+                            - 90min  : {result.skipRate3}%
+                        ""","log")}}
+                        """;
             }
             else if (param.FirstOrDefault() is "full")
             {
-                text = "maimai服务器状态:\n" +
-                          "```python" +
-                         StringHandle(
-                          "\nTcping延迟:" +
-                         $"\n- Title服务器  : {result["tAvgPing"]}ms\n" +
-                         $"  -  5min  : {result["tAvgPing1"]}ms\n" +
-                         $"  - 10min  : {result["tAvgPing2"]}ms\n" +
-                         $"  - 15min  : {result["tAvgPing3"]}ms" +
-                         $"\n- OAuth服务器  : {result["oAvgPing"]}ms\n" +
-                         $"  -  5min  : {result["oAvgPing1"]}ms\n" +
-                         $"  - 10min  : {result["oAvgPing2"]}ms\n" +
-                         $"  - 15min  : {result["oAvgPing3"]}ms" +
-                         $"\n- DXNet服务器  : {result["nAvgPing"]}ms\n" +
-                         $"  -  5min  : {result["nAvgPing1"]}ms\n" +
-                         $"  - 10min  : {result["nAvgPing2"]}ms\n" +
-                         $"  - 15min  : {result["nAvgPing3"]}ms" +
-                         $"\n- Main 服务器  : {result["mAvgPing"]}ms\n" +
-                         $"  -  5min  : {result["mAvgPing1"]}ms\n" +
-                         $"  - 10min  : {result["mAvgPing2"]}ms\n" +
-                         $"  - 15min  : {result["mAvgPing3"]}ms" +
-                         $"\n\n" +
-                          "响应状态:\n" +
-                         $"- 发送包数累计 : {result["totalRequestCount"]}\n" +
-                         $"- 响应超时累计 : {result["timeoutRequestCount"]}\n" +
-                         $"- 其他错误累计 : {result["otherErrorCount"]}\n" +
-                         $"- 非压缩包累计 : {result["compressSkipRequestCount"]}\n" +
-                         $"- 响应包跳过率 : \n" +
-                         $"  - 30min  : {result["skipRate1"]}%\n" +
-                         $"  - 60min  : {result["skipRate2"]}%\n" +
-                         $"  - 90min  : {result["skipRate3"]}%\n" +
-                         $"- 最新一次响应 : {result["statusCode"]}\n\n" +
-                         $"\n") +
-                          "```";
+                text = $$"""
+                        maimai服务器状态:
+                        {{MakeCodeEntity(
+                        $"""
+                        Tcping延迟:
+                        - Title服务器  : {result.tAvgPing}ms
+                            -  5min  : {result.tAvgPing1}ms
+                            - 10min  : {result.tAvgPing2}ms
+                            - 15min  : {result.tAvgPing3}ms
+                        - OAuth服务器  : {result.oAvgPing}ms
+                            -  5min  : {result.oAvgPing1}ms
+                            - 10min  : {result.oAvgPing2}ms
+                            - 15min  : {result.oAvgPing3}ms
+                        - DXNet服务器  : {result.nAvgPing}ms
+                            -  5min  : {result.nAvgPing1}ms
+                            - 10min  : {result.nAvgPing2}ms
+                            - 15min  : {result.nAvgPing3}ms
+                        - Main 服务器  : {result.mAvgPing}ms
+                            -  5min  : {result.mAvgPing1}ms
+                            - 10min  : {result.mAvgPing2}ms
+                            - 15min  : {result.mAvgPing3}ms
+
+                        响应状态:
+                        - 发送包数累计 : {result.totalRequestCount}
+                        - 响应超时累计 : {result.timeoutRequestCount}
+                        - 其他错误累计 : {result.otherErrorCount}
+                        - 非压缩包累计 : {result.compressSkipRequestCount}
+                        - 响应包跳过率 :
+                            - 30min  : {result.skipRate1}%
+                            - 60min  : {result.skipRate2}%
+                            - 90min  : {result.skipRate3}%
+                        - 最新一次响应 : {result.statusCode}
+
+                        ""","log")}}
+                        """;
             }
             else
-                text = $"\"{string.Join(" ", param)}\"为无效参数喵x";
+            {
+                text = $"\"{param}\"为无效参数喵x";
+            }
 
-            await userMsg.Reply(text, ParseMode.MarkdownV2, showDelButton: true);
+            await userMsg.Reply(text, ParseMode.Html, showDelButton: true);
         }
         else
             userMsg.Reply("Internal error: Module\"MaiMonitor\" not found", showDelButton: true);

@@ -11,7 +11,6 @@ using Telegram.Bot.Types.Enums;
 using Action = System.Action;
 using Message = NekoBot.Types.Message;
 using User = NekoBot.Types.User;
-using Version = NekoBot.Types.Version;
 #pragma warning disable CS4014
 public class MessageHandler: Destroyable, IExtension, IHandler, IDestroyable
 {
@@ -48,7 +47,7 @@ public class MessageHandler: Destroyable, IExtension, IHandler, IDestroyable
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "MessageHandler",
-        Version = new Version() { Major = 1, Minor = 1,Revision = 0},
+        Version = new Version("1.1.0"),
         Type = ExtensionType.Handler,
         SupportUpdate =
         [
@@ -59,7 +58,7 @@ public class MessageHandler: Destroyable, IExtension, IHandler, IDestroyable
             new ExtensionInfo()
             {
                 Name = "MongoDBManager",
-                Version = new Version() { Major = 1, Minor = 0 },
+                Version = new Version(),
                 Type = ExtensionType.Database
             }
         ]

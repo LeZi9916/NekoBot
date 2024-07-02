@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,14 +8,13 @@ using CZGL.SystemInfo;
 using NekoBot;
 using NekoBot.Interfaces;
 using NekoBot.Types;
-using Version = NekoBot.Types.Version;
 
-public class Monitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictionary<string,long>>
+public class Monitor : Destroyable, IExtension, IDestroyable, IMonitor
 {
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "Monitor",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version("1.1"),
         Type = ExtensionType.Module
     };
 
@@ -33,19 +33,19 @@ public class Monitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictionar
         ProcessorCount = SystemPlatformInfo.ProcessorCount;
         Proc();
     }
-    public Dictionary<string,long> GetResult()
+    public ExpandoObject GetReport()
     {
-        return new Dictionary<string, long>()
-        {
-            { "ProcessorCount",ProcessorCount },
-            { "CPULoad",CPULoad },
-            { "_5CPULoad",_5CPULoad },
-            { "_10CPULoad",_10CPULoad },
-            { "_15CPULoad",_15CPULoad },
-            { "TotalMemory",TotalMemory},
-            { "FreeMemory",FreeMemory },
-            { "UsedMemory",UsedMemory },
-        };
+        dynamic report = new ExpandoObject();
+        report.ProcessorCount = ProcessorCount;
+        report.CPULoad = CPULoad;
+        report.FreeMemory = FreeMemory;
+        report.UsedMemory = UsedMemory;
+        report.TotalMemory = TotalMemory;
+        report._5CPULoad = _5CPULoad;
+        report._10CPULoad = _10CPULoad;
+        report._15CPULoad = _15CPULoad;
+
+        return report;
     }
     async void Proc()
     {
@@ -57,9 +57,8 @@ public class Monitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictionar
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
-                    CalCPULoad();
+                    await CalCPULoad();
                     CalMemInfo();
-                    await Task.Delay(1000);
                 }
             }
             catch
@@ -81,14 +80,14 @@ public class Monitor : Destroyable, IExtension, IDestroyable, IMonitor<Dictionar
         _10CPULoad = (int)(_10minLoads / 600 * 100);
         _15CPULoad = (int)(_15minLoads / 900 * 100);
     }
-    void CalCPULoad()
+    async Task CalCPULoad()
     {
         var a = CPUHelper.GetCPUTime();
         try
         {
+            await Task.Delay(1000);
             var b = CPUHelper.GetCPUTime();
             var value = CPUHelper.CalculateCPULoad(a, b);
-            a = b;
             CPULoad = (int)(value * 100);
             CPULoadHistory.Add(value);
             CalCPULoadHistory();

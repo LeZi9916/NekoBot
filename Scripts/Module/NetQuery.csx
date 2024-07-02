@@ -10,7 +10,6 @@ using Telegram.Bot.Types.Enums;
 using Message = NekoBot.Types.Message;
 using NekoBot.Interfaces;
 using NekoBot.Types;
-using Version = NekoBot.Types.Version;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
@@ -21,7 +20,7 @@ public class NetQuery: Extension, IExtension
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "NetQuery",
-        Version = new Version() { Major = 1, Minor = 0,Revision = 15 },
+        Version = new Version("1.1.15"),
         Type = ExtensionType.Module,
         Commands =
         [
@@ -41,11 +40,11 @@ public class NetQuery: Extension, IExtension
                 Description = "对目标主机发送TCP SYN"
             }
         ],
-        SupportUpdate = new UpdateType[]
-        {
+        SupportUpdate =
+        [
             UpdateType.Message,
             UpdateType.EditedMessage
-        }
+        ]
     };
     public override void Handle(Message userMsg)
     {

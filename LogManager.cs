@@ -20,8 +20,8 @@ namespace NekoBot
         public static void WriteLog(Log l)
         {
             mutex.WaitOne();
-            logs.Add(l);
-            File.WriteAllText(LogFile, Serializer.Yaml.Serialize(logs), Encoding.UTF8);
+            //logs.Add(l);
+            File.AppendAllText(LogFile, Serializer.Yaml.Serialize(new Log[] { l }), Encoding.UTF8);
             LogCount++;
             mutex.ReleaseMutex();
         }

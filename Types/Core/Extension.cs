@@ -1,12 +1,15 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace NekoBot.Types;
 public class Extension
 {
+    protected Dictionary<Guid, CallbackHandler<CallbackMsg>> callbackTasks = new();
     public ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "Default",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version("1.0"),
         Type = ExtensionType.Module
     };
     public virtual void Handle(Message userMsg)
@@ -32,4 +35,6 @@ public class Extension
         return s;
 
     }
+    public static string MakeCodeEntity(string? codeStr,string lang = "copy") => $"<pre><code class=\"{lang}\">{codeStr}</code></pre>";
+    public static string MakeCodeEntity<T>(T obj,string lang = "copy") => MakeCodeEntity(obj?.ToString(),lang);
 }

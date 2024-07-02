@@ -11,7 +11,6 @@ using Microsoft.CodeAnalysis;
 using NekoBot.Interfaces;
 using NekoBot.Types;
 using NekoBot;
-using Version = NekoBot.Types.Version;
 using Message = NekoBot.Types.Message;
 using File = System.IO.File;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -21,11 +20,10 @@ using System.Collections.Generic;
 #pragma warning disable CS4014
 public partial class ScriptHelper : Extension, IExtension
 {
-    Dictionary<Guid, CallbackHandler<CallbackMsg>> tasks = new();
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "ScriptHelper",
-        Version = new Version() { Major = 1, Minor = 2, Revision = 3 },
+        Version = new Version("1.3.0"),
         Type = ExtensionType.Module,
         Commands =
         [
@@ -91,7 +89,7 @@ public partial class ScriptHelper : Extension, IExtension
             if (CheckCode(code, bannedNs, bannedTypes) || querier.CheckPermission(Permission.Root, null))
             {
                 sw.Start();
-                var (result, e) = ScriptManager.EvalCode(code);
+                var e = ScriptManager.EvalCode(code,out string? result);
                 sw.Stop();
 
                 
@@ -122,7 +120,7 @@ public partial class ScriptHelper : Extension, IExtension
                             return (true, false);
                         }
                     );
-                    tasks.Add(id, task);
+                    callbackTasks.Add(id, task);
                     callbackHandler.AddCallbackFunc(task);
                     if (e is not null)
                     {
@@ -130,20 +128,13 @@ public partial class ScriptHelper : Extension, IExtension
                         msg!.Edit(
                             $"""
                             (Complie error)
-                            <pre><code class="language-csharp">
-                            {e.Message}
-                            </code></pre>
+                            {MakeCodeEntity(e.Message,"csharp")}
                             """,ParseMode.Html);
                     }
                     else
                     {
                         msg.InlineMarkup = msg.AddButton(InlineKeyboardButton.WithCallbackData("Stat","getStat"));
-                        msg.Edit(
-                            $"""
-                             <pre><code class="language-csharp">
-                             {(string.IsNullOrEmpty(result) ? "(No value)" : result)}
-                             </code></pre>
-                             """,ParseMode.Html);
+                        msg.Edit(MakeCodeEntity(string.IsNullOrEmpty(result) ? "(No value)" : result,"csharp"),ParseMode.Html);
                     }
                 }
             }
@@ -159,7 +150,7 @@ public partial class ScriptHelper : Extension, IExtension
         var descendantNodes = root.DescendantNodes();
 
         var hasBannedNs = descendantNodes.OfType<UsingDirectiveSyntax>()
-                                         .Any(x => banNamespaces.Contains(x.Name.ToString()));
+                                         .Any(x => banNamespaces.Contains(x.Name?.ToString()));
         hasBannedNs = hasBannedNs || descendantNodes.OfType<QualifiedNameSyntax>()
                                                     .Any(x => banNamespaces.Contains(x.ToString()));
         var hasBannedType = root.DescendantNodes()
@@ -262,7 +253,7 @@ public partial class ScriptHelper : Extension, IExtension
                     {
                         _userMsg.InlineMarkup = delMarkup;
                         _userMsg.Edit("Operation canceled").Wait();
-                        tasks.Remove(id);
+                        callbackTasks.Remove(id);
                         return (true, true);
                     }
                     _userMsg.Edit($"Unloading \"{extName}\" extension...").Wait();
@@ -276,10 +267,11 @@ public partial class ScriptHelper : Extension, IExtension
                     {
                         _userMsg.Edit($"Internal error:\n {e.Message}").Wait();
                     }
-                    tasks.Remove(id);
+                    ScriptManager.UpdateCommand();
+                    callbackTasks.Remove(id);
                     return (true, true);
                 });
-            tasks.Add(id,task);
+            callbackTasks.Add(id,task);
             callbackHandler.AddCallbackFunc(task);
         }
         else
@@ -316,30 +308,32 @@ public partial class ScriptHelper : Extension, IExtension
         async Task complie(Message msg, string filePath, bool isUpdate = true)
         {
             await msg.Edit("Compiling script...(2/4)");
-            var script = ScriptManager.CompileScript<IExtension>(filePath);
-            if (script.Instance is not null)
+            var e = ScriptManager.CompileScript(filePath,out IExtension? instance);
+            if (instance is not null)
             {
-                var loadedScript = ScriptManager.GetExtension(script.Instance.Info.Name);
+                var loadedScript = ScriptManager.GetExtension(instance.Info.Name);
                 if (loadedScript is not null)
                     await msg.Edit("Updating script...(3/4)");
                 else
                     await msg.Edit("Initializing script...(3/4)");
-                ScriptManager.UpdateScript(script.Instance);
+                ScriptManager.UpdateScript(instance);
                 if (isUpdate)
                 {
                     await msg.Edit("Overwriting script...(4/4)");
-                    File.Copy(filePath, $"{Path.Combine(Config.ScriptPath, $"{script.Instance.Info.Type}/{script.Instance.Info.Name}.csx")}", true);
+                    File.Copy(filePath, $"{Path.Combine(Config.ScriptPath, $"{instance.Info.Type}/{instance.Info.Name}.csx")}", true);
                 }
                 else
                     await msg.Edit("Clean up...(4/4)");
+                ScriptManager.UpdateCommand();
                 await msg.Edit("Finished");
             }
             else
             {
-                await msg.Edit("Error: Compile script failure\n" +
-                    "```csharp\n" +
-                    $"{StringHandle(script.Exception)}" +
-                    "\n```", ParseMode.MarkdownV2);
+                await msg.Edit(
+                    $"""
+                    Error: Compile script failure
+                    {MakeCodeEntity(e)}
+                    """, ParseMode.Html);
                 return;
             }
         }
@@ -382,23 +376,22 @@ public partial class ScriptHelper : Extension, IExtension
     }
     void GetHelpInfo(Command cmd, Message userMsg)
     {
-        string helpStr = "```log\n";
+        string helpStr = string.Empty;
         switch (cmd.Prefix)
         {
             case "script":
-                helpStr += StringHandle(
+                helpStr += 
                     """
                     Usage:
                     /script load   [File]   Update or add C# Script
                     /script unload [string] Unload module by name
                     /script reload          reload all scripts
-                    """);
+                    """;
                 break;
             default:
                 userMsg.Reply("No helper");
                 return;
         }
-        helpStr += "\n```";
-        userMsg.Reply(helpStr, ParseMode.MarkdownV2, true);
+        userMsg.Reply(MakeCodeEntity(helpStr,"log"), ParseMode.Html, true);
     }
 }

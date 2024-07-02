@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
-using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -17,11 +16,6 @@ using Message = NekoBot.Types.Message;
 
 namespace NekoBot
 {
-    public class Script<T>
-    {
-        public T? Instance { get; init; }
-        public Exception? Exception { get; init; }
-    }
     public static partial class ScriptManager
     {
         public static bool IsCompiling { get; private set; } = false;
@@ -56,7 +50,7 @@ namespace NekoBot
         }
         public static void Init()
         {
-            evaluator.Reset();
+            evaluator =  evaluator.Reset();
             
             if (!Directory.Exists(Config.ScriptPath))
                 return;
@@ -113,13 +107,7 @@ namespace NekoBot
                      Scripts have been loaded:
                      - {scripts}
                      """;
-                await msg.Edit(
-                    $"""
-                     ```python
-                     {Extension.StringHandle(_)}
-                     ```
-                     """
-                    ,ParseMode.MarkdownV2);
+                await msg.Edit(Extension.MakeCodeEntity(_,"log"),ParseMode.Html);
                 GC.Collect();
             }
             catch(Exception e)
@@ -171,20 +159,24 @@ namespace NekoBot
             IsCompiling = false;
         }
         /// <summary>
-        /// 执行传入的C#代码，并返回String
+        /// 执行传入的C#代码
         /// </summary>
         /// <param name="code"></param>
-        /// <returns></returns>
-        public static (string?,Exception?) EvalCode(string code)
+        /// <returns>
+        /// 如果编译时出错，则返回Exception，否则返回null
+        /// </returns>
+        public static Exception? EvalCode(string code,out string? result)
         {
             try
             {
                 var eval = CSScript.RoslynEvaluator.Clone().Reset(false);
-                return (eval.Eval(code).ToString(),null);
+                result = eval.Eval(code)?.ToString();
+                return null;
             }
             catch(Exception e)
             {
-                return (null,e);
+                result = string.Empty;
+                return e;
             }
         }
         /// <summary>
@@ -193,24 +185,17 @@ namespace NekoBot
         /// <typeparam name="T"></typeparam>
         /// <param name="filePath"></param>
         /// <returns>第一个类的实例</returns>
-        public static Script<T> CompileScript<T>(string filePath) where T:class
+        public static Exception? CompileScript<T>(string filePath ,out T? instance) where T : class
         {
             try
             {
-                return new Script<T>()
-                {
-                    Instance = CSScript.Evaluator.LoadFile<T>(filePath),
-                    Exception = null
-                };
-                
+                instance = CSScript.Evaluator.LoadFile<T>(filePath);
+                return null;
             }
             catch(Exception e)
             {
-                return new Script<T>()
-                {
-                    Instance = null,
-                    Exception = e
-                };
+                instance = default;
+                return e;
             }
         }
         /// <summary>
@@ -223,7 +208,7 @@ namespace NekoBot
             {
                 bot.BotCommands = result.ToArray();
                 await bot.Client.SetMyCommandsAsync(result);
-                Core.Debug(DebugType.Info, $"[Bot${Core.OnlineBots.IndexOf(bot)}]Bot commands has been updated");
+                Core.Debug(DebugType.Info, $"[Bot#{Core.OnlineBots.IndexOf(bot)}]Bot commands has been updated");
             }
         }
         
@@ -334,14 +319,16 @@ namespace NekoBot
                                                   .Select(x => x.FullName)
                                                   .ToArray();
             List<IExtension> uninitObjs = new();
+            int index = 1;
             foreach (var path in scriptPaths)
             {
                 try
                 {
-                    step($"Compiling \"{new FileInfo(path).Name}\"...");
+                    step($"({index}/{scriptPaths.Length})Compiling \"{new FileInfo(path).Name}\"...");
                     var obj = evaluator.LoadFile<IExtension>(path);
                     var info = obj.Info;
                     var conflictObj = uninitObjs.Find(x => x.Info.Name == info.Name);
+                    index++;
                     if (conflictObj is not null)
                     {
                         if (conflictObj.Info.Version < info.Version)

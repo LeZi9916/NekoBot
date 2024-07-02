@@ -7,7 +7,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Version = NekoBot.Types.Version;
 
 public class MongoDBManager : Destroyable, IExtension, IDestroyable, IDBManager
 {
@@ -16,7 +15,7 @@ public class MongoDBManager : Destroyable, IExtension, IDestroyable, IDBManager
     public new ExtensionInfo Info { get; } = new ExtensionInfo()
     {
         Name = "MongoDBManager",
-        Version = new Version() { Major = 1, Minor = 0 },
+        Version = new Version("1.0"),
         Type = ExtensionType.Database
     };
     public override void Init()
