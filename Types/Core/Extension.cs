@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 
 namespace NekoBot.Types;
 public class Extension
@@ -35,6 +36,41 @@ public class Extension
         return s;
 
     }
-    public static string MakeCodeEntity(string? codeStr,string lang = "copy") => $"<pre><code class=\"{lang}\">{codeStr}</code></pre>";
+    public static string MakeCodeEntity(string? codeStr, string lang = "copy")
+    {
+        if(string.IsNullOrEmpty(codeStr))
+            codeStr = string.Empty;
+        else
+        {
+            var sb = new StringBuilder();
+            foreach (char c in codeStr)
+            {
+                switch (c)
+                {
+                    case '<':
+                        sb.Append("&lt;");
+                        break;
+                    case '>':
+                        sb.Append("&gt;");
+                        break;
+                    case '&':
+                        sb.Append("&amp;");
+                        break;
+                    case '"':
+                        sb.Append("&quot;");
+                        break;
+                    case '\'':
+                        sb.Append("&#39;");
+                        break;
+                    default:
+                        sb.Append(c);
+                        break;
+                }
+                codeStr = sb.ToString();
+            }
+        }
+
+        return $"<pre><code class=\"{lang}\">{codeStr}</code></pre>";
+    }
     public static string MakeCodeEntity<T>(T obj,string lang = "copy") => MakeCodeEntity(obj?.ToString(),lang);
 }
