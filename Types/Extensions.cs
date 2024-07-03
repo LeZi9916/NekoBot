@@ -1,4 +1,5 @@
 ﻿using MongoDB.Driver;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -20,5 +21,15 @@ public static class IFindFluentExtensions
     public static T? LastOrDefault<T>(this IFindFluent<T, T> source)
     {
         return source.ToList().LastOrDefault();
+    }
+    
+}
+public static class IEnumerableExtensions
+{
+    public static IEnumerable<(int, T)> WithIndex<T>(this IEnumerable<T> source)
+    {
+        int index = 0;
+        foreach (var item in source)
+            yield return (index++, item);
     }
 }

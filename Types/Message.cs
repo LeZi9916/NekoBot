@@ -163,7 +163,12 @@ public class Message
         }
         catch (Exception e)
         {
-            Debug(DebugType.Error, $"Failure to edit message : \n{e.Message}\n{e.StackTrace}");
+            Debug(DebugType.Error, $"""
+                                    Failure to edit message : 
+                                    Text : {text}
+                                    ErrMsg : {e.Message}
+                                    {e.StackTrace}
+                                    """);
             return null;
         }
     }

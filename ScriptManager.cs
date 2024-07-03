@@ -319,16 +319,14 @@ namespace NekoBot
                                                   .Select(x => x.FullName)
                                                   .ToArray();
             List<IExtension> uninitObjs = new();
-            int index = 1;
-            foreach (var path in scriptPaths)
+            foreach (var (index,path) in scriptPaths.WithIndex())
             {
                 try
                 {
-                    step($"({index}/{scriptPaths.Length})Compiling \"{new FileInfo(path).Name}\"...");
+                    step($"({index + 1}/{scriptPaths.Length})Compiling \"{new FileInfo(path).Name}\"...");
                     var obj = evaluator.LoadFile<IExtension>(path);
                     var info = obj.Info;
                     var conflictObj = uninitObjs.Find(x => x.Info.Name == info.Name);
-                    index++;
                     if (conflictObj is not null)
                     {
                         if (conflictObj.Info.Version < info.Version)
