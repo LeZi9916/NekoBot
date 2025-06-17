@@ -29,7 +29,7 @@ public class MaiDatabase : Database<MaiAccount>, IExtension, IDatabase<MaiAccoun
     public override void Init()
     {
         base.Init();
-        dbPath = Path.Combine(Config.DatabasePath, "MaiDatabase.yaml");
+        dbPath = Path.Combine(BotConfig.DatabasePath, "MaiDatabase.yaml");
         _database = Load<List<MaiAccount>>(yamlSerializer!,dbPath);
         AutoSave();
     }

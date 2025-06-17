@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using YamlDotNet.Serialization;
 
-namespace NekoBot;
+namespace NekoBot.Text;
 public static class Serializer
 {
     public static class Json
@@ -13,15 +13,16 @@ public static class Serializer
     }
     public static class Yaml
     {
+        static readonly ISerializer _serializer = new SerializerBuilder().Build();
+        static readonly IDeserializer _deserializer = new DeserializerBuilder().Build();
+
         public static string Serialize<T>(T obj)
         {
-            var serializer = new SerializerBuilder().Build();
-            return serializer.Serialize(obj);
+            return _serializer.Serialize(obj);
         }
-        public static T? Deserialize<T>(string yaml)
+        public static T Deserialize<T>(string yaml)
         {
-            var deserializer = new DeserializerBuilder().Build();
-            return deserializer.Deserialize<T>(yaml);
+            return _deserializer.Deserialize<T>(yaml);
         }
     }
 }

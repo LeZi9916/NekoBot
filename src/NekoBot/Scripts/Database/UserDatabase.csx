@@ -29,7 +29,7 @@ public class UserDatabase : Database<User>, IExtension, IDatabase<User>, IDestro
     public override void Init()
     {
         base.Init();
-        dbPath = Path.Combine(Config.DatabasePath, "UserDatabase.yaml");
+        dbPath = Path.Combine(BotConfig.DatabasePath, "UserDatabase.yaml");
         _database = Load<List<User>>(yamlSerializer!, dbPath);
         AutoSave();
     }

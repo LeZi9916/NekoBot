@@ -1,3 +1,4 @@
+using NekoBot.Text;
 using System;
 using System.IO;
 using System.Threading;
@@ -15,6 +16,7 @@ public static class BotEnv
     public static string TempPath { get; } = Path.Combine(AppPath, "Temps");
     public static string ScriptPath { get; } = Path.Combine(AppPath, "Scripts");
     public static string ConfigPath { get; } = Path.Combine(AppPath, "config.yaml");
+    public static BotConfig Config { get; } = new();
     public static CancellationToken GlobalCanncellationToken { get; } = _cts.Token;
     internal static event EventHandler OnProcessExit
     {
@@ -37,6 +39,17 @@ public static class BotEnv
         CreateDirectoryIfNotExists(TempPath);
         CreateDirectoryIfNotExists(ScriptPath);
         OnProcessExit += OnProcessExitFunc;
+        if (File.Exists(ConfigPath))
+        {
+            Config = Serializer.Yaml.Deserialize<BotConfig>(File.ReadAllText(ConfigPath))!;
+        }
+        else
+        {
+            BotLogger.Debug("The configuration file has been generated");
+            File.WriteAllText(ConfigPath, Serializer.Yaml.Serialize(Config));
+            Console.ReadKey();
+            Environment.Exit(0);
+        }
     }
 
     static void OnProcessExitFunc(object? sender, EventArgs e)
