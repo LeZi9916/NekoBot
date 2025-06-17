@@ -26,7 +26,9 @@ public partial class Core
         Config.Up = DateTime.Now;
         Config.Check();
         if (File.Exists(Config.ConfigPath))
+        {
             Config = Serializer.Yaml.Deserialize<Config>(File.ReadAllText(Config.ConfigPath))!;
+        }
         else
         {
             Debug(DebugType.Info, "The configuration file has been generated\n" +

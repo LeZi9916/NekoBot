@@ -1,12 +1,5 @@
 ﻿namespace NekoBot.Types;
 
-public enum DebugType
-{
-    Debug,
-    Info,
-    Warning,
-    Error
-}
 public enum ExtensionType
 {
     Module,
