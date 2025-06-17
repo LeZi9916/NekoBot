@@ -56,7 +56,10 @@ public partial class Core
             botClient = new TelegramBotClient(Config.Token, httpClient);
         }
         else
+        {
             botClient = new TelegramBotClient(Config.Token);
+        }
+            
 
         Debug(DebugType.Info, "Connecting to telegram...");
         botClient.ReceiveAsync(
