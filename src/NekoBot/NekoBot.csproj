@@ -34,16 +34,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="Scripts\Database\GroupDatabase.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
     <Compile Include="Scripts\Database\MaiDatabase.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Handler\MessageHandler.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Module\Generic.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
     <Compile Include="Scripts\Serializer\JsonSerializer.csx">
@@ -52,33 +46,20 @@
     <Compile Include="Scripts\Database\UserDatabase.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
-    <Compile Include="Scripts\Module\Monitor.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Module\NetQuery.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Module\ScriptHelper.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
     <Compile Include="Scripts\Serializer\YamlSerializer.csx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Compile>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Scripts\Module\MaiScanner.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CS-Script" Version="4.8.14" />
+    <PackageReference Include="CS-Script" Version="4.9.7" />
     <PackageReference Include="CZGL.SystemInfo" Version="2.2.0" />
-    <PackageReference Include="DnsClient" Version="1.7.0" />
-    <PackageReference Include="SkiaSharp" Version="2.88.7" />
-    <PackageReference Include="Telegram.Bot" Version="19.0.0" />
-    <PackageReference Include="YamlDotNet" Version="15.1.4" />
-    <PackageReference Include="ZXing.Net" Version="0.16.6" />
-    <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.10" />
+    <PackageReference Include="DnsClient" Version="1.8.0" />
+    <PackageReference Include="SkiaSharp" Version="3.119.0" />
+    <PackageReference Include="Telegram.Bot" Version="22.5.1" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    <PackageReference Include="ZXing.Net" Version="0.16.10" />
+    <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.21" />
   </ItemGroup>
 
 </Project>
