@@ -1,6 +1,8 @@
 using NekoBot.Text;
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 
 namespace NekoBot;
@@ -17,6 +19,7 @@ public static class BotEnv
     public static string ScriptPath { get; } = Path.Combine(AppPath, "Scripts");
     public static string ConfigPath { get; } = Path.Combine(AppPath, "config.yaml");
     public static BotConfig Config { get; } = new();
+    public static HttpClient SharedHttpClient { get; }
     public static CancellationToken GlobalCanncellationToken { get; } = _cts.Token;
     internal static event EventHandler OnProcessExit
     {
@@ -50,6 +53,35 @@ public static class BotEnv
             Console.ReadKey();
             Environment.Exit(0);
         }
+        var proxyConfig = Config.Networking.Proxy;
+        if (proxyConfig.UseProxy)
+        {
+            if (string.IsNullOrEmpty(proxyConfig.Address))
+            {
+                HttpClient.DefaultProxy = WebRequest.GetSystemWebProxy();
+            }
+            else
+            {
+                if (proxyConfig.Address.StartsWith("http://") || proxyConfig.Address.StartsWith("https://"))
+                {
+                    BotLogger.Fatal("Not supported proxy type");
+                }
+                HttpClient.DefaultProxy = new WebProxy(proxyConfig.Address)
+                {
+                    Credentials = new NetworkCredential(proxyConfig.Username, proxyConfig.Password)
+                };
+            }
+            SharedHttpClient = new();
+        }
+        else
+        {
+            SharedHttpClient = new(new SocketsHttpHandler()
+            {
+                UseProxy = false
+            });
+        }
+        SharedHttpClient.Timeout = TimeSpan.FromMilliseconds(Config.Networking.TimeoutMS);
+        SharedHttpClient.DefaultRequestHeaders.UserAgent.Add(new("NekoBot", "0.1.0"));
     }
 
     static void OnProcessExitFunc(object? sender, EventArgs e)
