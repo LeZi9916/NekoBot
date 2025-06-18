@@ -13,6 +13,6 @@ public class Program
             BotLogger.Fatal("Bot token not found");
         }
 
-        await TGBotClient.Start();
+        await TGBotClient.StartAsync();
     }
 }

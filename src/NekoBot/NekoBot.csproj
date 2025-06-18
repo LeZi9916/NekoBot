@@ -13,46 +13,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Scripts\Module\MaiScanner.cs" />
-    <Compile Remove="Scripts\Script.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="Scripts\Database\GroupDatabase.csx" />
-    <None Remove="Scripts\Generic.csx" />
-    <None Remove="Scripts\JsonSerializer.csx" />
-    <None Remove="Scripts\Mai.csx" />
-    <None Remove="Scripts\MaiDatabase.csx" />
-    <None Remove="Scripts\MessageHandler.csx" />
-    <None Remove="Scripts\Module\Generic.csx" />
-    <None Remove="Scripts\Module\Monitor.csx" />
-    <None Remove="Scripts\Module\NetQuery.csx" />
-    <None Remove="Scripts\Module\ScriptHelper.csx" />
-    <None Remove="Scripts\NetQuery.csx" />
-    <None Remove="Scripts\ScriptHelper.csx" />
-    <None Remove="Scripts\UserDatabase.csx" />
-    <None Remove="Scripts\YamlSerializer.csx" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="Scripts\Database\MaiDatabase.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Handler\MessageHandler.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Serializer\JsonSerializer.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Database\UserDatabase.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-    <Compile Include="Scripts\Serializer\YamlSerializer.csx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="CS-Script" Version="4.9.7" />
     <PackageReference Include="CZGL.SystemInfo" Version="2.2.0" />
     <PackageReference Include="DnsClient" Version="1.8.0" />

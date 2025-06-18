@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace NekoBot.Clients;
 internal static class TGBotClient
@@ -67,7 +68,11 @@ internal static class TGBotClient
                                             Update update,
                                             CancellationToken token)
     {
-
+        switch (update.Type)
+        {
+            case UpdateType.Message:
+                break;
+        }
     }
     static async Task OnPollingErrorAsync(ITelegramBotClient client,
                                           Exception e,
