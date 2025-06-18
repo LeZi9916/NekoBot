@@ -53,6 +53,7 @@ public static class BotEnv
             Console.ReadKey();
             Environment.Exit(0);
         }
+        BotLogger.Info($"Read bot config from {ConfigPath}");
         var proxyConfig = Config.Networking.Proxy;
         if (proxyConfig.UseProxy)
         {

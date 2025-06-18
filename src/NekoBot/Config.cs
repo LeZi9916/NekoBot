@@ -16,7 +16,7 @@ public record BotConfig
 public class NetworkConfig
 {
     public ProxyConfig Proxy { get; init; } = new();
-    public int TimeoutMS = 2000;
+    public int TimeoutMS { get; init; } = 2000;
 }
 public class ProxyConfig
 {

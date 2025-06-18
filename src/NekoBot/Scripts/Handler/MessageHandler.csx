@@ -94,7 +94,7 @@ public class MessageHandler: Extension, IExtension, IHandler
             var prefix = cmd.Prefix;
             var s = prefix.Split("@", 2, StringSplitOptions.RemoveEmptyEntries);
 
-            if (s.Length != 2 || s[1] != Core.BotUsername)
+            if (s.Length != 2 || s[1] != Program.BotUsername)
                 return default;
         }
         if (cmd.Prefix.Contains("@"))
@@ -115,7 +115,7 @@ public class MessageHandler: Extension, IExtension, IHandler
             }
             var token = sArray[1];
 
-            if (!Core.Config.Authenticator.Compare(token.Trim()))
+            if (!Program.Config.Authenticator.Compare(token.Trim()))
             {
                 //SendMessage("Authentication failed:\nInvalid HOTP code", update);
                 Debug(DebugType.Info, "HOTP code is invalid,rejected");

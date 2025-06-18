@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using static NekoBot.Core;
+using static NekoBot.Program;
 
 namespace NekoBot.Types;
 public class Message

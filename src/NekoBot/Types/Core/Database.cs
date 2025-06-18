@@ -42,7 +42,7 @@ public class Database<T> : Destroyable, IDatabase<T>
 
     protected async void AutoSave()
     {
-        while(Core.Config.DbAutoSave && !isDestroying.IsCancellationRequested)
+        while(Program.Config.DbAutoSave && !isDestroying.IsCancellationRequested)
         {
             try
             {
@@ -56,7 +56,7 @@ public class Database<T> : Destroyable, IDatabase<T>
                         Save();
                         hasChange = false;
                     }
-                    await Task.Delay(Core.Config.AutoSaveInterval * 1000, token);
+                    await Task.Delay(Program.Config.AutoSaveInterval * 1000, token);
                 }
             }
             catch(IOException e)

@@ -22,7 +22,7 @@ public class Extension
 
     }
     public virtual MethodInfo? GetMethod(string methodName) => Info.ExtAssembly.GetType().GetMethod(methodName);
-    public static void Debug(DebugType type, string message) => Core.Debug(type, message);
+    public static void Debug(DebugType type, string message) => Program.Debug(type, message);
     public static string StringHandle(string s)
     {
         string[] reservedChar = { "_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!" };

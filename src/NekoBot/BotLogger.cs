@@ -68,6 +68,26 @@ public static class BotLogger
             StackTrace = GetStackTrace()
         });
     }
+    public static void Error(string msg, Exception e)
+    {
+        _logQueue.Enqueue(new()
+        {
+            Level = DebugLevel.Error,
+            Message = $"{msg}\n{e}",
+            Timestamp = DateTime.Now,
+            StackTrace = null
+        });
+    }
+    public static void Error(Exception e)
+    {
+        _logQueue.Enqueue(new()
+        {
+            Level = DebugLevel.Error,
+            Message = e.ToString(),
+            Timestamp = DateTime.Now,
+            StackTrace = null
+        });
+    }
     [DoesNotReturn]
     public static void Fatal(string msg, int exitCode = -127)
     {
