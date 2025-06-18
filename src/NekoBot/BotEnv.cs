@@ -13,10 +13,10 @@ public static class BotEnv
 
     public static DateTime Up { get; } = DateTime.Now;
     public static string AppPath { get; } = Environment.CurrentDirectory;
-    public static string LogPath { get; } = Path.Combine(AppPath, "Logs");
-    public static string DataPath { get; } = Path.Combine(AppPath, "Data");
-    public static string TempPath { get; } = Path.Combine(AppPath, "Temps");
-    public static string ScriptPath { get; } = Path.Combine(AppPath, "Scripts");
+    public static string LogPath { get; } = Path.Combine(AppPath, "logs");
+    public static string DataPath { get; } = Path.Combine(AppPath, "data");
+    public static string TempPath { get; } = Path.Combine(AppPath, "temps");
+    public static string ScriptPath { get; } = Path.Combine(AppPath, "scripts");
     public static string ConfigPath { get; } = Path.Combine(AppPath, "config.yaml");
     public static BotConfig Config { get; } = new();
     public static HttpClient SharedHttpClient { get; }

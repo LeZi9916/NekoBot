@@ -20,7 +20,6 @@ public class Core
             BotLogger.Fatal("Bot token not found");
         }
         var botClient = new TelegramBotClient(botConfig.Token, BotEnv.SharedHttpClient);
-        Func<ITelegramBotClient, Update, CancellationToken, Task> o = OnReceivedUpdateAsync;
         BotLogger.Info("Connecting to telegram...");
         botClient.ReceiveAsync(updateHandler: OnReceivedUpdateAsync,
                                errorHandler: OnPollingErrorAsync,
